@@ -1,0 +1,19 @@
+# Child Spree — Cloudflare Pages config
+name = "childspree"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+# D1 Database — run `npm run db:create` then paste the ID here
+[[d1_databases]]
+binding = "DB"
+database_name = "childspree-db"
+database_id = "" # FILL AFTER: wrangler d1 create childspree-db
+
+# R2 Bucket — for parent video uploads
+[[r2_buckets]]
+binding = "VIDEOS"
+bucket_name = "childspree-videos"
+
+# Auth secret for admin routes
+[vars]
+ADMIN_PASSWORD = "childspree2026"

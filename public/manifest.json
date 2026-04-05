@@ -1,0 +1,21 @@
+{
+  "name": "Child Spree 2026",
+  "short_name": "Child Spree",
+  "description": "Davis Education Foundation — Back-to-school clothing for students in need",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#1B3A4B",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
