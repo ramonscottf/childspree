@@ -187,3 +187,60 @@ export async function notifyIntakeComplete(env, nom, intake) {
     `,
   });
 }
+
+export async function notifyVolunteerRegistered(env, vol) {
+  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+
+  await sendEmail(env, {
+    to: adminEmails,
+    subject: `🙋 New volunteer — ${vol.firstName} ${vol.lastName}${vol.organization ? ' (' + vol.organization + ')' : ''}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:#1B3A4B;padding:20px 24px;border-radius:8px 8px 0 0;">
+          <h2 style="color:#fff;margin:0;font-size:18px;">🙋 New Volunteer Registration</h2>
+        </div>
+        <div style="background:#f9f9f9;padding:24px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
+          <table style="font-size:14px;border-collapse:collapse;width:100%;">
+            <tr><td style="padding:8px 0;color:#666;width:140px;">Name</td><td style="padding:8px 0;font-weight:700;">${vol.firstName} ${vol.lastName}</td></tr>
+            ${vol.email ? `<tr><td style="padding:8px 0;color:#666;">Email</td><td style="padding:8px 0;"><a href="mailto:${vol.email}">${vol.email}</a></td></tr>` : ''}
+            ${vol.phone ? `<tr><td style="padding:8px 0;color:#666;">Phone</td><td style="padding:8px 0;">${vol.phone}</td></tr>` : ''}
+            ${vol.organization ? `<tr><td style="padding:8px 0;color:#666;">Org</td><td style="padding:8px 0;">${vol.organization} (${vol.groupType||'Individual'})</td></tr>` : ''}
+            ${vol.shirtSize ? `<tr><td style="padding:8px 0;color:#666;">Shirt</td><td style="padding:8px 0;">${vol.shirtSize}</td></tr>` : ''}
+            <tr><td style="padding:8px 0;color:#666;">Early arrival</td><td style="padding:8px 0;">${vol.earlyArrival ? '✅ Yes — before 7am' : 'No'}</td></tr>
+          </table>
+          <div style="margin-top:20px;">
+            <a href="https://childspree.org/#/admin?tab=volunteers" style="background:#1B3A4B;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">View in Admin →</a>
+          </div>
+        </div>
+      </div>
+    `,
+  });
+
+  // Confirmation to volunteer
+  if (vol.email) {
+    await sendEmail(env, {
+      to: vol.email,
+      replyTo: adminEmails,
+      subject: `You\'re registered for Child Spree 2026! 🛒`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+          <div style="background:#1B3A4B;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
+            <div style="font-size:40px;margin-bottom:8px;">🛒</div>
+            <h2 style="color:#fff;margin:0;font-size:20px;">You\'re registered!</h2>
+            <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:14px;">Child Spree 2026 · Davis Education Foundation</p>
+          </div>
+          <div style="background:#f9f9f9;padding:28px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:15px;color:#333;">Hi ${vol.firstName},</p>
+            <p style="font-size:14px;color:#555;line-height:1.7;">Thank you for signing up to volunteer at Child Spree 2026! You\'ll be shopping for one child — someone who needs it and deserves it — at Kohl\'s in Layton on the first Friday of August.</p>
+            <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:14px 18px;margin:20px 0;font-size:13px;color:#166534;">
+              <strong>What happens next:</strong> The DEF team will send you more details as the event approaches. Make sure to keep an eye on your email and texts.
+            </div>
+            <p style="font-size:13px;color:#555;">Questions? Reply to this email.</p>
+            <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
+            <p style="font-size:11px;color:#999;">Davis Education Foundation · Child Spree 2026 · daviskids.org</p>
+          </div>
+        </div>
+      `,
+    });
+  }
+}
