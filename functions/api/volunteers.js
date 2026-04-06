@@ -49,10 +49,10 @@ export async function onRequestPost(context) {
 
   const id = generateId();
   await env.DB.prepare(`
-    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, shirt_size, early_arrival, experience, hear_about, sms_opt_in)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, shirt_size, store_location, early_arrival, experience, hear_about, sms_opt_in)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(id, body.firstName, body.lastName, body.email||null, body.phone||null,
-    body.organization||null, body.groupType||'Individual', body.shirtSize||null,
+    body.organization||null, body.groupType||'Individual', body.shirtSize||null, body.storeLocation||null,
     body.earlyArrival?1:0, body.experience||null, body.hearAbout||null,
     body.smsOptIn!==false?1:0
   ).run();
