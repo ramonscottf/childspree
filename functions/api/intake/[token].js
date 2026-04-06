@@ -46,10 +46,10 @@ export async function onRequestPost(context) {
 
   const intakeId = generateId();
   await env.DB.prepare(`
-    INSERT INTO parent_intake (id, nomination_id, shirt_size, pant_size, shoe_size,
+    INSERT INTO parent_intake (id, nomination_id, gender, department, shirt_size, pant_size, shoe_size,
       favorite_colors, avoid_colors, allergies, preferences)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(intakeId, nom.id, body.shirtSize, body.pantSize, body.shoeSize,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(intakeId, nom.id, body.gender||null, body.department||null, body.shirtSize, body.pantSize, body.shoeSize,
     body.favoriteColors||null, body.avoidColors||null, body.allergies||null, body.preferences||null
   ).run();
 
@@ -63,7 +63,7 @@ export async function onRequestPost(context) {
     childFirst: nom.child_first, childLast: nom.child_last,
     school: nom.school, grade: nom.grade,
   }, {
-    shirtSize: body.shirtSize, pantSize: body.pantSize, shoeSize: body.shoeSize,
+    gender: body.gender, department: body.department, shirtSize: body.shirtSize, pantSize: body.pantSize, shoeSize: body.shoeSize,
     favoriteColors: body.favoriteColors, avoidColors: body.avoidColors,
     allergies: body.allergies, preferences: body.preferences, videoUploaded: false,
   }));
