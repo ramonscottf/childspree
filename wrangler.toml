@@ -7,7 +7,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "childspree-db"
-database_id = "" # FILL AFTER: wrangler d1 create childspree-db
+database_id = "5091ef2f-c4bc-4759-872f-1828fde2ec18"
 
 # R2 Bucket — for parent video uploads
 [[r2_buckets]]
