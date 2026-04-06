@@ -38,7 +38,7 @@ const inputStyle = {
   background: '#FAFBFC', outline: 'none', boxSizing: 'border-box',
 };
 const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, letterSpacing: 0.3 };
-const sectionTitle = { fontSize: 11, fontWeight: 700, color: '#1B3A4B', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12, borderBottom: '2px solid #E2E8F0', paddingBottom: 6 };
+const sectionTitle = { fontSize: 11, fontWeight: 700, color: '#1B3A4B', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12, borderBottom: '2px solid #F9A8C9', paddingBottom: 6 };
 
 // ─── API helpers ───
 async function api(path, options = {}) {
@@ -72,12 +72,16 @@ function StatusBadge({ status }) {
 
 function Header({ subtitle }) {
   return (
-    <div style={{ background: '#1B3A4B', color: '#fff', padding: '16px 16px 14px', textAlign: 'center' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6, marginBottom: 2 }}>
-        Davis Education Foundation
-      </div>
+    <div style={{ background: '#1B3A4B', color: '#fff', padding: '14px 16px 12px', textAlign: 'center' }}>
+      <img src="/logo.png" alt="Child Spree" style={{
+        width: 72, height: 72, borderRadius: '50%', objectFit: 'cover',
+        border: '3px solid rgba(255,255,255,0.2)', marginBottom: 6,
+      }} />
       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 800 }}>
         Child Spree 2026
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 1.5, textTransform: 'uppercase', opacity: 0.5, marginTop: 2 }}>
+        Davis Education Foundation
       </div>
       {subtitle && <div style={{ fontSize: 12, opacity: 0.5, marginTop: 2 }}>{subtitle}</div>}
     </div>
@@ -119,7 +123,7 @@ function NominationForm() {
           Thank you for advocating for this child. The DEF team will review and reach out to the family.
         </p>
         <button onClick={() => { setSubmitted(false); setForm({ childFirst: '', childLast: '', school: '', grade: '', nominatorName: '', nominatorRole: 'Teacher', nominatorEmail: '', parentName: '', parentPhone: '', parentEmail: '', reason: '', siblings: '', additionalNotes: '' }); }}
-          style={{ background: '#1B3A4B', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          style={{ background: '#E8548C', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
           Nominate Another Child
         </button>
       </div>
@@ -128,9 +132,16 @@ function NominationForm() {
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px' }}>
+      {/* Hero */}
+      <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+        <img src="/hero.webp" alt="Kids with backpacks" style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+      </div>
+
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1B3A4B', marginBottom: 4 }}>Nominate a Child</h2>
-        <p style={{ color: '#94A3B8', fontSize: 13 }}>Back-to-school clothing for students in need</p>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1B3A4B', marginBottom: 6 }}>Nominate a Child</h2>
+        <p style={{ color: '#64748B', fontSize: 14, lineHeight: 1.5, maxWidth: 340, margin: '0 auto' }}>
+          Be the reason a child walks into school with confidence.
+        </p>
       </div>
 
       <div style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 10, padding: '12px 14px', marginBottom: 24, fontSize: 13, color: '#0C4A6E', lineHeight: 1.5 }}>
@@ -215,9 +226,9 @@ function NominationForm() {
       </div>
 
       <button onClick={handleSubmit} disabled={submitting} style={{
-        width: '100%', padding: 14, background: submitting ? '#94A3B8' : '#1B3A4B', color: '#fff',
+        width: '100%', padding: 14, background: submitting ? '#94A3B8' : '#E8548C', color: '#fff',
         border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting ? 'default' : 'pointer',
-        marginTop: 8, letterSpacing: 0.3, boxShadow: '0 2px 8px rgba(27,58,75,0.25)',
+        marginTop: 8, letterSpacing: 0.3, boxShadow: '0 2px 8px rgba(232,84,140,0.3)',
       }}>
         {submitting ? 'Submitting...' : 'Submit Nomination'}
       </button>
@@ -281,7 +292,7 @@ function AdminDashboard() {
         {['all','pending','approved','sent','complete'].map(k => (
           <button key={k} onClick={() => setFilter(k)} style={{
             padding: '6px 12px', borderRadius: 20, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-            background: filter === k ? '#1B3A4B' : '#F1F5F9', color: filter === k ? '#fff' : '#64748B',
+            background: filter === k ? '#E8548C' : '#F1F5F9', color: filter === k ? '#fff' : '#64748B',
           }}>
             {k.charAt(0).toUpperCase() + k.slice(1)}
           </button>
@@ -478,9 +489,9 @@ function ParentIntake({ token }) {
       </div>
 
       <button onClick={handleSubmit} disabled={submitting} style={{
-        width: '100%', padding: 14, background: submitting ? '#94A3B8' : '#1B3A4B', color: '#fff',
+        width: '100%', padding: 14, background: submitting ? '#94A3B8' : '#E8548C', color: '#fff',
         border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting ? 'default' : 'pointer',
-        boxShadow: '0 2px 8px rgba(27,58,75,0.25)',
+        boxShadow: '0 2px 8px rgba(232,84,140,0.3)',
       }}>
         {submitting ? 'Submitting...' : 'Submit Sizes & Preferences'}
       </button>
@@ -541,7 +552,7 @@ export default function App() {
             opacity: route === item.key || (item.key === '#/' && route === '#/') ? 1 : 0.5,
           }}>
             <span style={{ fontSize: 20 }}>{item.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: '#1B3A4B', textTransform: 'uppercase' }}>{item.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: route === item.key || (item.key === '#/' && route === '#/') ? '#E8548C' : '#94A3B8', textTransform: 'uppercase' }}>{item.label}</span>
           </button>
         ))}
       </div>
