@@ -162,7 +162,7 @@ function LandingPage({ navigate }) {
         <div style={{ fontSize:11, fontWeight:700, color:C.pinkLight, letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Make it possible</div>
         <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?'1.8rem':'2.5rem', color:'#fff', margin:'0 0 16px' }}>Sponsor a Student</h2>
         <p style={{ color:'rgba(255,255,255,0.65)', fontSize:isMobile?14:16, lineHeight:1.7, maxWidth:460, margin:'0 auto 28px' }}>$150 covers one child — head to toe. New shoes. New clothes. New backpack. One donation. One complete, unforgettable morning.</p>
-        <a href="https://daviskids.org/events-child-spree" target="_blank" rel="noreferrer" style={{ display:'inline-block', padding:'16px 36px', background:C.pink, color:'#fff', borderRadius:10, fontSize:16, fontWeight:700, textDecoration:'none', boxShadow:'0 4px 20px rgba(232,84,140,0.4)' }}>Sponsor a Child — $150</a>
+        <a href="https://dsdgive.net/event/2" target="_blank" rel="noreferrer" style={{ display:'inline-block', padding:'16px 36px', background:C.pink, color:'#fff', borderRadius:10, fontSize:16, fontWeight:700, textDecoration:'none', boxShadow:'0 4px 20px rgba(232,84,140,0.4)' }}>Sponsor a Child — $150</a>
       </div>
       <div style={{ background:'#0f2634', padding:'28px', textAlign:'center' }}>
         <p style={{ color:'rgba(255,255,255,0.3)', fontSize:12, margin:'0 0 6px' }}>Child Spree 2026 · Davis Education Foundation · <a href="https://daviskids.org/events-child-spree" target="_blank" rel="noreferrer" style={{ color:'rgba(255,255,255,0.4)' }}>daviskids.org</a></p>
@@ -241,7 +241,7 @@ function NominationForm() {
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', shirtSize:'', earlyArrival:false, experience:'', hearAbout:'', smsOptIn:true });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', shirtSize:'', earlyArrival:false, storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -300,6 +300,12 @@ function VolunteerForm() {
             </div>
           </Field>
           <Field label="Any experience with shopping for or working with kids?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — helps us match you"/></Field>
+          <Field label="Preferred Kohl's location *">
+            <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
+              <option value="">Select a store...</option>
+              {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </Field>
           <Field label="How did you hear about Child Spree?"><select style={{...inp(),appearance:'auto'}} value={form.hearAbout} onChange={e=>upd('hearAbout',e.target.value)}><option value="">Select...</option>{['School or teacher','DEF newsletter','Social media','Friend or coworker','My employer','Church','Other'].map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
           <label style={{ display:'flex', alignItems:'flex-start', gap:8, cursor:'pointer', marginTop:8 }}>
             <input type="checkbox" checked={form.smsOptIn} onChange={e=>upd('smsOptIn',e.target.checked)} style={{ marginTop:2, accentColor:C.pink }}/>
@@ -488,7 +494,7 @@ function ParentIntake({ token }) {
   const [child, setChild] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState({ shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'' });
+  const [form, setForm] = useState({ gender:'', department:'', shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'' });
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form');
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
@@ -515,6 +521,21 @@ function ParentIntake({ token }) {
       {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
       <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
         <div>
+          <p style={secHead(isMobile)}>About {child?.childFirst}</p>
+          <Row cols={2} gap={10}>
+            <Field label="Gender">
+              <select style={{...inp(),appearance:'auto'}} value={form.gender} onChange={e=>upd('gender',e.target.value)}>
+                <option value="">Select...</option>
+                {['Girl','Boy','Non-binary / Other'].map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </Field>
+            <Field label="Preferred shopping department">
+              <select style={{...inp(),appearance:'auto'}} value={form.department} onChange={e=>upd('department',e.target.value)}>
+                <option value="">Select...</option>
+                {["Girls' section","Boys' section","Either is fine"].map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
+            </Field>
+          </Row>
           <p style={secHead(isMobile)}>Clothing Sizes</p>
           <Row cols={3} gap={8}><Field label="Shirt *"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Size</option>{SHIRT_SIZES.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Pants *"><select style={{...inp(),appearance:'auto'}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}><option value="">Size</option>{PANT_SIZES.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Shoe *"><input style={inp()} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)} placeholder="e.g., 4Y"/></Field></Row>
         </div>
