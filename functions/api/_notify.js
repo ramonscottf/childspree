@@ -7,6 +7,14 @@ export async function sendSMS(env, to, body) {
   if (phone.length < 10) return null;
   const e164 = phone.startsWith('1') ? `+${phone}` : `+1${phone}`;
 
+  // Use MessagingServiceSid if available (handles A2P compliance), else fall back to From number
+  const params = { To: e164, Body: body };
+  if (env.TWILIO_MESSAGING_SERVICE_SID) {
+    params.MessagingServiceSid = env.TWILIO_MESSAGING_SERVICE_SID;
+  } else {
+    params.From = env.TWILIO_FROM_NUMBER || '+18019236121';
+  }
+
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`,
     {
@@ -15,11 +23,7 @@ export async function sendSMS(env, to, body) {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`),
       },
-      body: new URLSearchParams({
-        To: e164,
-        From: env.TWILIO_FROM_NUMBER || '+18019236121',
-        Body: body,
-      }),
+      body: new URLSearchParams(params),
     }
   );
   const data = await res.json();
@@ -244,3 +248,4 @@ export async function notifyVolunteerRegistered(env, vol) {
     });
   }
 }
+
