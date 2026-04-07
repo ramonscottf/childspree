@@ -47,10 +47,11 @@ export async function onRequestPost(context) {
   const intakeId = generateId();
   await env.DB.prepare(`
     INSERT INTO parent_intake (id, nomination_id, gender, department, shirt_size, pant_size, shoe_size,
-      favorite_colors, avoid_colors, allergies, preferences)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      favorite_colors, avoid_colors, allergies, preferences, parent_consent, language)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(intakeId, nom.id, body.gender||null, body.department||null, body.shirtSize, body.pantSize, body.shoeSize,
-    body.favoriteColors||null, body.avoidColors||null, body.allergies||null, body.preferences||null
+    body.favoriteColors||null, body.avoidColors||null, body.allergies||null, body.preferences||null,
+    body.parentConsent ? 1 : 0, body.language||"en"
   ).run();
 
   const now = new Date().toISOString();
