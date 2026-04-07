@@ -124,13 +124,17 @@ export async function notifyNewNomination(env, nom) {
 export async function notifyParentIntakeReady(env, nom) {
   const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
   const intakeUrl = `https://childspree.org/#/intake/${nom.parentToken}`;
+  const lang = nom.lang || 'en';
+  const isEs = lang === 'es';
 
   const siblingCount = nom.siblingCount || 0;
   const familyNote = siblingCount > 0
     ? ` We've also received nominations for ${siblingCount} other child${siblingCount > 1 ? 'ren' : ''} in your family${nom.siblingNames ? ' (' + nom.siblingNames + ')' : ''}. Each will receive their own link.`
     : '';
 
-  const smsBody = `Hi ${nom.parentName}! ${nom.childFirst} has been selected for Child Spree 2026 — brand new back-to-school clothes from Davis Education Foundation.${familyNote} Fill out sizes here (2 min): ${intakeUrl} Questions? Reply to this text. Reply STOP to opt out.`;
+  const smsBody = isEs
+    ? `¡Hola ${nom.parentName}! ${nom.childFirst} ha sido seleccionado/a para Child Spree 2026 — ropa nueva de regreso a clases de la Fundación de Educación Davis.${familyNote ? familyNote.replace('We\'ve also received','También recibimos').replace('other child','otro niño/a').replace('children','niños/as').replace('in your family','de su familia').replace('Each will receive their own link.','Cada uno recibirá su propio enlace.') : ''} Complete las tallas aquí (2 min): ${intakeUrl} ¿Preguntas? Responda a este mensaje. Responda STOP para cancelar.`
+    : `Hi ${nom.parentName}! ${nom.childFirst} has been selected for Child Spree 2026 — brand new back-to-school clothes from Davis Education Foundation.${familyNote} Fill out sizes here (2 min): ${intakeUrl} Questions? Reply to this text. Reply STOP to opt out.`;
 
   const emailHtml = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
@@ -144,11 +148,11 @@ export async function notifyParentIntakeReady(env, nom) {
         <p style="font-size:14px;color:#555;line-height:1.7;">We're excited to let you know that <strong>${nom.childFirst}</strong> has been selected to receive brand new back-to-school clothing through the Davis Education Foundation's Child Spree program.</p>
         <p style="font-size:14px;color:#555;line-height:1.7;">A volunteer will shop specifically for ${nom.childFirst}. To make sure everything fits perfectly, please fill out this quick form — it takes about 2 minutes:</p>
         <div style="text-align:center;margin:28px 0;">
-          <a href="${intakeUrl}" style="background:#E8548C;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">Fill Out ${nom.childFirst}'s Sizes →</a>
+          <a href="${intakeUrl}" style="background:#E8548C;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">${isEs ? `Completar las tallas de ${nom.childFirst} →` : `Fill Out ${nom.childFirst}'s Sizes →`}</a>
         </div>
         <p style="font-size:13px;color:#888;text-align:center;">This link is unique to your family. All information is kept strictly confidential.</p>
         <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
-        <p style="font-size:13px;color:#555;">Questions? Reply to this email or contact us at <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
+        <p style="font-size:13px;color:#555;">${isEs ? '¿Preguntas? Responda a este correo o contáctenos en' : 'Questions? Reply to this email or contact us at'} <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
         <p style="font-size:11px;color:#999;margin-top:16px;">Davis Education Foundation · Child Spree 2026 · daviskids.org</p>
       </div>
     </div>
@@ -160,7 +164,7 @@ export async function notifyParentIntakeReady(env, nom) {
     await sendEmail(env, {
       to: nom.parentEmail,
       replyTo: adminEmails,
-      subject: `${nom.childFirst} has been selected for Child Spree 2026 🎒`,
+      subject: isEs ? `¡${nom.childFirst} ha sido seleccionado/a para Child Spree 2026! 🎒` : `${nom.childFirst} has been selected for Child Spree 2026 🎒`,
       html: emailHtml,
     });
   }
@@ -257,8 +261,9 @@ export async function notifyVolunteerRegistered(env, vol) {
 
 
 // ─── Family intake — one email/SMS with ALL children's links ───────────────
-export async function notifyParentFamilyIntakeReady(env, { parentName, parentPhone, parentEmail, children }) {
+export async function notifyParentFamilyIntakeReady(env, { parentName, parentPhone, parentEmail, children, lang }) {
   const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const isEs = (lang || 'en') === 'es';
   const count = children.length;
   const firstName = children[0].childFirst;
 
@@ -271,7 +276,9 @@ export async function notifyParentFamilyIntakeReady(env, { parentName, parentPho
 
   // SMS — short with all links
   const linkList = childLinks.map(c => `${c.name}: ${c.url}`).join(' | ');
-  const smsBody = `Hi ${parentName}! ${count} children in your family have been selected for Child Spree 2026 🎒 Each needs their own size form (2 min each): ${linkList} Reply STOP to opt out.`;
+  const smsBody = isEs
+    ? `¡Hola ${parentName}! ${count} niños/as de su familia han sido seleccionados para Child Spree 2026 🎒 Cada uno necesita su propio formulario de tallas (2 min c/u): ${linkList} Responda STOP para cancelar.`
+    : `Hi ${parentName}! ${count} children in your family have been selected for Child Spree 2026 🎒 Each needs their own size form (2 min each): ${linkList} Reply STOP to opt out.`;
 
   // Email — one per family, all links in one message
   const linksHtml = childLinks.map(c => `
@@ -288,20 +295,24 @@ export async function notifyParentFamilyIntakeReady(env, { parentName, parentPho
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
       <div style="background:#1B3A4B;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
         <div style="font-size:40px;margin-bottom:8px;">🎒</div>
-        <h2 style="color:#fff;margin:0;font-size:20px;">${count} children selected for Child Spree 2026!</h2>
+        <h2 style="color:#fff;margin:0;font-size:20px;">${isEs ? `¡${count} niños/as seleccionados para Child Spree 2026!` : `${count} children selected for Child Spree 2026!`}</h2>
         <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:14px;">Davis Education Foundation</p>
       </div>
       <div style="background:#f9f9f9;padding:28px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
-        <p style="font-size:15px;color:#333;">Dear ${parentName},</p>
-        <p style="font-size:14px;color:#555;line-height:1.7;">We're excited to let you know that <strong>${count} children</strong> in your family have been selected to receive brand new back-to-school clothing through Child Spree 2026!</p>
-        <p style="font-size:14px;color:#555;line-height:1.7;">Each child has their own size form. Please fill out one form per child — it takes about 2 minutes each. A volunteer will shop specifically for each of them.</p>
+        <p style="font-size:15px;color:#333;">${isEs ? `Estimado/a ${parentName},` : `Dear ${parentName},`}</p>
+        <p style="font-size:14px;color:#555;line-height:1.7;">${isEs
+          ? `Nos complace informarle que <strong>${count} niños/as</strong> de su familia han sido seleccionados para recibir ropa nueva de regreso a clases a través de Child Spree 2026.`
+          : `We're excited to let you know that <strong>${count} children</strong> in your family have been selected to receive brand new back-to-school clothing through Child Spree 2026!`}</p>
+        <p style="font-size:14px;color:#555;line-height:1.7;">${isEs
+          ? `Cada niño/a tiene su propio formulario de tallas. Complete un formulario por niño/a — toma unos 2 minutos cada uno. Un voluntario comprará ropa específicamente para cada uno de ellos.`
+          : `Each child has their own size form. Please fill out one form per child — it takes about 2 minutes each. A volunteer will shop specifically for each of them.`}</p>
         <div style="margin:24px 0;">
           ${linksHtml}
         </div>
         <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 16px;font-size:13px;color:#166534;margin-bottom:20px;">
           ✅ Each link is unique to that child. All information is kept strictly confidential.
         </div>
-        <p style="font-size:13px;color:#555;">Questions? Reply to this email or contact us at <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
+        <p style="font-size:13px;color:#555;">${isEs ? '¿Preguntas? Responda a este correo o contáctenos en' : 'Questions? Reply to this email or contact us at'} <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
         <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
         <p style="font-size:11px;color:#999;">Davis Education Foundation · Child Spree 2026 · daviskids.org</p>
       </div>
@@ -313,7 +324,7 @@ export async function notifyParentFamilyIntakeReady(env, { parentName, parentPho
     await sendEmail(env, {
       to: parentEmail,
       replyTo: adminEmails,
-      subject: `${count} children selected for Child Spree 2026 🎒`,
+      subject: isEs ? `¡${count} niños/as seleccionados para Child Spree 2026! 🎒` : `${count} children selected for Child Spree 2026 🎒`,
       html: emailHtml,
     });
   }
