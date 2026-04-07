@@ -14,6 +14,156 @@ const PHOTOS = [
   "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/81ef2dc4-cfcb-4687-aa20-03bf329972c8/child-spree-volunteer-helping-shopper-browse.jpg?disposition=inline",
   "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/ca2263e5-c82c-4a94-bb70-46d64545058b/child-spree-two-volunteers-smiling.jpg?disposition=inline",
 ];
+
+// ─── TRANSLATIONS ─────────────────────────────────────────────────────────────
+const LANG = {
+  en: {
+    // Nav
+    home:'Home', nominate:'Nominate', volunteer:'Volunteer', admin:'Admin', portal:'My Portal',
+    // Landing
+    sponsorBtn:'Sponsor a Child — $150',
+    nominateBtn:'Nominate a Child →',
+    volunteerBtn:'Sign Up to Volunteer →',
+    // Intake
+    intakeTitle:'Sizes for', intakeSubtitle:'A volunteer will shop brand new clothes for your child. Takes about 2 minutes.',
+    intakeConfidential:'Everything shared here is confidential and used only for shopping.',
+    aboutTitle:'About', clothingSizes:'Clothing Sizes',
+    genderLabel:'Gender', genderGirl:'Girl', genderBoy:'Boy', genderOther:'Non-binary / Other',
+    deptLabel:'Preferred shopping department',
+    deptGirls:"Girls' section", deptBoys:"Boys' section", deptEither:'Either is fine',
+    shirtLabel:'Shirt *', pantLabel:'Pants *', shoeLabel:'Shoe *',
+    prefsTitle:'Preferences', prefsOptional:'optional',
+    colorsLabel:'Favorite colors, styles, or characters?',
+    colorsPlaceholder:'e.g., Blue, dinosaurs, soccer',
+    avoidLabel:'Colors or styles to avoid?',
+    avoidPlaceholder:'e.g., No pink, no ruffles',
+    sensoryLabel:'Allergies or sensory needs?',
+    sensoryPlaceholder:'e.g., No wool, needs soft fabrics',
+    notesLabel:'Anything else?',
+    consentLabel:'I give permission for my child to participate in Child Spree 2026, and agree that the information I provide will be used by volunteers to shop for my child.',
+    consentRequired:'Please check the consent box to continue.',
+    submitIntake:'Next — Add a Video (optional) →',
+    submitIntakeSaving:'Saving...',
+    // Video
+    videoTitle:'Optional: Record a short video',
+    videoSubtitle1:'30–60 seconds. Tell us', videoSubtitle2:"'s favorite color, what they love, the shoes they've been dreaming about!",
+    recordNow:'Record now', uploadVideo:'Upload a video',
+    usesCamera:'Uses your camera', fromPhone:'From your phone',
+    skipVideo:'Skip — no video',
+    startRecording:'Start Recording', stopReview:'Stop & Review',
+    goBack:'← Back',
+    previewLabel:'Preview',
+    retake:'↩ Redo', looksGood:'✓ Looks good — Upload',
+    skipDontInclude:"Skip — don't include video",
+    uploadingVideo:'Uploading your video...',
+    videoReceived:'Video received!',
+    videoReceivedMsg:'A volunteer will watch this before they shop for', videoReceivedMsg2:'. It makes a huge difference.',
+    allDone:'All done ✓',
+    // Done
+    intakeDoneTitle:'All Done!', intakeDoneMsg:'We have everything we need for',
+    intakeDoneMsg2:'. A volunteer will shop brand new clothes just for them.',
+    // Portal
+    portalTitle:'Family Advocate Portal', portalSubtitle:'Track your nominated children',
+    portalEmailLabel:'Your school email address', portalEmailPlaceholder:'you@davis.k12.ut.us',
+    portalLogin:'View My Dashboard', portalLoggingIn:'Looking up your nominations...',
+    portalNotFound:"No nominations found for this email. Please use the exact email you used when submitting nominations.",
+    portalWelcome:'Welcome back,',
+    portalTotal:'Total Nominated', portalIntake:'Intake Complete',
+    portalConsent:'Consented', portalNeedsVideo:'Needs Video',
+    portalAwaiting:'Awaiting Parent', portalPending:'Pending Review',
+    portalNeedsVideoTitle:'🎬 Children Who Still Need a Video',
+    portalNeedsVideoEmpty:'All children who completed intake have recorded a video.',
+    portalAllTitle:'All Nominated Children',
+    portalChildCol:'Child', portalStatusCol:'Status', portalIntakeCol:'Parent Intake',
+    portalConsentCol:'Consent', portalVideoCol:'Video',
+    portalIntakeDone:'✅ Complete', portalIntakePending:'⏳ Not yet',
+    portalConsentYes:'✅ Yes', portalConsentNo:'—',
+    portalVideoYes:'🎬 Recorded', portalVideoNeeded:'⚠️ Needed',
+    portalLogout:'Log out',
+  },
+  es: {
+    // Nav
+    home:'Inicio', nominate:'Nominar', volunteer:'Voluntario', admin:'Admin', portal:'Mi Portal',
+    // Landing
+    sponsorBtn:'Patrocinar un Niño — $150',
+    nominateBtn:'Nominar a un Niño →',
+    volunteerBtn:'Inscribirse como Voluntario →',
+    // Intake
+    intakeTitle:'Tallas para', intakeSubtitle:'Un voluntario comprará ropa nueva para su hijo/a. Toma unos 2 minutos.',
+    intakeConfidential:'Todo lo que comparte aquí es confidencial y se usará únicamente para las compras.',
+    aboutTitle:'Sobre', clothingSizes:'Tallas de Ropa',
+    genderLabel:'Género', genderGirl:'Niña', genderBoy:'Niño', genderOther:'No binario / Otro',
+    deptLabel:'Departamento preferido para compras',
+    deptGirls:'Sección de niñas', deptBoys:'Sección de niños', deptEither:'Cualquiera está bien',
+    shirtLabel:'Camiseta *', pantLabel:'Pantalón *', shoeLabel:'Zapato *',
+    prefsTitle:'Preferencias', prefsOptional:'opcional',
+    colorsLabel:'¿Colores favoritos, estilos o personajes?',
+    colorsPlaceholder:'Ej: Azul, dinosaurios, fútbol',
+    avoidLabel:'¿Colores o estilos que evitar?',
+    avoidPlaceholder:'Ej: Sin rosado, sin volantes',
+    sensoryLabel:'¿Alergias o necesidades sensoriales?',
+    sensoryPlaceholder:'Ej: Sin lana, necesita telas suaves',
+    notesLabel:'¿Algo más?',
+    consentLabel:'Doy permiso para que mi hijo/a participe en Child Spree 2026, y acepto que la información que proporcione sea utilizada por los voluntarios para hacer las compras para mi hijo/a.',
+    consentRequired:'Por favor marque la casilla de consentimiento para continuar.',
+    submitIntake:'Siguiente — Agregar un Video (opcional) →',
+    submitIntakeSaving:'Guardando...',
+    // Video
+    videoTitle:'Opcional: Grabe un video corto',
+    videoSubtitle1:'30–60 segundos. ¡Cuéntenos el color favorito de', videoSubtitle2:', lo que le gusta, los zapatos con los que ha soñado!',
+    recordNow:'Grabar ahora', uploadVideo:'Subir un video',
+    usesCamera:'Usa su cámara', fromPhone:'Desde su teléfono',
+    skipVideo:'Omitir — sin video',
+    startRecording:'Iniciar Grabación', stopReview:'Detener y Revisar',
+    goBack:'← Atrás',
+    previewLabel:'Vista previa',
+    retake:'↩ Repetir', looksGood:'✓ Se ve bien — Subir',
+    skipDontInclude:'Omitir — no incluir video',
+    uploadingVideo:'Subiendo su video...',
+    videoReceived:'¡Video recibido!',
+    videoReceivedMsg:'Un voluntario verá esto antes de comprar para', videoReceivedMsg2:'. Hace una gran diferencia.',
+    allDone:'¡Listo! ✓',
+    // Done
+    intakeDoneTitle:'¡Todo Listo!', intakeDoneMsg:'Tenemos todo lo que necesitamos para',
+    intakeDoneMsg2:'. Un voluntario comprará ropa nueva específicamente para su hijo/a.',
+    // Portal (Spanish — same labels, FA are school staff)
+    portalTitle:'Portal del Coordinador Familiar', portalSubtitle:'Seguimiento de niños nominados',
+    portalEmailLabel:'Su correo electrónico escolar', portalEmailPlaceholder:'usted@davis.k12.ut.us',
+    portalLogin:'Ver Mi Panel', portalLoggingIn:'Buscando sus nominaciones...',
+    portalNotFound:'No se encontraron nominaciones para este correo. Use el correo exacto con el que envió las nominaciones.',
+    portalWelcome:'Bienvenido/a,',
+    portalTotal:'Total Nominados', portalIntake:'Formulario Completo',
+    portalConsent:'Con Consentimiento', portalNeedsVideo:'Necesita Video',
+    portalAwaiting:'Esperando al Padre', portalPending:'Pendiente de Revisión',
+    portalNeedsVideoTitle:'🎬 Niños que Aún Necesitan Video',
+    portalNeedsVideoEmpty:'Todos los niños que completaron el formulario han grabado un video.',
+    portalAllTitle:'Todos los Niños Nominados',
+    portalChildCol:'Niño/a', portalStatusCol:'Estado', portalIntakeCol:'Formulario del Padre',
+    portalConsentCol:'Consentimiento', portalVideoCol:'Video',
+    portalIntakeDone:'✅ Completo', portalIntakePending:'⏳ Pendiente',
+    portalConsentYes:'✅ Sí', portalConsentNo:'—',
+    portalVideoYes:'🎬 Grabado', portalVideoNeeded:'⚠️ Necesario',
+    portalLogout:'Cerrar sesión',
+  },
+};
+
+function useLang() {
+  const [lang, setLangState] = useState(() => localStorage.getItem('cs-lang') || 'en');
+  const setLang = (l) => { setLangState(l); localStorage.setItem('cs-lang', l); };
+  const t = (key) => LANG[lang]?.[key] || LANG.en[key] || key;
+  return { lang, setLang, t };
+}
+
+function LangToggle({ lang, setLang, style }) {
+  return (
+    <button onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
+      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:20, cursor:'pointer', fontSize:12, fontWeight:700, color:'#fff', letterSpacing:0.5, ...style }}>
+      <span style={{ fontSize:14 }}>{lang === 'en' ? '🇲🇽' : '🇺🇸'}</span>
+      {lang === 'en' ? 'Español' : 'English'}
+    </button>
+  );
+}
+
 const C = { navy:'#1B3A4B', pink:'#E8548C', pinkLight:'#F9A8C9', bg:'#F8FAFC', card:'#fff', border:'#E2E8F0', text:'#1E293B', muted:'#64748B', light:'#94A3B8', green:'#059669', red:'#DC2626', amber:'#D97706', blue:'#2563EB' };
 const inp = (ex={}) => ({ width:'100%', padding:'10px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:"'DM Sans',sans-serif", background:'#FAFBFC', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s', color:C.text, ...ex });
 const lbl = { display:'block', fontSize:12, fontWeight:600, color:C.muted, marginBottom:4, letterSpacing:0.3 };
@@ -32,9 +182,12 @@ function StatusBadge({ status, vol }) {
 }
 
 function TopNav({ view, navigate }) {
+  const { t: navT } = useLang();
   const items = [
-    {key:'home',hash:'#/',label:'Home'},{key:'nominate',hash:'#/nominate',label:'Nominate'},
-    {key:'volunteer',hash:'#/volunteer',label:'Volunteer'},{key:'admin',hash:'#/admin',label:'Admin'},
+    {key:'home',hash:'#/',label:navT('home')},{key:'nominate',hash:'#/nominate',label:navT('nominate')},
+    {key:'volunteer',hash:'#/volunteer',label:navT('volunteer')},
+    {key:'portal',hash:'#/portal',label:navT('portal')},
+    {key:'admin',hash:'#/admin',label:navT('admin')},
   ];
   return (
     <nav style={{ background:C.navy, padding:'0 32px', display:'flex', alignItems:'center', position:'sticky', top:0, zIndex:50 }}>
@@ -65,7 +218,8 @@ function MobileHeader({ onHome }) {
   );
 }
 function MobileNav({ view, navigate }) {
-  const items = [{key:'home',hash:'#/',icon:'🏠',label:'Home'},{key:'nominate',hash:'#/nominate',icon:'📋',label:'Nominate'},{key:'volunteer',hash:'#/volunteer',icon:'🛒',label:'Volunteer'},{key:'admin',hash:'#/admin',icon:'⚙️',label:'Admin'}];
+  const { t: mnavT } = useLang();
+  const items = [{key:'home',hash:'#/',icon:'🏠',label:mnavT('home')},{key:'nominate',hash:'#/nominate',icon:'📋',label:mnavT('nominate')},{key:'volunteer',hash:'#/volunteer',icon:'🛒',label:mnavT('volunteer')},{key:'portal',hash:'#/portal',icon:'📋',label:mnavT('portal')},{key:'admin',hash:'#/admin',icon:'⚙️',label:mnavT('admin')}];
   return (
     <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'#fff', borderTop:`1px solid ${C.border}`, display:'flex', justifyContent:'space-around', padding:'8px 0 16px', boxShadow:'0 -2px 8px rgba(0,0,0,0.04)', zIndex:100 }}>
       {items.map(item => { const active=view===item.key; return (
@@ -340,7 +494,8 @@ function VolunteerForm() {
 }
 
 // ─── VIDEO CAPTURE ───
-function VideoCapture({ token, childFirst, onDone }) {
+function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
+  const { t } = useLang();
   const isMobile = useIsMobile();
   const [mode, setMode] = useState('choose'); // choose | camera | preview | uploading | done
   const [stream, setStream] = useState(null);
@@ -619,25 +774,27 @@ function VideoCapture({ token, childFirst, onDone }) {
 
 // ─── PARENT INTAKE ───
 function ParentIntake({ token }) {
+  const { lang, setLang, t } = useLang();
   const isMobile = useIsMobile();
   const [child, setChild] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState({ gender:'', department:'', shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'' });
+  const [form, setForm] = useState({ gender:'', department:'', shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'', parentConsent:false });
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form');
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
   useEffect(() => { (async()=>{ try{ const data=await api(`/intake/${token}`); setChild(data); if(data.alreadySubmitted)setStep('done'); }catch(err){setError(err.message);} setLoading(false); })(); }, [token]);
   const submit = async () => {
-    if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert('Please fill in shirt, pant, and shoe sizes.'); return; }
+    if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
+    if (!form.parentConsent) { alert(t('consentRequired')); return; }
     setSubmitting(true);
-    try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify(form)}); setStep('video'); } catch(err){setError(err.message);}
+    try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify({...form,language:lang})}); setStep('video'); } catch(err){setError(err.message);}
     setSubmitting(false);
   };
   if (loading) return <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>;
   if (error) return <div style={{ textAlign:'center', padding:60 }}><div style={{ fontSize:48, marginBottom:16 }}>🔒</div><p style={{ color:'#991B1B', fontSize:14 }}>{error}</p></div>;
   if (step === 'done') return <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}><div style={{ marginBottom:16 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:72,height:72}} /></div><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>All Done!</h2><p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto' }}>We have everything we need for {child?.childFirst}. A volunteer will shop brand new clothes just for them.</p></div>;
-  if (step === 'video') return <VideoCapture token={token} childFirst={child?.childFirst} onDone={()=>setStep('done')}/>;
+  if (step === 'video') return <VideoCapture token={token} childFirst={child?.childFirst} onDone={()=>setStep('done')} lang={lang}/>;
   const maxW = isMobile ? '100%' : 680;
   return (
     <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'20px 16px':'32px 40px' }}>
@@ -650,7 +807,7 @@ function ParentIntake({ token }) {
       {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
       <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
         <div>
-          <p style={secHead(isMobile)}>About {child?.childFirst}</p>
+          <p style={secHead(isMobile)}>{t('aboutTitle')} {child?.childFirst}</p>
           <Row cols={2} gap={10}>
             <Field label="Gender">
               <select style={{...inp(),appearance:'auto'}} value={form.gender} onChange={e=>upd('gender',e.target.value)}>
@@ -665,7 +822,7 @@ function ParentIntake({ token }) {
               </select>
             </Field>
           </Row>
-          <p style={secHead(isMobile)}>Clothing Sizes</p>
+          <p style={secHead(isMobile)}>{t('clothingSizes')}</p>
           <Row cols={3} gap={8}><Field label="Shirt *"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Size</option>{SHIRT_SIZES.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Pants *"><select style={{...inp(),appearance:'auto'}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}><option value="">Size</option>{PANT_SIZES.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Shoe *"><input style={inp()} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)} placeholder="e.g., 4Y"/></Field></Row>
         </div>
         <div>
@@ -675,8 +832,16 @@ function ParentIntake({ token }) {
           <Field label="Allergies or sensory needs?"><input style={inp()} value={form.allergies} onChange={e=>upd('allergies',e.target.value)} placeholder="e.g., No wool, needs soft fabrics"/></Field>
         </div>
       </div>
-      <button onClick={submit} disabled={submitting} style={{ width:'100%', padding:isMobile?14:16, background:submitting?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting?'default':'pointer', marginTop:24 }}>
-        {submitting ? 'Saving...' : 'Next — Add a Video (optional) →'}
+      {/* Consent checkbox */}
+      <div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'14px 16px', marginTop:20 }}>
+        <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
+          <input type="checkbox" checked={form.parentConsent} onChange={e=>upd('parentConsent',e.target.checked)}
+            style={{ marginTop:2, width:18, height:18, accentColor:C.pink, flexShrink:0, cursor:'pointer' }}/>
+          <span style={{ fontSize:13, color:'#0C4A6E', lineHeight:1.6 }}>{t('consentLabel')}</span>
+        </label>
+      </div>
+      <button onClick={submit} disabled={submitting||!form.parentConsent} style={{ width:'100%', padding:isMobile?14:16, background:submitting||!form.parentConsent?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting||!form.parentConsent?'default':'pointer', marginTop:12 }}>
+        {submitting ? t('submitIntakeSaving') : t('submitIntake')}
       </button>
     </div>
   );
@@ -1553,8 +1718,201 @@ export default function App() {
       {view === 'home' && <LandingPage navigate={navigate}/>}
       {view === 'nominate' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><NominationForm/></div>}
       {view === 'volunteer' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><VolunteerForm/></div>}
+      {view === 'portal' && <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto' }}><FAPortal/></div>}
       {view === 'admin' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><AdminDashboard/></div>}
       {isMobile && <MobileNav view={view} navigate={navigate}/>}
+    </div>
+  );
+}
+
+// ─── FA PORTAL ─────────────────────────────────────────────────────────────
+function FAPortal() {
+  const isMobile = useIsMobile();
+  const { lang, setLang, t } = useLang();
+  const [email, setEmail] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [error, setError] = useState(null);
+  const [session, setSession] = useState(() => {
+    const s = sessionStorage.getItem('fa-session');
+    return s ? JSON.parse(s) : null;
+  });
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {
+    setError(null); setLoggingIn(true);
+    try {
+      const res = await api('/portal/login', { method:'POST', body:JSON.stringify({ email }) });
+      const s = { token: res.token, email: res.email };
+      sessionStorage.setItem('fa-session', JSON.stringify(s));
+      setSession(s);
+    } catch(err) {
+      setError(err.message);
+    }
+    setLoggingIn(false);
+  };
+
+  const logout = () => { sessionStorage.removeItem('fa-session'); setSession(null); setDashboard(null); };
+
+  useEffect(() => {
+    if (!session) return;
+    setLoading(true);
+    api('/portal/dashboard', { headers:{ 'X-FA-Token': session.token } })
+      .then(d => setDashboard(d))
+      .catch(err => { if (err.message.includes('expired')) { logout(); } else { setError(err.message); } })
+      .finally(() => setLoading(false));
+  }, [session]);
+
+  const pad = isMobile ? '20px 16px' : '32px 40px';
+
+  // ── LOGIN ──
+  if (!session) return (
+    <div style={{ maxWidth:420, margin: isMobile?'48px auto 0':'80px auto 0', padding:'0 16px' }}>
+      <div style={{ background:C.card, borderRadius:16, padding:36, boxShadow:'0 4px 24px rgba(0,0,0,0.08)' }}>
+        <div style={{ textAlign:'center', marginBottom:28 }}>
+          <div style={{ fontSize:44, marginBottom:10 }}>📋</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:6 }}>{t('portalTitle')}</h2>
+          <p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>{t('portalSubtitle')}</p>
+        </div>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
+          <LangToggle lang={lang} setLang={setLang} style={{ background:'rgba(27,58,75,0.08)', border:'1px solid rgba(27,58,75,0.2)', color:C.navy }}/>
+        </div>
+        {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
+        <label style={lbl}>{t('portalEmailLabel')}</label>
+        <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
+          placeholder={t('portalEmailPlaceholder')} style={{...inp(), marginBottom:14, fontSize:15 }}/>
+        <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:14, background:loggingIn||!email.trim()?C.light:C.navy, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>
+          {loggingIn ? t('portalLoggingIn') : t('portalLogin')}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── LOADING ──
+  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading your dashboard...</div>;
+
+  // ── DASHBOARD ──
+  if (!dashboard) return null;
+
+  const { stats, nominations, nominatorName } = dashboard;
+  const needsVideo = nominations.filter(n => n.intake.submitted && !n.intake.videoRecorded);
+  const statusColor = { pending:'#F59E0B', approved:'#10B981', sent:'#3B82F6', complete:'#8B5CF6', declined:'#EF4444' };
+  const statusLabel = { pending:'Pending Review', approved:'Approved', sent:'Sent to Parent', complete:'Complete', declined:'Declined' };
+
+  return (
+    <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto', padding:pad }}>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <p style={{ color:C.muted, fontSize:13, margin:'0 0 2px' }}>{t('portalWelcome')}</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?20:26, color:C.navy, margin:0 }}>{nominatorName || session.email}</h2>
+        </div>
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          <LangToggle lang={lang} setLang={setLang} style={{ background:'rgba(27,58,75,0.08)', border:'1px solid rgba(27,58,75,0.2)', color:C.navy }}/>
+          <button onClick={logout} style={{ padding:'8px 16px', background:'#F1F5F9', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', color:C.muted }}>{t('portalLogout')}</button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(6,1fr)', gap:isMobile?8:12, marginBottom:28 }}>
+        {[
+          { label:t('portalTotal'), v:stats.total, c:C.navy },
+          { label:t('portalIntake'), v:stats.intakeComplete, c:C.green },
+          { label:t('portalConsent'), v:stats.consented, c:'#8B5CF6' },
+          { label:t('portalNeedsVideo'), v:stats.needsVideo, c:C.amber },
+          { label:t('portalAwaiting'), v:stats.awaitingParent, c:C.blue },
+          { label:t('portalPending'), v:stats.pending, c:C.muted },
+        ].slice(0, isMobile?3:6).map(s=>(
+          <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px', textAlign:'center', border:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:isMobile?22:30, fontWeight:800, color:s.c, lineHeight:1 }}>{s.v}</div>
+            <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.4, marginTop:4, lineHeight:1.3 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Needs Video Alert */}
+      {needsVideo.length > 0 && (
+        <div style={{ background:'#FFF7ED', border:`1.5px solid #FED7AA`, borderRadius:12, padding:'16px 20px', marginBottom:24 }}>
+          <h3 style={{ color:'#92400E', fontFamily:"'Playfair Display',serif", fontSize:16, margin:'0 0 12px' }}>{t('portalNeedsVideoTitle')}</h3>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {needsVideo.map(n => (
+              <div key={n.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', borderRadius:8, padding:'10px 14px', border:`1px solid #FED7AA` }}>
+                <div>
+                  <span style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</span>
+                  <span style={{ fontSize:12, color:C.muted, marginLeft:8 }}>{n.grade} · {n.school}</span>
+                </div>
+                <span style={{ fontSize:12, color:'#92400E', fontWeight:600 }}>⚠️ No video</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {needsVideo.length === 0 && stats.intakeComplete > 0 && (
+        <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:13, color:'#166534' }}>
+          ✅ {t('portalNeedsVideoEmpty')}
+        </div>
+      )}
+
+      {/* All nominations table */}
+      <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?16:18, color:C.navy, marginBottom:14 }}>{t('portalAllTitle')}</h3>
+      {nominations.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:C.light, fontSize:14 }}>No nominations yet.</div>
+      ) : !isMobile ? (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
+              {[t('portalChildCol'),t('portalStatusCol'),'School / Grade',t('portalIntakeCol'),t('portalConsentCol'),t('portalVideoCol')].map(h=>(
+                <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.4 }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {nominations.map(n => (
+                <tr key={n.id} style={{ borderBottom:`1px solid ${C.border}` }}>
+                  <td style={{ padding:'12px 14px' }}>
+                    <div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
+                    <div style={{ fontSize:11, color:C.light, marginTop:1 }}>{n.parentName} · {n.parentPhone||n.parentEmail||''}</div>
+                  </td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>
+                      {statusLabel[n.status]||n.status}
+                    </span>
+                  </td>
+                  <td style={{ padding:'12px 14px', fontSize:12, color:C.text }}>{n.school}<br/><span style={{ color:C.light }}>{n.grade}</span></td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? t('portalIntakeDone') : t('portalIntakePending')}</td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.consent ? t('portalConsentYes') : t('portalConsentNo')}</td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? (n.intake.videoRecorded ? t('portalVideoYes') : t('portalVideoNeeded')) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {nominations.map(n => (
+            <div key={n.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:'14px 16px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontWeight:700, color:C.navy, fontSize:15 }}>{n.childFirst} {n.childLast}</div>
+                <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>{statusLabel[n.status]||n.status}</span>
+              </div>
+              <div style={{ fontSize:12, color:C.muted, marginBottom:8 }}>{n.grade} · {n.school}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
+                  <div style={{ color:C.muted, marginBottom:2 }}>Intake</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? '✅' : '⏳'}</div>
+                </div>
+                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
+                  <div style={{ color:C.muted, marginBottom:2 }}>Consent</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.consent ? '✅' : '—'}</div>
+                </div>
+                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
+                  <div style={{ color:C.muted, marginBottom:2 }}>Video</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? (n.intake.videoRecorded ? '🎬' : '⚠️') : '—'}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
