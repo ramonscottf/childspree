@@ -338,3 +338,84 @@ export async function notifyParentFamilyIntakeReady(env, { parentName, parentPho
     `,
   });
 }
+
+// ─── FA Welcome — sent when admin creates FA account ─────────────────────
+export async function notifyFAWelcome(env, fa) {
+  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const portalUrl = `https://childspree.org/#/fa/${fa.portalToken}`;
+
+  if (fa.phone) {
+    await sendSMS(env, fa.phone,
+      `Hi ${fa.firstName}! You've been added as a Child Spree 2026 Family Advocate. Your portal: ${portalUrl} — bookmark it! Questions? Reply here.`
+    );
+  }
+  if (fa.email) {
+    await sendEmail(env, {
+      to: fa.email,
+      replyTo: adminEmails,
+      subject: `Welcome to Child Spree 2026 — Your Family Advocate Portal`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+          <div style="background:#1B3A4B;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
+            <div style="font-size:40px;margin-bottom:8px;">🏫</div>
+            <h2 style="color:#fff;margin:0;font-size:20px;">Welcome, ${fa.firstName}!</h2>
+            <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:14px;">Child Spree 2026 Family Advocate</p>
+          </div>
+          <div style="background:#f9f9f9;padding:28px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:15px;color:#333;">Hi ${fa.firstName},</p>
+            <p style="font-size:14px;color:#555;line-height:1.7;">You've been set up as a Family Advocate for Child Spree 2026. Your portal is where you'll track your nominated students, nudge parents to fill out their size forms, and record videos of the kids at school.</p>
+            <div style="text-align:center;margin:28px 0;">
+              <a href="${portalUrl}" style="background:#E8548C;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;">Open My Portal →</a>
+            </div>
+            <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;padding:14px 18px;font-size:13px;color:#0C4A6E;line-height:1.6;">
+              <strong>Bookmark this link</strong> — it's your personal portal. Share it with no one.
+            </div>
+            <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
+            <p style="font-size:11px;color:#999;">Davis Education Foundation · Child Spree 2026</p>
+          </div>
+        </div>
+      `,
+    });
+  }
+}
+
+// ─── FA Video Needed — sent when parent completes intake ─────────────────
+export async function notifyFAVideoNeeded(env, { fa, nom, intake }) {
+  const videoUrl = `https://childspree.org/#/fa/${fa.portal_token}/video/${nom.id}`;
+  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+
+  const smsBody = `Hi ${fa.first_name}! Great news — ${nom.parent_name} just filled out sizes for ${nom.child_first} ${nom.child_last}. Next step: record a short video of ${nom.child_first} at school. Here's your link: ${videoUrl} Reply STOP to opt out.`;
+
+  const emailHtml = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#1B3A4B;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">🎬 Time to record ${nom.child_first}'s video!</h2>
+      </div>
+      <div style="background:#f9f9f9;padding:24px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#333;margin:0 0 16px;">Hi ${fa.first_name} — the parent has filled out sizes. Here's what you need to know before recording:</p>
+        <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:20px;">
+          <tr><td style="padding:8px 12px;color:#666;width:120px;">Child</td><td style="padding:8px 12px;font-weight:700;color:#1B3A4B;">${nom.child_first} ${nom.child_last} · ${nom.grade}</td></tr>
+          ${intake.gender ? `<tr style="background:#fafafa;"><td style="padding:8px 12px;color:#666;">Gender</td><td style="padding:8px 12px;">${intake.gender}</td></tr>` : ''}
+          ${intake.shirt_size ? `<tr><td style="padding:8px 12px;color:#666;">Shirt</td><td style="padding:8px 12px;">${intake.shirt_size}</td></tr>` : ''}
+          ${intake.favorite_colors ? `<tr style="background:#fafafa;"><td style="padding:8px 12px;color:#666;">Loves</td><td style="padding:8px 12px;">${intake.favorite_colors}</td></tr>` : ''}
+        </table>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${videoUrl}" style="background:#E8548C;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">Record ${nom.child_first}'s Video →</a>
+        </div>
+        <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:14px 18px;font-size:13px;color:#92400E;line-height:1.6;">
+          <strong>Video tips:</strong> 30–60 seconds. Have them say their name, grade, favorite color, and anything they love — sports, characters, hobbies. A smile goes a long way for the volunteer who's about to shop for them!
+        </div>
+        <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
+        <p style="font-size:11px;color:#999;">Davis Education Foundation · Child Spree 2026</p>
+      </div>
+    </div>
+  `;
+
+  if (fa.phone) await sendSMS(env, fa.phone, smsBody);
+  if (fa.email) await sendEmail(env, {
+    to: fa.email,
+    replyTo: adminEmails,
+    subject: `🎬 Record ${nom.child_first}'s video — sizes are in!`,
+    html: emailHtml,
+  });
+}
