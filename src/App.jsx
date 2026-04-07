@@ -701,7 +701,7 @@ function AdminDashboard() {
       </div>
     </div>
   );
-  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }];
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'advocates', icon:'🏫', label:'Advocates' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
       <div style={{ display:'flex', gap:8, marginBottom:20 }}>
@@ -713,6 +713,7 @@ function AdminDashboard() {
       </div>
       {activeTab === 'nominations' && <NominationsTab isMobile={isMobile}/>}
       {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
+      {activeTab === 'advocates' && <AdvocatesTab isMobile={isMobile}/>}
     </div>
   );
 }
@@ -981,6 +982,528 @@ function VolunteersTab({ isMobile }) {
   );
 }
 
+
+// ─── FA VIDEO PAGE — recorded by advocate at school ──────────────────────────
+function FAVideoPage({ faToken, nominationId, navigate }) {
+  const isMobile = useIsMobile();
+  const [nom, setNom] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [mode, setMode] = useState('intro'); // intro | camera | preview | uploading | done
+  const [stream, setStream] = useState(null);
+  const [facingMode, setFacingMode] = useState('user');
+  const [recorder, setRecorder] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [countdown, setCountdown] = useState(0);
+  const liveRef = useRef(null);
+  const playbackRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const elapsedRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await api(`/fa/${faToken}`);
+        const n = data.nominations.find(n => n.id === nominationId);
+        if (!n) { setError('Nomination not found.'); } else { setNom(n); }
+      } catch(e) { setError(e.message); }
+      setLoading(false);
+    })();
+  }, [faToken, nominationId]);
+
+  const stopStream = useCallback(() => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    setStream(null);
+  }, [stream]);
+
+  useEffect(() => () => { stopStream(); clearInterval(timerRef.current); clearInterval(elapsedRef.current); }, []);
+
+  useEffect(() => {
+    if (stream && liveRef.current) {
+      liveRef.current.srcObject = stream;
+      liveRef.current.play().catch(() => {});
+    }
+  }, [stream, mode]);
+
+  useEffect(() => {
+    if (previewUrl && playbackRef.current) {
+      playbackRef.current.src = previewUrl;
+      playbackRef.current.load();
+    }
+  }, [previewUrl, mode]);
+
+  const startCamera = async (facing = facingMode) => {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); }
+    setError(null);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 1280 } },
+        audio: true,
+      });
+      setStream(s);
+      setMode('camera');
+    } catch { setError('Camera access denied.'); }
+  };
+
+  const flipCamera = async () => {
+    const next = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(next);
+    await startCamera(next);
+  };
+
+  const startRecording = () => {
+    if (!stream) return;
+    chunksRef.current = [];
+    const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+    const rec = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 2000000 });
+    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mt });
+      const url = URL.createObjectURL(blob);
+      setRecordedBlob(blob); setPreviewUrl(url);
+      stopStream(); setMode('preview');
+    };
+    setRecorder(rec); rec.start(1000);
+    setRecording(true); setCountdown(90); setElapsed(0);
+    timerRef.current = setInterval(() => setCountdown(c => {
+      if (c <= 1) { clearInterval(timerRef.current); clearInterval(elapsedRef.current); rec.stop(); setRecording(false); return 0; }
+      return c - 1;
+    }), 1000);
+    elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+  };
+
+  const stopRecording = () => {
+    clearInterval(timerRef.current); clearInterval(elapsedRef.current);
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    setRecording(false);
+  };
+
+  const retake = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setRecordedBlob(null); setPreviewUrl(null); setElapsed(0); setCountdown(0);
+    setMode('intro');
+  };
+
+  const upload = async () => {
+    if (!recordedBlob) return;
+    setMode('uploading'); setProgress(0);
+    try {
+      const fd = new FormData();
+      fd.append('video', recordedBlob, 'video.webm');
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded/e.total*100)); };
+        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject();
+        xhr.onerror = reject;
+        xhr.open('POST', `${API}/upload/${nom.parentToken}`);
+        xhr.send(fd);
+      });
+      // Mark video uploaded
+      await fetch(`${API}/fa/video/${nominationId}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+      setMode('done');
+    } catch { setError('Upload failed. Try again.'); setMode('preview'); }
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading...</div>;
+  if (error) return <div style={{ textAlign:'center', padding:80 }}><p style={{ color:C.red }}>{error}</p></div>;
+
+  const maxW = isMobile ? '100%' : 480;
+  const isPortrait = window.innerHeight > window.innerWidth;
+
+  if (mode === 'done') return (
+    <div style={{ textAlign:'center', padding:'60px 20px' }}>
+      <div style={{ fontSize:56, marginBottom:12 }}>🎬</div>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, marginBottom:8 }}>Video uploaded!</h2>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:360, margin:'0 auto 28px' }}>
+        The volunteer who shops for {nom.childFirst} will watch this video before they go. It makes all the difference.
+      </p>
+      <button onClick={() => navigate(`#/fa/${faToken}`)} style={{ background:C.navy, color:'#fff', border:'none', padding:'13px 32px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+        ← Back to my kids
+      </button>
+    </div>
+  );
+
+  if (mode === 'uploading') return (
+    <div style={{ textAlign:'center', padding:'60px 20px' }}>
+      <div style={{ fontSize:40, marginBottom:16 }}>📤</div>
+      <p style={{ color:C.navy, fontWeight:700, fontSize:16, marginBottom:20 }}>Uploading...</p>
+      <div style={{ height:10, background:C.border, borderRadius:5, maxWidth:280, margin:'0 auto 10px' }}>
+        <div style={{ height:10, background:C.pink, borderRadius:5, width:`${progress}%`, transition:'width 0.3s' }}/>
+      </div>
+      <p style={{ color:C.muted, fontSize:13 }}>{progress}%</p>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'0 0 32px':'20px 24px 40px' }}>
+      {/* Header */}
+      <div style={{ background:C.navy, padding:'16px 20px', textAlign:'center', marginBottom:0 }}>
+        <button onClick={() => navigate(`#/fa/${faToken}`)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', float:'left', padding:'4px 0' }}>← Back</button>
+        <div style={{ color:'#fff', fontWeight:700, fontSize:15 }}>🎬 {nom.childFirst}'s Video</div>
+        <div style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginTop:2 }}>{nom.grade} · {nom.school}</div>
+      </div>
+
+      {error && <div style={{ background:'#FEF2F2', padding:'10px 16px', fontSize:13, color:C.red }}>{error}</div>}
+
+      {/* INTRO / INSTRUCTIONS */}
+      {mode === 'intro' && (
+        <div style={{ padding:'24px 20px' }}>
+          <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:12, padding:'16px 18px', marginBottom:20 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:'#166534', margin:'0 0 10px' }}>📋 Before you record:</p>
+            <ul style={{ margin:0, padding:'0 0 0 18px', fontSize:13, color:'#166534', lineHeight:2 }}>
+              <li>Find a quiet spot with good light</li>
+              <li>Ask {nom.childFirst} to face the camera and smile</li>
+              <li>Aim for <strong>30–60 seconds</strong> (90 max)</li>
+              <li>Hold phone <strong>vertically</strong> (portrait)</li>
+            </ul>
+          </div>
+          <div style={{ background:'#EFF6FF', border:`1px solid #BAE6FD`, borderRadius:12, padding:'14px 18px', marginBottom:20 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:'#1E40AF', margin:'0 0 8px' }}>🎤 What to ask {nom.childFirst}:</p>
+            <ol style={{ margin:0, padding:'0 0 0 18px', fontSize:13, color:'#1E40AF', lineHeight:2 }}>
+              <li>"What's your name and what grade are you in?"</li>
+              <li>"What's your favorite color?"</li>
+              <li>"What do you love — sports, characters, hobbies?"</li>
+              <li>"Is there anything specific you've been wanting?"</li>
+              <li>"What makes you excited about a new outfit?"</li>
+            </ol>
+          </div>
+          {nom.parentIntake && (
+            <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:12, padding:'14px 18px', marginBottom:20, fontSize:13, color:'#92400E' }}>
+              <p style={{ fontWeight:700, margin:'0 0 6px' }}>👕 Parent already filled out sizes:</p>
+              <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
+                {nom.parentIntake.shirtSize && <span>Shirt: <strong>{nom.parentIntake.shirtSize}</strong></span>}
+                {nom.parentIntake.pantSize && <span>Pants: <strong>{nom.parentIntake.pantSize}</strong></span>}
+                {nom.parentIntake.shoeSize && <span>Shoe: <strong>{nom.parentIntake.shoeSize}</strong></span>}
+                {nom.parentIntake.favoriteColors && <span>Loves: <strong>{nom.parentIntake.favoriteColors}</strong></span>}
+              </div>
+            </div>
+          )}
+          <button onClick={() => startCamera()} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow:'0 2px 12px rgba(232,84,140,0.35)' }}>
+            <span style={{ fontSize:20 }}>📷</span> Start Recording {nom.childFirst}
+          </button>
+        </div>
+      )}
+
+      {/* CAMERA */}
+      {mode === 'camera' && (
+        <div>
+          <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
+            <video ref={liveRef} muted playsInline
+              style={{ width:'100%', maxHeight: isMobile ? '70vh' : 500, objectFit:'cover', display:'block',
+                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
+            {/* Top controls overlay */}
+            <div style={{ position:'absolute', top:12, left:12, right:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              {recording ? (
+                <div style={{ background:'rgba(220,38,38,0.9)', color:'#fff', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+                  <span style={{ width:8, height:8, background:'#fff', borderRadius:'50%', display:'inline-block' }}/>
+                  REC {elapsed}s
+                </div>
+              ) : <div/>}
+              {/* Flip button */}
+              <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.5)', border:'1.5px solid rgba(255,255,255,0.4)', color:'#fff', borderRadius:'50%', width:44, height:44, fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(4px)' }}>
+                🔄
+              </button>
+            </div>
+            {/* Countdown + progress */}
+            {recording && (
+              <>
+                <div style={{ position:'absolute', bottom:60, right:14, background:'rgba(0,0,0,0.6)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:600 }}>
+                  {countdown}s left
+                </div>
+                <div style={{ position:'absolute', bottom:0, left:0, right:0, height:5, background:'rgba(255,255,255,0.2)' }}>
+                  <div style={{ height:5, background:C.pink, width:`${((90-countdown)/90)*100}%`, transition:'width 1s linear' }}/>
+                </div>
+              </>
+            )}
+            {/* Portrait guide */}
+            {!recording && (
+              <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', border:'2px dashed rgba(255,255,255,0.3)', borderRadius:16, width:'55%', height:'70%', pointerEvents:'none' }}/>
+            )}
+          </div>
+          <div style={{ padding:'14px 16px' }}>
+            {!recording ? (
+              <button onClick={startRecording} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                <span style={{ width:14, height:14, background:'#fff', borderRadius:'50%', display:'inline-block' }}/> Start Recording
+              </button>
+            ) : (
+              <button onClick={stopRecording} style={{ width:'100%', padding:16, background:'#DC2626', color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                <span style={{ width:14, height:14, background:'#fff', borderRadius:2, display:'inline-block' }}/> Stop & Preview
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW */}
+      {mode === 'preview' && previewUrl && (
+        <div style={{ padding:'0 16px 16px' }}>
+          <div style={{ borderRadius:16, overflow:'hidden', background:'#000', marginBottom:14, position:'relative' }}>
+            <video ref={playbackRef} controls playsInline style={{ width:'100%', maxHeight:isMobile?'65vh':480, objectFit:'contain', display:'block', background:'#000' }}/>
+            <div style={{ position:'absolute', top:10, left:10, background:'rgba(5,150,105,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>✓ Preview</div>
+          </div>
+          <div style={{ fontSize:12, color:C.muted, textAlign:'center', marginBottom:12 }}>
+            {elapsed}s recorded · {recordedBlob ? (recordedBlob.size/1024/1024).toFixed(1) : '?'} MB
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={retake} style={{ flex:1, padding:13, background:'#F1F5F9', color:C.navy, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}>↩ Redo</button>
+            <button onClick={upload} style={{ flex:2, padding:13, background:C.green, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>✓ Upload Video</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── FA PORTAL ────────────────────────────────────────────────────────────────
+function FAPortal({ faToken, navigate }) {
+  const isMobile = useIsMobile();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [nudging, setNudging] = useState(null);
+  const [nudgeResult, setNudgeResult] = useState({});
+
+  useEffect(() => {
+    (async () => {
+      try { const d = await api(`/fa/${faToken}`); setData(d); }
+      catch(e) { setError('Invalid or expired link.'); }
+      setLoading(false);
+    })();
+  }, [faToken]);
+
+  const nudgeParent = async (nomId) => {
+    setNudging(nomId);
+    try {
+      const r = await api(`/fa/${faToken}`, { method:'POST', body: JSON.stringify({ action:'nudge', nominationId: nomId }) });
+      setNudgeResult(prev => ({ ...prev, [nomId]: r.smsSent || r.emailSent ? '✅ Reminder sent!' : '⚠️ No contact info' }));
+    } catch { setNudgeResult(prev => ({ ...prev, [nomId]: '❌ Failed' })); }
+    setNudging(null);
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading your portal...</div>;
+  if (error) return <div style={{ textAlign:'center', padding:80 }}><div style={{ fontSize:48, marginBottom:16 }}>🔒</div><p style={{ color:C.red }}>{error}</p></div>;
+
+  const { fa, nominations } = data;
+  const intakeDone = nominations.filter(n => n.parentIntake).length;
+  const videoDone = nominations.filter(n => n.parentIntake?.hasVideo).length;
+
+  return (
+    <div style={{ maxWidth: isMobile ? '100%' : 700, margin:'0 auto' }}>
+      {/* Header */}
+      <div style={{ background:C.navy, padding:'24px 20px', textAlign:'center' }}>
+        <div style={{ fontSize:36, marginBottom:8 }}>🏫</div>
+        <h2 style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:22, margin:'0 0 4px' }}>
+          {fa.firstName} {fa.lastName}
+        </h2>
+        {fa.school && <p style={{ color:'rgba(255,255,255,0.6)', fontSize:13, margin:0 }}>{fa.school}</p>}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:C.border }}>
+        {[
+          { label:'Nominated', v:nominations.length, c:C.navy },
+          { label:'Sizes in', v:intakeDone, c:C.green },
+          { label:'Videos done', v:videoDone, c:C.pink },
+        ].map(s => (
+          <div key={s.label} style={{ background:'#fff', padding:'16px 12px', textAlign:'center' }}>
+            <div style={{ fontSize:28, fontWeight:800, color:s.c }}>{s.v}</div>
+            <div style={{ fontSize:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Kids list */}
+      <div style={{ padding:isMobile?'16px':'20px' }}>
+        {nominations.length === 0 ? (
+          <div style={{ textAlign:'center', padding:48, color:C.light }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
+            <p style={{ fontSize:14 }}>No nominations yet. Nominations you submit will appear here.</p>
+          </div>
+        ) : nominations.map(n => {
+          const hasSizes = !!n.parentIntake;
+          const hasVideo = n.parentIntake?.hasVideo;
+          return (
+            <div key={n.id} style={{ background:'#fff', borderRadius:12, border:`1px solid ${C.border}`, marginBottom:12, overflow:'hidden' }}>
+              {/* Child header */}
+              <div style={{ padding:'14px 16px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
+                  <div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.grade} · {n.school}</div>
+                </div>
+                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, textTransform:'uppercase',
+                    background: hasSizes ? '#D1FAE5' : '#FEF3C7',
+                    color: hasSizes ? '#065F46' : '#92400E' }}>
+                    {hasSizes ? '✓ Sizes' : 'No sizes'}
+                  </span>
+                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, textTransform:'uppercase',
+                    background: hasVideo ? '#E0E7FF' : '#F1F5F9',
+                    color: hasVideo ? '#3730A3' : C.light }}>
+                    {hasVideo ? '✓ Video' : 'No video'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sizes preview if available */}
+              {hasSizes && (
+                <div style={{ padding:'0 16px 10px', display:'flex', gap:14, flexWrap:'wrap', fontSize:12, color:C.muted }}>
+                  {n.parentIntake.shirtSize && <span>👕 {n.parentIntake.shirtSize}</span>}
+                  {n.parentIntake.pantSize && <span>👖 {n.parentIntake.pantSize}</span>}
+                  {n.parentIntake.shoeSize && <span>👟 {n.parentIntake.shoeSize}</span>}
+                  {n.parentIntake.favoriteColors && <span>❤️ {n.parentIntake.favoriteColors}</span>}
+                  {n.parentIntake.gender && <span>· {n.parentIntake.gender}</span>}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ padding:'10px 16px 14px', borderTop:`1px solid ${C.border}`, display:'flex', gap:8, flexWrap:'wrap' }}>
+                {/* Nudge parent if no sizes yet */}
+                {!hasSizes && (
+                  <button
+                    onClick={() => nudgeParent(n.id)}
+                    disabled={nudging === n.id}
+                    style={{ flex:1, minWidth:120, padding:'8px 12px', background:'#FFF7ED', color:'#92400E', border:`1px solid #FED7AA`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    {nudging === n.id ? 'Sending...' : nudgeResult[n.id] || '📲 Remind Parent'}
+                  </button>
+                )}
+                {/* Record video button */}
+                {hasSizes && !hasVideo && (
+                  <button
+                    onClick={() => navigate(`#/fa/${faToken}/video/${n.id}`)}
+                    style={{ flex:1, padding:'8px 12px', background:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 1px 6px rgba(232,84,140,0.3)' }}>
+                    🎬 Record Video
+                  </button>
+                )}
+                {hasVideo && (
+                  <button
+                    onClick={() => navigate(`#/fa/${faToken}/video/${n.id}`)}
+                    style={{ flex:1, padding:'8px 12px', background:'#F0FDF4', color:'#166534', border:`1px solid #BBF7D0`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    ✓ Video done — Re-record?
+                  </button>
+                )}
+                {!hasSizes && nudgeResult[n.id] && (
+                  <span style={{ fontSize:12, color:C.green, alignSelf:'center' }}>{nudgeResult[n.id]}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+
+function AdvocatesTab({ isMobile }) {
+  const [fas, setFas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', school:'', notes:'' });
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(null);
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const load = useCallback(async () => {
+    try { const d = await api('/fa',{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setFas(d.fas); } catch(e){console.error(e);}
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const addFA = async () => {
+    if (!form.firstName||!form.lastName) return;
+    if (!form.email&&!form.phone) return;
+    setSaving(true);
+    try {
+      await api('/fa',{method:'POST',body:JSON.stringify(form),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}});
+      setForm({ firstName:'',lastName:'',email:'',phone:'',school:'',notes:'' });
+      setShowAdd(false);
+      load();
+    } catch(e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const copyLink = (token, id) => {
+    navigator.clipboard.writeText(`https://childspree.org/#/fa/${token}`);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <div style={{ fontSize:13, color:C.muted }}>{fas.length} family advocate{fas.length!==1?'s':''}</div>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{ padding:'8px 18px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          + Add Advocate
+        </button>
+      </div>
+
+      {showAdd && (
+        <div style={{ background:'#F8FAFC', border:`1px solid ${C.border}`, borderRadius:12, padding:20, marginBottom:20 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:C.navy, textTransform:'uppercase', letterSpacing:1, marginBottom:14 }}>New Family Advocate</p>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12 }}>
+            <Field label="First Name *"><input style={inp()} value={form.firstName} onChange={e=>upd('firstName',e.target.value)} placeholder="First"/></Field>
+            <Field label="Last Name *"><input style={inp()} value={form.lastName} onChange={e=>upd('lastName',e.target.value)} placeholder="Last"/></Field>
+            <Field label="Email"><input style={inp()} type="email" value={form.email} onChange={e=>upd('email',e.target.value)} placeholder="fa@davis.k12.ut.us"/></Field>
+            <Field label="Phone"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
+            <Field label="School"><input style={inp()} value={form.school} onChange={e=>upd('school',e.target.value)} placeholder="Adams Elementary"/></Field>
+            <Field label="Notes"><input style={inp()} value={form.notes} onChange={e=>upd('notes',e.target.value)} placeholder="Optional"/></Field>
+          </div>
+          <div style={{ display:'flex', gap:10, marginTop:14 }}>
+            <button onClick={()=>setShowAdd(false)} style={{ padding:'10px 20px', background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancel</button>
+            <button onClick={addFA} disabled={saving} style={{ padding:'10px 24px', background:saving?C.light:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:saving?'default':'pointer' }}>
+              {saving ? 'Creating...' : 'Create + Send Portal Link'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div style={{ textAlign:'center', padding:48, color:C.light }}>Loading...</div>
+      : fas.length === 0 ? (
+        <div style={{ textAlign:'center', padding:48, color:C.light, fontSize:14 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>🏫</div>
+          No family advocates yet. Add one above to get started.
+        </div>
+      ) : (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
+              {['Name','School','Contact','Kids','Portal','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {fas.map(fa => (
+                <tr key={fa.id} style={{ borderBottom:`1px solid ${C.border}`, background:'#fff' }}>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{fa.firstName} {fa.lastName}</div></td>
+                  <td style={{ padding:'12px 14px', color:C.muted, fontSize:12 }}>{fa.school||'—'}</td>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontSize:12, color:C.text }}>{fa.email||'—'}</div><div style={{ fontSize:11, color:C.light }}>{fa.phone||''}</div></td>
+                  <td style={{ padding:'12px 14px', textAlign:'center' }}>
+                    <span style={{ fontWeight:700, color:C.navy }}>{fa.nominationCount}</span>
+                    {fa.completeCount > 0 && <span style={{ fontSize:11, color:C.green, marginLeft:4 }}>({fa.completeCount} done)</span>}
+                  </td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <a href={`/#/fa/${fa.portalToken}`} target="_blank" rel="noreferrer" style={{ fontSize:11, color:C.blue }}>Open portal →</a>
+                  </td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <button onClick={() => copyLink(fa.portalToken, fa.id)} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                      {copied===fa.id ? '✅ Copied' : '📋 Copy Link'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── APP ROUTER ───
 export default function App() {
   const isMobile = useIsMobile();
@@ -992,11 +1515,16 @@ export default function App() {
   }, []);
   const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
 
-  let view = 'home', token = null;
+  let view = 'home', token = null, faToken = null, faVideoNomId = null;
   if (route.startsWith('#/nominate')) view = 'nominate';
   else if (route.startsWith('#/volunteer')) view = 'volunteer';
   else if (route.startsWith('#/admin')) view = 'admin';
   else if (route.startsWith('#/intake/')) { view = 'parent'; token = route.replace('#/intake/',''); }
+  else if (route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/)) {
+    const m = route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/);
+    view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
+  }
+  else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
   else if (route === '#/' || route === '#' || route === '') view = 'home';
 
   if (view === 'parent' && token) return (
@@ -1004,6 +1532,18 @@ export default function App() {
       {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
       <ParentIntake token={token}/>
       {isMobile && <div style={{ height:72 }}/>}
+    </div>
+  );
+
+  if (view === 'fa' && faToken) return (
+    <div style={{ minHeight:'100vh', background:C.bg }}>
+      <FAPortal faToken={faToken} navigate={navigate}/>
+    </div>
+  );
+
+  if (view === 'fa-video' && faToken && faVideoNomId) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <FAVideoPage faToken={faToken} nominationId={faVideoNomId} navigate={navigate}/>
     </div>
   );
 
