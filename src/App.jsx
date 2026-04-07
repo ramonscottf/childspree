@@ -328,7 +328,7 @@ function LandingPage({ navigate }) {
 // ─── NOMINATE ───
 function NominationForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:''});
+  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:'',parentLanguage:'en'});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -348,7 +348,7 @@ function NominationForm() {
       <div style={{ fontSize:56, marginBottom:16 }}>✓</div>
       <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>Nomination Received</h2>
       <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>Thank you. The DEF team will review and reach out to the family. You'll receive an email confirmation shortly.</p>
-      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:''});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
+      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
     </div>
   );
   const maxW = isMobile?'100%':760;
@@ -401,6 +401,19 @@ function NominationForm() {
                 📋 The parent will receive a separate size form for each child. Their notification will note that {form.siblingCount+1} children from their family were nominated.
               </div>
             )}
+          </Field>
+          <Field label="Parent's preferred language">
+            <div style={{display:'flex',gap:10}}>
+              {[['en','🇺🇸 English'],['es','🇲🇽 Español']].map(([val,label])=>(
+                <label key={val} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'10px 14px',background:form.parentLanguage===val?C.navy:C.bg,border:`1.5px solid ${form.parentLanguage===val?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s'}}>
+                  <input type="radio" name="parentLanguage" value={val} checked={form.parentLanguage===val} onChange={()=>upd('parentLanguage',val)} style={{accentColor:'#fff',display:'none'}}/>
+                  <span style={{fontSize:15}}>{label.split(' ')[0]}</span>
+                  <span style={{fontSize:13,fontWeight:form.parentLanguage===val?700:400,color:form.parentLanguage===val?'#fff':C.muted}}>{label.split(' ')[1]}</span>
+                  {form.parentLanguage===val&&<span style={{marginLeft:'auto',color:'#fff',fontSize:12}}>✓</span>}
+                </label>
+              ))}
+            </div>
+            <p style={{fontSize:11,color:C.light,margin:'6px 0 0'}}>The parent's intake form link and notification will be sent in this language.</p>
           </Field>
         </div>
       </div>
@@ -783,7 +796,7 @@ function ParentIntake({ token }) {
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form');
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
-  useEffect(() => { (async()=>{ try{ const data=await api(`/intake/${token}`); setChild(data); if(data.alreadySubmitted)setStep('done'); }catch(err){setError(err.message);} setLoading(false); })(); }, [token]);
+  useEffect(() => { (async()=>{ try{ const data=await api(`/intake/${token}`); setChild(data); if(data.parentLanguage && data.parentLanguage !== 'en') setLang(data.parentLanguage); if(data.alreadySubmitted)setStep('done'); }catch(err){setError(err.message);} setLoading(false); })(); }, [token]);
   const submit = async () => {
     if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
     if (!form.parentConsent) { alert(t('consentRequired')); return; }
