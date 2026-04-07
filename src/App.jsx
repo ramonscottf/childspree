@@ -174,7 +174,7 @@ function LandingPage({ navigate }) {
 // ─── NOMINATE ───
 function NominationForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblings:'',additionalNotes:''});
+  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:''});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -194,7 +194,7 @@ function NominationForm() {
       <div style={{ fontSize:56, marginBottom:16 }}>✓</div>
       <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>Nomination Received</h2>
       <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>Thank you. The DEF team will review and reach out to the family. You'll receive an email confirmation shortly.</p>
-      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblings:'',additionalNotes:''});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
+      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:''});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
     </div>
   );
   const maxW = isMobile?'100%':760;
@@ -227,7 +227,27 @@ function NominationForm() {
           <Row cols={2} gap={10}><Field label="Phone"><input style={inp()} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)} placeholder="(801) 555-0000"/></Field><Field label="Email"><input style={inp()} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)} placeholder="parent@email.com"/></Field></Row>
           <p style={{...secHead(isMobile),marginTop:20}}>Details</p>
           <Field label="Why are you nominating this child?"><textarea style={{...inp(),minHeight:isMobile?72:100,resize:'vertical'}} value={form.reason} onChange={e=>upd('reason',e.target.value)} placeholder="Brief explanation — stays confidential"/></Field>
-          <Field label="Siblings to nominate?"><input style={inp()} value={form.siblings} onChange={e=>upd('siblings',e.target.value)} placeholder="e.g., Maria (3rd), James (K)"/></Field>
+          <Field label="Additional siblings to nominate?">
+            <div style={{display:'flex', gap:10, alignItems:'center', marginBottom: form.siblingCount > 0 ? 10 : 0}}>
+              <div style={{flex:'0 0 auto'}}>
+                <label style={lbl}>How many siblings?</label>
+                <select style={{...inp({width:100}), appearance:'auto'}} value={form.siblingCount} onChange={e=>upd('siblingCount',parseInt(e.target.value))}>
+                  {[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?'None':n}</option>)}
+                </select>
+              </div>
+              {form.siblingCount > 0 && (
+                <div style={{flex:1}}>
+                  <label style={lbl}>Sibling names & grades</label>
+                  <input style={inp()} value={form.siblingNames} onChange={e=>upd('siblingNames',e.target.value)} placeholder={form.siblingCount===1?'e.g., Maria (3rd)':'e.g., Maria (3rd), James (K)'}/>
+                </div>
+              )}
+            </div>
+            {form.siblingCount > 0 && (
+              <div style={{background:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#92400E',lineHeight:1.5}}>
+                📋 The parent will receive a separate size form for each child. Their notification will note that {form.siblingCount+1} children from their family were nominated.
+              </div>
+            )}
+          </Field>
         </div>
       </div>
       <div style={{ marginTop:24 }}>
