@@ -339,45 +339,59 @@ function VolunteerForm() {
   );
 }
 
-// ─── VIDEO CAPTURE (fixed) ───
+// ─── VIDEO CAPTURE ───
 function VideoCapture({ token, childFirst, onDone }) {
   const isMobile = useIsMobile();
-  const [mode, setMode] = useState('choose'); // choose | camera | preview | upload | uploading | done
+  const [mode, setMode] = useState('choose'); // choose | camera | preview | uploading | done
   const [stream, setStream] = useState(null);
   const [recorder, setRecorder] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
   const [countdown, setCountdown] = useState(0);
-  const videoRef = useRef(null);
-  const previewRef = useRef(null);
+  const [elapsed, setElapsed] = useState(0);
+  const liveRef = useRef(null);
+  const playbackRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
+  const elapsedRef = useRef(null);
 
   const stopStream = useCallback(() => {
     if (stream) stream.getTracks().forEach(t => t.stop());
     setStream(null);
   }, [stream]);
-  useEffect(() => () => { stopStream(); clearInterval(timerRef.current); }, []);
+  useEffect(() => () => { stopStream(); clearInterval(timerRef.current); clearInterval(elapsedRef.current); }, []);
 
-  // Assign stream to video element whenever stream changes
+  // Attach stream to live video element
   useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch(() => {});
+    if (stream && liveRef.current) {
+      liveRef.current.srcObject = stream;
+      liveRef.current.play().catch(() => {});
     }
   }, [stream, mode]);
+
+  // Attach previewUrl to playback element
+  useEffect(() => {
+    if (previewUrl && playbackRef.current) {
+      playbackRef.current.src = previewUrl;
+      playbackRef.current.load();
+    }
+  }, [previewUrl, mode]);
 
   const startCamera = async () => {
     setError(null);
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:1280}, height:{ideal:720} }, audio:true });
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
       setStream(s);
       setMode('camera');
-    } catch(err) {
-      setError('Camera access was denied. Please use the upload option instead.');
+    } catch {
+      setError('Camera access denied. Use the upload option instead.');
     }
   };
 
@@ -386,34 +400,50 @@ function VideoCapture({ token, childFirst, onDone }) {
     chunksRef.current = [];
     const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
       : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
-    const rec = new MediaRecorder(stream, { mimeType:mt, videoBitsPerSecond:2000000 });
-    rec.ondataavailable = e => { if (e.data.size>0) chunksRef.current.push(e.data); };
+    const rec = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 2000000 });
+    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type:mt });
+      const blob = new Blob(chunksRef.current, { type: mt });
+      const url = URL.createObjectURL(blob);
       setRecordedBlob(blob);
+      setPreviewUrl(url);
       stopStream();
       setMode('preview');
-      setTimeout(() => {
-        if (previewRef.current) { previewRef.current.src = URL.createObjectURL(blob); previewRef.current.play().catch(()=>{}); }
-      }, 100);
     };
-    setRecorder(rec); rec.start(1000);
-    setRecording(true); setCountdown(60);
+    setRecorder(rec);
+    rec.start(1000);
+    setRecording(true);
+    setCountdown(60);
+    setElapsed(0);
     timerRef.current = setInterval(() => setCountdown(c => {
-      if (c <= 1) { clearInterval(timerRef.current); rec.stop(); setRecording(false); return 0; }
+      if (c <= 1) { clearInterval(timerRef.current); clearInterval(elapsedRef.current); rec.stop(); setRecording(false); return 0; }
       return c - 1;
     }), 1000);
+    elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
   };
 
-  const stopRecording = () => { clearInterval(timerRef.current); if(recorder&&recorder.state!=='inactive')recorder.stop(); setRecording(false); };
+  const stopRecording = () => {
+    clearInterval(timerRef.current);
+    clearInterval(elapsedRef.current);
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    setRecording(false);
+  };
 
   const handleFile = e => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 100*1024*1024) { setError('Video must be under 100MB'); return; }
+    if (file.size > 100 * 1024 * 1024) { setError('Video must be under 100MB'); return; }
+    const url = URL.createObjectURL(file);
     setUploadedFile(file);
+    setPreviewUrl(url);
     setMode('preview');
-    setTimeout(() => { if(previewRef.current){previewRef.current.src=URL.createObjectURL(file);previewRef.current.play().catch(()=>{});} }, 100);
+  };
+
+  const retake = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setRecordedBlob(null); setUploadedFile(null); setPreviewUrl(null);
+    setElapsed(0); setCountdown(0);
+    setMode('choose');
   };
 
   const upload = async () => {
@@ -426,86 +456,166 @@ function VideoCapture({ token, childFirst, onDone }) {
       fd.append('video', blob, `video.${ext}`);
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.upload.onprogress = e => { if(e.lengthComputable) setProgress(Math.round(e.loaded/e.total*100)); };
+        xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
         xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
         xhr.onerror = reject;
         xhr.open('POST', `${API}/upload/${token}`);
         xhr.send(fd);
       });
       setMode('done');
-    } catch(err) {
+    } catch {
       setError('Upload failed. Please try again.');
-      setMode(recordedBlob ? 'preview' : 'upload');
+      setMode('preview');
     }
   };
 
+  // ── DONE ──
   if (mode === 'done') return (
-    <div style={{ textAlign:'center', padding:isMobile?'32px 20px':'48px 40px' }}>
-      <div style={{ fontSize:48, marginBottom:12 }}>🎬</div>
-      <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:6 }}>Video received!</h3>
-      <p style={{ color:C.muted, fontSize:13, lineHeight:1.6, marginBottom:20 }}>A volunteer will watch this to make sure everything is perfect for {childFirst}.</p>
-      <button onClick={onDone} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Finish ✓</button>
+    <div style={{ textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
+      <div style={{ fontSize: 52, marginBottom: 12 }}>🎬</div>
+      <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: C.navy, marginBottom: 8 }}>Video received!</h3>
+      <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, maxWidth: 340, margin: '0 auto 24px' }}>
+        A volunteer will watch this before they shop for {childFirst}. It makes a huge difference.
+      </p>
+      <button onClick={onDone} style={{ background: C.pink, color: '#fff', border: 'none', padding: '13px 36px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(232,84,140,0.35)' }}>
+        All done ✓
+      </button>
     </div>
   );
+
+  // ── UPLOADING ──
   if (mode === 'uploading') return (
-    <div style={{ textAlign:'center', padding:'48px 20px' }}>
-      <div style={{ fontSize:36, marginBottom:16 }}>📤</div>
-      <p style={{ color:C.navy, fontWeight:600, marginBottom:16 }}>Uploading... {progress}%</p>
-      <div style={{ height:8, background:C.border, borderRadius:4, maxWidth:320, margin:'0 auto' }}>
-        <div style={{ height:8, background:C.pink, borderRadius:4, width:`${progress}%`, transition:'width 0.3s' }}/>
+    <div style={{ textAlign: 'center', padding: '56px 20px' }}>
+      <div style={{ fontSize: 40, marginBottom: 16 }}>📤</div>
+      <p style={{ color: C.navy, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Uploading your video...</p>
+      <div style={{ height: 10, background: C.border, borderRadius: 5, maxWidth: 300, margin: '0 auto 10px' }}>
+        <div style={{ height: 10, background: C.pink, borderRadius: 5, width: `${progress}%`, transition: 'width 0.3s' }}/>
       </div>
+      <div style={{ fontSize: 13, color: C.muted }}>{progress}%</div>
     </div>
   );
 
   const maxW = isMobile ? '100%' : 500;
+
   return (
-    <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'0 16px 24px':'0 40px 32px' }}>
-      <div style={{ textAlign:'center', marginBottom:20 }}>
-        <div style={{ fontSize:32, marginBottom:8 }}>🎬</div>
-        <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:4 }}>Optional: Record a short video</h3>
-        <p style={{ color:C.muted, fontSize:13, lineHeight:1.5, maxWidth:360, margin:'0 auto' }}>30–60 seconds helps volunteers shop with heart. Tell us {childFirst}'s favorite color, what they love!</p>
+    <div style={{ maxWidth: maxW, margin: '0 auto', padding: isMobile ? '0 16px 32px' : '0 40px 40px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 36, marginBottom: 8 }}>🎬</div>
+        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: C.navy, marginBottom: 4 }}>
+          Optional: Record a short video
+        </h3>
+        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.5, maxWidth: 340, margin: '0 auto' }}>
+          30–60 seconds. Tell us {childFirst}'s favorite color, what they love, the shoes they've been dreaming about!
+        </p>
       </div>
-      {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#991B1B' }}>{error}</div>}
 
+      {error && (
+        <div style={{ background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#991B1B' }}>{error}</div>
+      )}
+
+      {/* CHOOSE */}
       {mode === 'choose' && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-          <button onClick={startCamera} style={{ padding:'24px 12px', background:C.navy, color:'#fff', border:'none', borderRadius:12, fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'center', lineHeight:1.6 }}>📷<br/>Record with camera</button>
-          <label style={{ padding:'24px 12px', background:C.bg, border:`1.5px solid ${C.border}`, borderRadius:12, fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'center', lineHeight:1.6, display:'block', color:C.navy }}>
-            📁<br/>Upload a video
-            <input type="file" accept="video/*" onChange={handleFile} style={{ display:'none' }}/>
-          </label>
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <button onClick={startCamera} style={{ padding: '28px 12px', background: C.navy, color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.7 }}>
+              <div style={{ fontSize: 32, marginBottom: 4 }}>📷</div>
+              Record now
+              <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.6, marginTop: 2 }}>Uses your camera</div>
+            </button>
+            <label style={{ padding: '28px 12px', background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.7, display: 'block', color: C.navy }}>
+              <div style={{ fontSize: 32, marginBottom: 4 }}>📁</div>
+              Upload a video
+              <div style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginTop: 2 }}>From your phone</div>
+              <input type="file" accept="video/*" onChange={handleFile} style={{ display: 'none' }}/>
+            </label>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <button onClick={onDone} style={{ background: 'none', border: 'none', color: C.light, fontSize: 13, cursor: 'pointer', padding: '8px 20px' }}>Skip — no video</button>
+          </div>
         </div>
       )}
 
+      {/* CAMERA — mirrored live preview */}
       {mode === 'camera' && (
-        <div style={{ marginBottom:16 }}>
-          <div style={{ position:'relative', borderRadius:12, overflow:'hidden', background:'#000', marginBottom:12 }}>
-            <video ref={videoRef} muted playsInline style={{ width:'100%', maxHeight:280, objectFit:'cover', display:'block' }}/>
-            {recording && <div style={{ position:'absolute', top:10, right:10, background:'rgba(232,84,140,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:700 }}>● {countdown}s left</div>}
+        <div>
+          <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            {/* Mirror the live preview so it feels like a selfie */}
+            <video ref={liveRef} muted playsInline style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }}/>
+
+            {/* Recording indicator + timers */}
+            {recording && (
+              <div style={{ position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 14px', pointerEvents: 'none' }}>
+                <div style={{ background: 'rgba(220,38,38,0.9)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, background: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1s infinite' }}/>
+                  REC {elapsed}s
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>
+                  {countdown}s left
+                </div>
+              </div>
+            )}
+
+            {/* Progress bar when recording */}
+            {recording && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(255,255,255,0.2)' }}>
+                <div style={{ height: 4, background: C.pink, width: `${((60 - countdown) / 60) * 100}%`, transition: 'width 1s linear' }}/>
+              </div>
+            )}
           </div>
-          {!recording
-            ? <button onClick={startRecording} style={{ width:'100%', padding:14, background:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>● Start Recording</button>
-            : <button onClick={stopRecording} style={{ width:'100%', padding:14, background:C.navy, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>■ Stop & Preview</button>
-          }
+
+          {/* Controls */}
+          {!recording ? (
+            <button onClick={startRecording} style={{ width: '100%', padding: 16, background: C.pink, color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 2px 12px rgba(232,84,140,0.35)' }}>
+              <span style={{ width: 14, height: 14, background: '#fff', borderRadius: '50%', display: 'inline-block' }}/>
+              Start Recording
+            </button>
+          ) : (
+            <button onClick={stopRecording} style={{ width: '100%', padding: 16, background: '#DC2626', color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <span style={{ width: 14, height: 14, background: '#fff', borderRadius: 2, display: 'inline-block' }}/>
+              Stop & Review
+            </button>
+          )}
+          <div style={{ textAlign: 'center', marginTop: 10 }}>
+            <button onClick={() => { stopStream(); setMode('choose'); }} style={{ background: 'none', border: 'none', color: C.light, fontSize: 13, cursor: 'pointer' }}>← Back</button>
+          </div>
         </div>
       )}
 
-      {mode === 'preview' && (
-        <div style={{ marginBottom:16 }}>
-          <video ref={previewRef} controls playsInline style={{ width:'100%', borderRadius:12, background:'#000', maxHeight:280, objectFit:'cover', display:'block', marginBottom:12 }}/>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={() => { setRecordedBlob(null); setUploadedFile(null); setMode('choose'); }} style={{ flex:1, padding:12, background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Try again</button>
-            <button onClick={upload} style={{ flex:2, padding:12, background:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Upload this video →</button>
+      {/* PREVIEW — review before uploading */}
+      {mode === 'preview' && previewUrl && (
+        <div>
+          <div style={{ borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', position: 'relative' }}>
+            <video ref={playbackRef} controls playsInline style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block' }}/>
+            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(5,150,105,0.9)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
+              ✓ Preview
+            </div>
+          </div>
+
+          {/* Duration info */}
+          {recordedBlob && elapsed > 0 && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: C.muted, marginBottom: 12 }}>
+              Recorded {elapsed} second{elapsed !== 1 ? 's' : ''} · {(recordedBlob.size / 1024 / 1024).toFixed(1)} MB
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <button onClick={retake} style={{ flex: 1, padding: 13, background: '#F1F5F9', color: C.navy, border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              ↩ Redo
+            </button>
+            <button onClick={upload} style={{ flex: 2, padding: 13, background: C.green, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(5,150,105,0.3)' }}>
+              ✓ Looks good — Upload
+            </button>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <button onClick={onDone} style={{ background: 'none', border: 'none', color: C.light, fontSize: 12, cursor: 'pointer' }}>Skip — don't include video</button>
           </div>
         </div>
       )}
-
-      <div style={{ textAlign:'center', marginTop:8, paddingTop:8, borderTop:`1px solid ${C.border}` }}>
-        <button onClick={onDone} style={{ background:'none', border:'none', color:C.light, fontSize:13, cursor:'pointer', padding:'8px 20px' }}>Skip — no video</button>
-      </div>
     </div>
   );
 }
+
 
 // ─── PARENT INTAKE ───
 function ParentIntake({ token }) {
