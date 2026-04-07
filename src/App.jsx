@@ -100,7 +100,7 @@ function LandingPage({ navigate }) {
         ))}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.25) 0%,rgba(27,58,75,0.88) 100%)' }}/>
         <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'flex-end', padding:isMobile?'32px 20px':'60px 64px', maxWidth:800 }}>
-          <div style={{ color:'rgba(249,168,201,0.9)', fontSize:isMobile?11:12, fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Every August · Kohl's Layton, UT</div>
+          <div style={{ color:'rgba(249,168,201,0.9)', fontSize:isMobile?11:12, fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Every August · Three Davis County Kohl's</div>
           <h1 style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:isMobile?'2.2rem':'3.8rem', fontWeight:700, lineHeight:1.1, margin:'0 0 16px' }}>
             500+ students.<br/>Brand new clothes.<br/><em style={{ color:C.pinkLight }}>One unforgettable morning.</em>
           </h1>
@@ -154,7 +154,7 @@ function LandingPage({ navigate }) {
         <div style={{ background:'#fff', border:`1px solid ${C.border}`, borderRadius:16, padding:isMobile?'32px 24px':'40px' }}>
           <div style={{ fontSize:36, marginBottom:16 }}>🛒</div>
           <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?20:24, color:C.navy, margin:'0 0 12px' }}>Volunteer to Shop</h3>
-          <p style={{ color:C.muted, fontSize:14, lineHeight:1.7, marginBottom:24 }}>Join 400+ volunteers on the first Friday of August at Kohl's in Layton. You'll be matched with one child and shop for them like they're family.</p>
+          <p style={{ color:C.muted, fontSize:14, lineHeight:1.7, marginBottom:24 }}>Join 400+ volunteers on the first Friday of August at three Davis County Kohl's locations (Layton, Centerville & Clinton). You'll be matched with one child and shop for them head to toe.</p>
           <button onClick={()=>navigate('#/volunteer')} style={{ padding:'13px 28px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Sign Up to Volunteer →</button>
         </div>
       </div>
@@ -279,7 +279,7 @@ function VolunteerForm() {
       <div style={{ fontSize:56, marginBottom:16 }}>🛒</div>
       <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>You're Registered!</h2>
       <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:420, margin:'0 auto 12px' }}>Thank you for signing up to volunteer at Child Spree 2026. Check your email for a confirmation. We'll be in touch as the event approaches!</p>
-      <p style={{ color:C.muted, fontSize:13, marginBottom:28 }}>📅 First Friday of August · Kohl's, Layton UT · Before sunrise</p>
+      <p style={{ color:C.muted, fontSize:13, marginBottom:28 }}>📅 First Friday of August · Three Kohl's locations · Davis County · Before sunrise</p>
       <a href="https://daviskids.org/events-child-spree" target="_blank" rel="noreferrer" style={{ display:'inline-block', padding:'12px 28px', background:C.navy, color:'#fff', borderRadius:8, fontSize:14, fontWeight:700, textDecoration:'none' }}>Learn More About the Event →</a>
     </div>
   );
@@ -291,12 +291,12 @@ function VolunteerForm() {
           <div style={{ flex:'0 0 240px', borderRadius:12, overflow:'hidden' }}><img src={photo} alt="" style={{ width:'100%', height:170, objectFit:'cover', display:'block' }}/></div>
           <div style={{ flex:1, paddingTop:4 }}>
             <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, marginBottom:8 }}>Volunteer to Shop</h2>
-            <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>Join 400+ volunteers on the first Friday of August at Kohl's in Layton. You'll be matched to one child and shop for them head to toe.</p>
-            <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#166534' }}>📅 First Friday of August · Kohl's Layton · Arrive ~7:00 AM</div>
+            <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>Join 400+ volunteers on the first Friday of August at three Davis County Kohl's locations (Layton, Centerville & Clinton). You'll be matched to one child and shop for them head to toe.</p>
+            <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div>
           </div>
         </div>
       )}
-      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={photo} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Volunteer to Shop</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Join 400+ volunteers. Be matched to one child. Shop for them like they're family.</p></div><div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#166534' }}>📅 First Friday of August · Kohl's Layton · Arrive ~7:00 AM</div></>}
+      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={photo} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Volunteer to Shop</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Join 400+ volunteers. Be matched to one child. Shop for them like they're family.</p></div><div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div></>}
       {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
       <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
         <div>
@@ -323,7 +323,7 @@ function VolunteerForm() {
           <Field label="Preferred Kohl's location *">
             <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
               <option value="">Select a store...</option>
-              {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
+              {["Kohl's · Layton, Centerville, Clinton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
           <Field label="How did you hear about Child Spree?"><select style={{...inp(),appearance:'auto'}} value={form.hearAbout} onChange={e=>upd('hearAbout',e.target.value)}><option value="">Select...</option>{['School or teacher','DEF newsletter','Social media','Friend or coworker','My employer','Church','Other'].map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
