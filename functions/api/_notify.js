@@ -86,6 +86,7 @@ export async function notifyNewNomination(env, nom) {
             <tr><td style="padding:8px 0;color:#666;">Nominated by</td><td style="padding:8px 0;">${nom.nominatorName} (${nom.nominatorRole})<br><a href="mailto:${nom.nominatorEmail}">${nom.nominatorEmail}</a></td></tr>
             <tr><td style="padding:8px 0;color:#666;">Parent</td><td style="padding:8px 0;">${nom.parentName}${nom.parentPhone ? ' · ' + nom.parentPhone : ''}${nom.parentEmail ? ' · ' + nom.parentEmail : ''}</td></tr>
             ${nom.reason ? `<tr><td style="padding:8px 0;color:#666;vertical-align:top;">Reason</td><td style="padding:8px 0;">${nom.reason}</td></tr>` : ''}
+            ${(nom.siblingCount||0) > 0 ? `<tr><td style="padding:8px 0;color:#666;vertical-align:top;">Siblings</td><td style="padding:8px 0;"><strong style="color:#D97706;">${nom.siblingCount} sibling${nom.siblingCount>1?'s':''} also nominated</strong>${nom.siblingNames ? '<br><span style=\"font-size:12px;color:#666;\">' + nom.siblingNames + '</span>' : ''}</td></tr>` : ''}
             ${nom.siblings ? `<tr><td style="padding:8px 0;color:#666;">Siblings</td><td style="padding:8px 0;">${nom.siblings}</td></tr>` : ''}
           </table>
           <div style="margin-top:20px;">
@@ -124,7 +125,12 @@ export async function notifyParentIntakeReady(env, nom) {
   const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
   const intakeUrl = `https://childspree.org/#/intake/${nom.parentToken}`;
 
-  const smsBody = `Hi ${nom.parentName}! ${nom.childFirst} has been selected for Child Spree 2026 — brand new back-to-school clothes from Davis Education Foundation. Fill out sizes here (2 min): ${intakeUrl} Questions? Reply to this text. Reply STOP to opt out.`;
+  const siblingCount = nom.siblingCount || 0;
+  const familyNote = siblingCount > 0
+    ? ` We've also received nominations for ${siblingCount} other child${siblingCount > 1 ? 'ren' : ''} in your family${nom.siblingNames ? ' (' + nom.siblingNames + ')' : ''}. Each will receive their own link.`
+    : '';
+
+  const smsBody = `Hi ${nom.parentName}! ${nom.childFirst} has been selected for Child Spree 2026 — brand new back-to-school clothes from Davis Education Foundation.${familyNote} Fill out sizes here (2 min): ${intakeUrl} Questions? Reply to this text. Reply STOP to opt out.`;
 
   const emailHtml = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
