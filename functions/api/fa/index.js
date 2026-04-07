@@ -1,6 +1,6 @@
 // functions/api/fa/index.js — GET all FAs (admin) + POST create FA
 
-import { notifyFAWelcome } from '../../_notify.js';
+import { notifyFAWelcome } from '../_notify.js';
 
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,8); }
 function generateToken() { const c='abcdefghjkmnpqrstuvwxyz23456789'; let t=''; for(let i=0;i<16;i++) t+=c[Math.floor(Math.random()*c.length)]; return t; }
