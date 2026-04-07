@@ -261,7 +261,7 @@ function NominationForm() {
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', shirtSize:'', earlyArrival:false, storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -310,14 +310,13 @@ function VolunteerForm() {
         <div>
           <p style={secHead(isMobile)}>Event Details</p>
           <Field label="T-shirt size"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Select size...</option>{VOL_SHIRTS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
-          <Field label="Can you arrive by 7:00 AM?">
-            <div style={{ display:'flex', gap:12 }}>
-              {[['Yes, I\'ll be there!',true],['I\'ll try my best',false]].map(([label,val])=>(
-                <label key={String(val)} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, color:C.text }}>
-                  <input type="radio" name="earlyArrival" checked={form.earlyArrival===val} onChange={()=>upd('earlyArrival',val)} style={{ accentColor:C.pink }}/>{label}
-                </label>
-              ))}
-            </div>
+          <Field label="Arrival time slot *">
+            <select style={{...inp(),appearance:'auto'}} value={form.arrivalTime} onChange={e=>upd('arrivalTime',e.target.value)}>
+              <option value="">Select a time...</option>
+              <option value="6:30 AM">6:30 AM — Early setup crew</option>
+              <option value="7:00 AM">7:00 AM — Main shopping shift</option>
+              <option value="7:30 AM">7:30 AM — Second wave</option>
+            </select>
           </Field>
           <Field label="Any experience with shopping for or working with kids?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — helps us match you"/></Field>
           <Field label="Preferred Kohl's location *">
