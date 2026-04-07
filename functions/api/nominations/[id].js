@@ -67,7 +67,7 @@ export async function onRequestPatch(context) {
         context.waitUntil(notifyParentIntakeReady(env, {
           parentName: nom.parent_name, parentPhone: nom.parent_phone, parentEmail: nom.parent_email,
           parentToken: nom.parent_token, childFirst: nom.child_first, childLast: nom.child_last,
-          siblingCount: 0,
+          siblingCount: 0, lang: nom.parent_language || 'en',
         }));
       } else {
         // Multi-child family — auto-create sibling nominations then send one family email
@@ -110,7 +110,7 @@ export async function onRequestPatch(context) {
         // Send ONE family email/SMS with all intake links
         context.waitUntil(notifyParentFamilyIntakeReady(env, {
           parentName: nom.parent_name, parentPhone: nom.parent_phone, parentEmail: nom.parent_email,
-          children: allChildren,
+          children: allChildren, lang: nom.parent_language || 'en',
         }));
       }
     }
