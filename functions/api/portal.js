@@ -30,14 +30,18 @@ export async function onRequest(context) {
 
     const norm = email.toLowerCase().trim();
 
-    // Check if this email has any nominations
-    const check = await env.DB.prepare(
-      'SELECT COUNT(*) as count FROM nominations WHERE LOWER(nominator_email) = ?'
+    // Check family_advocates registry OR existing nominations
+    const faRecord = await env.DB.prepare(
+      "SELECT first_name, last_name, school, languages FROM family_advocates WHERE LOWER(email) = ?"
     ).bind(norm).first();
 
-    if (!check || check.count === 0) {
+    const nomCheck = await env.DB.prepare(
+      "SELECT COUNT(*) as count FROM nominations WHERE LOWER(nominator_email) = ?"
+    ).bind(norm).first();
+
+    if (!faRecord && (!nomCheck || nomCheck.count === 0)) {
       return cors(Response.json({
-        error: 'No nominations found for this email. Please use the email address you used when submitting nominations.',
+        error: 'Email not found. Please use your @dsdmail.net school email address.',
         notFound: true,
       }, { status: 404 }));
     }
@@ -49,7 +53,7 @@ export async function onRequest(context) {
       'INSERT INTO fa_sessions (token, nominator_email, expires_at) VALUES (?, ?, ?)'
     ).bind(token, norm, expires).run();
 
-    return cors(Response.json({ token, email: norm }));
+    return cors(Response.json({ token, email: norm, name: faRecord ? faRecord.first_name + ' ' + faRecord.last_name : null, school: faRecord?.school, languages: faRecord?.languages }));
   }
 
   // GET /api/portal/dashboard
@@ -64,6 +68,8 @@ export async function onRequest(context) {
     if (!session) return cors(Response.json({ error: 'Session expired. Please log in again.' }, { status: 401 }));
 
     const email = session.nominator_email;
+    // Look up FA registry for display name and school
+    const faInfo = await env.DB.prepare("SELECT first_name, last_name, school FROM family_advocates WHERE LOWER(email) = ?").bind(email).first();
 
     // Get all nominations with intake status
     const { results } = await env.DB.prepare(`
@@ -119,7 +125,7 @@ export async function onRequest(context) {
     const pending = nominations.filter(n => n.status === 'pending' || n.status === 'approved').length;
 
     return cors(Response.json({
-      email, nominatorName: results[0]?.nominator_name || email,
+      email, nominatorName: faInfo ? faInfo.first_name + ' ' + faInfo.last_name : (results[0]?.nominator_name || email), faSchool: faInfo?.school,
       stats: { total, intakeComplete, consented, needsVideo, awaitingParent, pending },
       nominations,
     }));
