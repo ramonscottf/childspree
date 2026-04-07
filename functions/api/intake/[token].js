@@ -20,7 +20,7 @@ export async function onRequestOptions() {
 export async function onRequestGet(context) {
   const { env, params } = context;
   const nom = await env.DB.prepare(
-    'SELECT id, child_first, child_last, school, grade, status FROM nominations WHERE parent_token = ?'
+    'SELECT id, child_first, child_last, school, grade, status, parent_language FROM nominations WHERE parent_token = ?'
   ).bind(params.token).first();
   if (!nom) return cors(Response.json({ error: 'Invalid or expired link' }, { status: 404 }));
   if (nom.status !== 'sent' && nom.status !== 'complete') {
@@ -30,6 +30,7 @@ export async function onRequestGet(context) {
   return cors(Response.json({
     childFirst: nom.child_first, childLast: nom.child_last,
     school: nom.school, grade: nom.grade, alreadySubmitted: !!existing,
+    parentLanguage: nom.parent_language || 'en',
   }));
 }
 
