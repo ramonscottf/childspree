@@ -33,7 +33,7 @@ export async function onRequestGet(context) {
     firstName: r.first_name, lastName: r.last_name,
     email: r.email, phone: r.phone,
     organization: r.organization, groupType: r.group_type,
-    shirtSize: r.shirt_size, earlyArrival: !!r.early_arrival,
+    shirtSize: r.shirt_size, arrivalTime: r.arrival_time, earlyArrival: !!r.early_arrival,
     experience: r.experience, hearAbout: r.hear_about,
     smsOptIn: !!r.sms_opt_in, notes: r.notes,
     createdAt: r.created_at,
@@ -49,11 +49,11 @@ export async function onRequestPost(context) {
 
   const id = generateId();
   await env.DB.prepare(`
-    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, shirt_size, store_location, early_arrival, experience, hear_about, sms_opt_in)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(id, body.firstName, body.lastName, body.email||null, body.phone||null,
-    body.organization||null, body.groupType||'Individual', body.shirtSize||null, body.storeLocation||null,
-    body.earlyArrival?1:0, body.experience||null, body.hearAbout||null,
+    body.organization||null, body.groupType||'Individual', body.shirtSize||null, body.storeLocation||null, body.arrivalTime||null,
+    body.arrivalTime === '6:30 AM' ? 1 : 0, body.experience||null, body.hearAbout||null,
     body.smsOptIn!==false?1:0
   ).run();
 
