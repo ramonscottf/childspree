@@ -42,7 +42,7 @@ export async function onRequestGet(context) {
     childFirst: r.child_first, childLast: r.child_last, school: r.school, grade: r.grade,
     nominatorName: r.nominator_name, nominatorRole: r.nominator_role, nominatorEmail: r.nominator_email,
     parentName: r.parent_name, parentPhone: r.parent_phone, parentEmail: r.parent_email,
-    reason: r.reason, siblings: r.siblings, additionalNotes: r.additional_notes,
+    reason: r.reason, siblingCount: r.sibling_count||0, siblingNames: r.sibling_names||null, additionalNotes: r.additional_notes,
     createdAt: r.created_at, updatedAt: r.updated_at,
     parentIntake: r.shirt_size ? {
       shirtSize: r.shirt_size, pantSize: r.pant_size, shoeSize: r.shoe_size,
@@ -74,14 +74,14 @@ export async function onRequestPost(context) {
     INSERT INTO nominations (id, parent_token, child_first, child_last, school, grade,
       nominator_name, nominator_role, nominator_email,
       parent_name, parent_phone, parent_email,
-      reason, siblings, additional_notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      reason, sibling_count, sibling_names, additional_notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id, token,
     body.childFirst, body.childLast, body.school, body.grade,
     body.nominatorName, body.nominatorRole || 'Teacher', body.nominatorEmail,
     body.parentName, body.parentPhone || null, body.parentEmail || null,
-    body.reason || null, body.siblings || null, body.additionalNotes || null
+    body.reason || null, body.siblingCount || 0, body.siblingNames || null, body.additionalNotes || null
   ).run();
 
   // Fire notifications async (don't block response)
@@ -91,7 +91,7 @@ export async function onRequestPost(context) {
     nominatorName: body.nominatorName, nominatorRole: body.nominatorRole,
     nominatorEmail: body.nominatorEmail,
     parentName: body.parentName, parentPhone: body.parentPhone, parentEmail: body.parentEmail,
-    reason: body.reason, siblings: body.siblings,
+    reason: body.reason, siblingCount: body.siblingCount||0, siblingNames: body.siblingNames||null,
   }));
 
   return cors(Response.json({ id, parentToken: token, status: 'pending' }, { status: 201 }));
