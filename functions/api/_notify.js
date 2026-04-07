@@ -255,3 +255,86 @@ export async function notifyVolunteerRegistered(env, vol) {
   }
 }
 
+
+// ─── Family intake — one email/SMS with ALL children's links ───────────────
+export async function notifyParentFamilyIntakeReady(env, { parentName, parentPhone, parentEmail, children }) {
+  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const count = children.length;
+  const firstName = children[0].childFirst;
+
+  // Build intake links for each child
+  const childLinks = children.map(c => ({
+    name: `${c.childFirst} ${c.childLast}`,
+    grade: c.grade,
+    url: `https://childspree.org/#/intake/${c.parentToken}`,
+  }));
+
+  // SMS — short with all links
+  const linkList = childLinks.map(c => `${c.name}: ${c.url}`).join(' | ');
+  const smsBody = `Hi ${parentName}! ${count} children in your family have been selected for Child Spree 2026 🎒 Each needs their own size form (2 min each): ${linkList} Reply STOP to opt out.`;
+
+  // Email — one per family, all links in one message
+  const linksHtml = childLinks.map(c => `
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-weight:700;color:#1B3A4B;font-size:15px;">${c.name}</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:2px;">${c.grade}</div>
+      </div>
+      <a href="${c.url}" style="background:#E8548C;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap;">Fill Out Sizes →</a>
+    </div>
+  `).join('');
+
+  const emailHtml = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#1B3A4B;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
+        <div style="font-size:40px;margin-bottom:8px;">🎒</div>
+        <h2 style="color:#fff;margin:0;font-size:20px;">${count} children selected for Child Spree 2026!</h2>
+        <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:14px;">Davis Education Foundation</p>
+      </div>
+      <div style="background:#f9f9f9;padding:28px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:15px;color:#333;">Dear ${parentName},</p>
+        <p style="font-size:14px;color:#555;line-height:1.7;">We're excited to let you know that <strong>${count} children</strong> in your family have been selected to receive brand new back-to-school clothing through Child Spree 2026!</p>
+        <p style="font-size:14px;color:#555;line-height:1.7;">Each child has their own size form. Please fill out one form per child — it takes about 2 minutes each. A volunteer will shop specifically for each of them.</p>
+        <div style="margin:24px 0;">
+          ${linksHtml}
+        </div>
+        <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 16px;font-size:13px;color:#166534;margin-bottom:20px;">
+          ✅ Each link is unique to that child. All information is kept strictly confidential.
+        </div>
+        <p style="font-size:13px;color:#555;">Questions? Reply to this email or contact us at <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
+        <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
+        <p style="font-size:11px;color:#999;">Davis Education Foundation · Child Spree 2026 · daviskids.org</p>
+      </div>
+    </div>
+  `;
+
+  if (parentPhone) await sendSMS(env, parentPhone, smsBody);
+  if (parentEmail) {
+    await sendEmail(env, {
+      to: parentEmail,
+      replyTo: adminEmails,
+      subject: `${count} children selected for Child Spree 2026 🎒`,
+      html: emailHtml,
+    });
+  }
+
+  // Also alert admin
+  const adminList = childLinks.map(c => `<li>${c.name} (${c.grade}) — <a href="${c.url}">${c.url}</a></li>`).join('');
+  await sendEmail(env, {
+    to: adminEmails,
+    subject: `🎒 Family packet sent — ${count} children (${parentName})`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;">
+        <div style="background:#1B3A4B;padding:16px 20px;border-radius:8px 8px 0 0;">
+          <h3 style="color:#fff;margin:0;">Family packet sent — ${count} children</h3>
+        </div>
+        <div style="background:#f9f9f9;padding:20px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
+          <p style="margin:0 0 10px;"><strong>Parent:</strong> ${parentName} · ${parentPhone||''} · ${parentEmail||''}</p>
+          <p style="margin:0 0 8px;"><strong>Children:</strong></p>
+          <ul style="margin:0;padding-left:20px;font-size:13px;color:#555;">${adminList}</ul>
+          <p style="margin:16px 0 0;font-size:12px;color:#999;">Sibling nominations were auto-created and are now visible in the admin dashboard.</p>
+        </div>
+      </div>
+    `,
+  });
+}
