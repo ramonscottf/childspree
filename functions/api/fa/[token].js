@@ -1,6 +1,6 @@
 // functions/api/fa/[token].js — FA portal: GET their nominations + POST nudge parent
 
-import { sendSMS, sendEmail } from '../../_notify.js';
+import { sendSMS, sendEmail } from '../_notify.js';
 
 function cors(r) { r.headers.set('Access-Control-Allow-Origin','*'); r.headers.set('Access-Control-Allow-Methods','GET,POST,OPTIONS'); r.headers.set('Access-Control-Allow-Headers','Content-Type,Authorization'); return r; }
 export async function onRequestOptions() { return cors(new Response(null,{status:204})); }
