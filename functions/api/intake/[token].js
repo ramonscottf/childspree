@@ -1,7 +1,7 @@
 // GET /api/intake/:token
 // POST /api/intake/:token — submit sizes + notify admin
 
-import { notifyIntakeComplete } from '../_notify.js';
+import { notifyIntakeComplete, notifyFAVideoNeeded } from '../_notify.js';
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
@@ -59,14 +59,25 @@ export async function onRequestPost(context) {
   ).bind('complete', now, now, nom.id).run();
 
   // Notify admin
-  context.waitUntil(notifyIntakeComplete(env, {
-    childFirst: nom.child_first, childLast: nom.child_last,
-    school: nom.school, grade: nom.grade,
-  }, {
-    gender: body.gender, department: body.department, shirtSize: body.shirtSize, pantSize: body.pantSize, shoeSize: body.shoeSize,
-    favoriteColors: body.favoriteColors, avoidColors: body.avoidColors,
-    allergies: body.allergies, preferences: body.preferences, videoUploaded: false,
-  }));
+  context.waitUntil((async () => {
+    await notifyIntakeComplete(env, {
+      childFirst: nom.child_first, childLast: nom.child_last,
+      school: nom.school, grade: nom.grade,
+    }, {
+      gender: body.gender, department: body.department, shirtSize: body.shirtSize, pantSize: body.pantSize, shoeSize: body.shoeSize,
+      favoriteColors: body.favoriteColors, avoidColors: body.avoidColors,
+      allergies: body.allergies, preferences: body.preferences, videoUploaded: false,
+    });
+    if (nom.fa_id) {
+      const fa = await env.DB.prepare('SELECT * FROM family_advocates WHERE id=?').bind(nom.fa_id).first();
+      if (fa) {
+        await notifyFAVideoNeeded(env, {
+          fa, nom,
+          intake: { shirt_size: body.shirtSize, gender: body.gender, favorite_colors: body.favoriteColors },
+        });
+      }
+    }
+  })());
 
   return cors(Response.json({ id: intakeId, status: 'complete' }, { status: 201 }));
 }
