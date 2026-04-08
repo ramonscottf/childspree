@@ -1,357 +1,993 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-// ─── Config ───
 const API = '/api';
-
-// ─── Data ───
-const SCHOOLS = [
-  "Adams Elementary", "Antelope Elementary", "Bountiful Elementary", "Burton Elementary",
-  "Clinton Elementary", "Columbia Elementary", "Cook Elementary", "Doxey Elementary",
-  "Eagle Bay Elementary", "East Layton Elementary", "Ellison Park Elementary",
-  "Endeavour Elementary", "Farmington Elementary", "Foxboro Elementary",
-  "Heritage Elementary", "Holt Elementary", "Kay's Creek Elementary",
-  "Knowlton Elementary", "Lake View Elementary", "Lincoln Elementary",
-  "Meadowbrook Elementary", "Morgan Elementary", "Mountain View Elementary",
-  "Muir Elementary", "Oak Hills Elementary", "Orchard Elementary",
-  "Parkside Elementary", "Reading Elementary", "Rosecrest Elementary",
-  "Sand Springs Elementary", "Snow Horse Elementary", "South Clearfield Elementary",
-  "Stewart Elementary", "Sunset Elementary", "Syracuse Elementary",
-  "Taylor Elementary", "Tolman Elementary", "Vae View Elementary",
-  "Valley View Elementary", "Wasatch Elementary", "Washington Elementary",
-  "West Bountiful Elementary", "West Clinton Elementary", "West Point Elementary",
-  "Whitesides Elementary", "Woods Cross Elementary",
-  "Centerville Junior High", "Central Davis Junior High", "Fairfield Junior High",
-  "Legacy Junior High", "Lakeridge Junior High", "Mueller Park Junior High",
-  "North Davis Junior High", "North Layton Junior High", "South Davis Junior High",
-  "Sunset Junior High", "Syracuse Junior High", "West Point Junior High",
-  "Bountiful High", "Clearfield High", "Davis High", "Farmington High",
-  "Layton High", "Northridge High", "Syracuse High", "Viewmont High", "Woods Cross High"
-];
+const SHIRT_SIZES = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10-12)","Youth XL (14-16)","Adult S","Adult M","Adult L","Adult XL","Adult 2XL"];
+const PANT_SIZES = ["Youth 4","Youth 5","Youth 6","Youth 6X/7","Youth 8","Youth 10","Youth 12","Youth 14","Youth 16","Adult 18","Adult 20","Adult 24W","Adult 26W","Adult 28W","Adult 30W","Adult 32W"];
+const VOL_SHIRTS = ["YS","YM","YL","AS","AM","AL","AXL","A2XL"];
+const SCHOOLS = ["Adams Elementary","Antelope Elementary","Bountiful Elementary","Burton Elementary","Clinton Elementary","Columbia Elementary","Cook Elementary","Doxey Elementary","Eagle Bay Elementary","East Layton Elementary","Ellison Park Elementary","Endeavour Elementary","Farmington Elementary","Foxboro Elementary","Heritage Elementary","Holt Elementary","Kay's Creek Elementary","Knowlton Elementary","Lake View Elementary","Lincoln Elementary","Meadowbrook Elementary","Morgan Elementary","Mountain View Elementary","Muir Elementary","Oak Hills Elementary","Orchard Elementary","Parkside Elementary","Reading Elementary","Rosecrest Elementary","Sand Springs Elementary","Snow Horse Elementary","South Clearfield Elementary","Stewart Elementary","Sunset Elementary","Syracuse Elementary","Taylor Elementary","Tolman Elementary","Vae View Elementary","Valley View Elementary","Wasatch Elementary","Washington Elementary","West Bountiful Elementary","West Clinton Elementary","West Point Elementary","Whitesides Elementary","Woods Cross Elementary","Centerville Junior High","Central Davis Junior High","Fairfield Junior High","Legacy Junior High","Lakeridge Junior High","Mueller Park Junior High","North Davis Junior High","North Layton Junior High","South Davis Junior High","Sunset Junior High","Syracuse Junior High","West Point Junior High","Bountiful High","Clearfield High","Davis High","Farmington High","Layton High","Northridge High","Syracuse High","Viewmont High","Woods Cross High"];
 const GRADES = ["Pre-K","K","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
-const SHIRT_SIZES = ["YXS (4-5)","YS (6-7)","YM (8)","YL (10-12)","YXL (14-16)","AS","AM","AL","AXL","A2XL"];
-const PANT_SIZES = ["4","5","6","6X/7","8","10","12","14","16","18","20","24W","26W","28W","30W","32W"];
+const PHOTOS = [
+  "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/edac9afc-9cc4-4880-ad8a-6c858f765f28/child-spree-america-first-volunteers-group.jpg?disposition=inline",
+  "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/ddb3a7a7-2722-4d47-ac13-f2ce041042ef/child-spree-citi-volunteers-group.jpg?disposition=inline",
+  "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/bcde49b8-2c6d-43cb-a18e-09dd4c08bd50/child-spree-america-first-volunteer-with-shopper.jpg?disposition=inline",
+  "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/5a3d3ca7-d8e5-4dcd-9e7c-87e29d590980/child-spree-teen-volunteer-group-with-cart.jpg?disposition=inline",
+  "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/81ef2dc4-cfcb-4687-aa20-03bf329972c8/child-spree-volunteer-helping-shopper-browse.jpg?disposition=inline",
+  "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/ca2263e5-c82c-4a94-bb70-46d64545058b/child-spree-two-volunteers-smiling.jpg?disposition=inline",
+];
 
-// ─── Styles ───
-const inputStyle = {
-  width: '100%', padding: '10px 12px', border: '1.5px solid #E2E8F0',
-  borderRadius: 8, fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-  background: '#FAFBFC', outline: 'none', boxSizing: 'border-box',
+// ─── TRANSLATIONS ─────────────────────────────────────────────────────────────
+const LANG = {
+  en: {
+    // Nav
+    home:'Home', nominate:'Nominate', volunteer:'Volunteer', admin:'Admin', portal:'My Portal',
+    // Landing
+    sponsorBtn:'Sponsor a Child — $150',
+    nominateBtn:'Nominate a Child →',
+    volunteerBtn:'Sign Up to Volunteer →',
+    // Intake
+    intakeTitle:'Sizes for', intakeSubtitle:'A volunteer will shop brand new clothes for your child. Takes about 2 minutes.',
+    intakeConfidential:'Everything shared here is confidential and used only for shopping.',
+    aboutTitle:'About', clothingSizes:'Clothing Sizes',
+    genderLabel:'Gender', genderGirl:'Girl', genderBoy:'Boy', genderOther:'Non-binary / Other',
+    deptLabel:'Preferred shopping department',
+    deptGirls:"Girls' section", deptBoys:"Boys' section", deptEither:'Either is fine',
+    shirtLabel:'Shirt *', pantLabel:'Pants *', shoeLabel:'Shoe *',
+    prefsTitle:'Preferences', prefsOptional:'optional',
+    colorsLabel:'Favorite colors, styles, or characters?',
+    colorsPlaceholder:'e.g., Blue, dinosaurs, soccer',
+    avoidLabel:'Colors or styles to avoid?',
+    avoidPlaceholder:'e.g., No pink, no ruffles',
+    sensoryLabel:'Allergies or sensory needs?',
+    sensoryPlaceholder:'e.g., No wool, needs soft fabrics',
+    notesLabel:'Anything else?',
+    consentLabel:'I give permission for my child to participate in Child Spree 2026, and agree that the information I provide will be used by volunteers to shop for my child.',
+    consentRequired:'Please check the consent box to continue.',
+    submitIntake:'Next — Add a Video (optional) →',
+    submitIntakeSaving:'Saving...',
+    // Video
+    videoTitle:'Optional: Record a short video',
+    videoSubtitle1:'30–60 seconds. Tell us', videoSubtitle2:"'s favorite color, what they love, the shoes they've been dreaming about!",
+    recordNow:'Record now', uploadVideo:'Upload a video',
+    usesCamera:'Uses your camera', fromPhone:'From your phone',
+    skipVideo:'Skip — no video',
+    startRecording:'Start Recording', stopReview:'Stop & Review',
+    goBack:'← Back',
+    previewLabel:'Preview',
+    retake:'↩ Redo', looksGood:'✓ Looks good — Upload',
+    skipDontInclude:"Skip — don't include video",
+    uploadingVideo:'Uploading your video...',
+    videoReceived:'Video received!',
+    videoReceivedMsg:'A volunteer will watch this before they shop for', videoReceivedMsg2:'. It makes a huge difference.',
+    allDone:'All done ✓',
+    // Done
+    intakeDoneTitle:'All Done!', intakeDoneMsg:'We have everything we need for',
+    intakeDoneMsg2:'. A volunteer will shop brand new clothes just for them.',
+    // Portal
+    portalTitle:'Family Advocate Portal', portalSubtitle:'Track your nominated children',
+    portalEmailLabel:'Your school email address', portalEmailPlaceholder:'you@davis.k12.ut.us',
+    portalLogin:'View My Dashboard', portalLoggingIn:'Looking up your nominations...',
+    portalNotFound:"No nominations found for this email. Please use the exact email you used when submitting nominations.",
+    portalWelcome:'Welcome back,',
+    portalTotal:'Total Nominated', portalIntake:'Intake Complete',
+    portalConsent:'Consented', portalNeedsVideo:'Needs Video',
+    portalAwaiting:'Awaiting Parent', portalPending:'Pending Review',
+    portalNeedsVideoTitle:'🎬 Children Who Still Need a Video',
+    portalNeedsVideoEmpty:'All children who completed intake have recorded a video.',
+    portalAllTitle:'All Nominated Children',
+    portalChildCol:'Child', portalStatusCol:'Status', portalIntakeCol:'Parent Intake',
+    portalConsentCol:'Consent', portalVideoCol:'Video',
+    portalIntakeDone:'✅ Complete', portalIntakePending:'⏳ Not yet',
+    portalConsentYes:'✅ Yes', portalConsentNo:'—',
+    portalVideoYes:'🎬 Recorded', portalVideoNeeded:'⚠️ Needed',
+    portalLogout:'Log out',
+  },
+  es: {
+    // Nav
+    home:'Inicio', nominate:'Nominar', volunteer:'Voluntario', admin:'Admin', portal:'Mi Portal',
+    // Landing
+    sponsorBtn:'Patrocinar un Niño — $150',
+    nominateBtn:'Nominar a un Niño →',
+    volunteerBtn:'Inscribirse como Voluntario →',
+    // Intake
+    intakeTitle:'Tallas para', intakeSubtitle:'Un voluntario comprará ropa nueva para su hijo/a. Toma unos 2 minutos.',
+    intakeConfidential:'Todo lo que comparte aquí es confidencial y se usará únicamente para las compras.',
+    aboutTitle:'Sobre', clothingSizes:'Tallas de Ropa',
+    genderLabel:'Género', genderGirl:'Niña', genderBoy:'Niño', genderOther:'No binario / Otro',
+    deptLabel:'Departamento preferido para compras',
+    deptGirls:'Sección de niñas', deptBoys:'Sección de niños', deptEither:'Cualquiera está bien',
+    shirtLabel:'Camiseta *', pantLabel:'Pantalón *', shoeLabel:'Zapato *',
+    prefsTitle:'Preferencias', prefsOptional:'opcional',
+    colorsLabel:'¿Colores favoritos, estilos o personajes?',
+    colorsPlaceholder:'Ej: Azul, dinosaurios, fútbol',
+    avoidLabel:'¿Colores o estilos que evitar?',
+    avoidPlaceholder:'Ej: Sin rosado, sin volantes',
+    sensoryLabel:'¿Alergias o necesidades sensoriales?',
+    sensoryPlaceholder:'Ej: Sin lana, necesita telas suaves',
+    notesLabel:'¿Algo más?',
+    consentLabel:'Doy permiso para que mi hijo/a participe en Child Spree 2026, y acepto que la información que proporcione sea utilizada por los voluntarios para hacer las compras para mi hijo/a.',
+    consentRequired:'Por favor marque la casilla de consentimiento para continuar.',
+    submitIntake:'Siguiente — Agregar un Video (opcional) →',
+    submitIntakeSaving:'Guardando...',
+    // Video
+    videoTitle:'Opcional: Grabe un video corto',
+    videoSubtitle1:'30–60 segundos. ¡Cuéntenos el color favorito de', videoSubtitle2:', lo que le gusta, los zapatos con los que ha soñado!',
+    recordNow:'Grabar ahora', uploadVideo:'Subir un video',
+    usesCamera:'Usa su cámara', fromPhone:'Desde su teléfono',
+    skipVideo:'Omitir — sin video',
+    startRecording:'Iniciar Grabación', stopReview:'Detener y Revisar',
+    goBack:'← Atrás',
+    previewLabel:'Vista previa',
+    retake:'↩ Repetir', looksGood:'✓ Se ve bien — Subir',
+    skipDontInclude:'Omitir — no incluir video',
+    uploadingVideo:'Subiendo su video...',
+    videoReceived:'¡Video recibido!',
+    videoReceivedMsg:'Un voluntario verá esto antes de comprar para', videoReceivedMsg2:'. Hace una gran diferencia.',
+    allDone:'¡Listo! ✓',
+    // Done
+    intakeDoneTitle:'¡Todo Listo!', intakeDoneMsg:'Tenemos todo lo que necesitamos para',
+    intakeDoneMsg2:'. Un voluntario comprará ropa nueva específicamente para su hijo/a.',
+    // Portal (Spanish — same labels, FA are school staff)
+    portalTitle:'Portal del Coordinador Familiar', portalSubtitle:'Seguimiento de niños nominados',
+    portalEmailLabel:'Su correo electrónico escolar', portalEmailPlaceholder:'usted@davis.k12.ut.us',
+    portalLogin:'Ver Mi Panel', portalLoggingIn:'Buscando sus nominaciones...',
+    portalNotFound:'No se encontraron nominaciones para este correo. Use el correo exacto con el que envió las nominaciones.',
+    portalWelcome:'Bienvenido/a,',
+    portalTotal:'Total Nominados', portalIntake:'Formulario Completo',
+    portalConsent:'Con Consentimiento', portalNeedsVideo:'Necesita Video',
+    portalAwaiting:'Esperando al Padre', portalPending:'Pendiente de Revisión',
+    portalNeedsVideoTitle:'🎬 Niños que Aún Necesitan Video',
+    portalNeedsVideoEmpty:'Todos los niños que completaron el formulario han grabado un video.',
+    portalAllTitle:'Todos los Niños Nominados',
+    portalChildCol:'Niño/a', portalStatusCol:'Estado', portalIntakeCol:'Formulario del Padre',
+    portalConsentCol:'Consentimiento', portalVideoCol:'Video',
+    portalIntakeDone:'✅ Completo', portalIntakePending:'⏳ Pendiente',
+    portalConsentYes:'✅ Sí', portalConsentNo:'—',
+    portalVideoYes:'🎬 Grabado', portalVideoNeeded:'⚠️ Necesario',
+    portalLogout:'Cerrar sesión',
+  },
 };
-const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, letterSpacing: 0.3 };
-const sectionTitle = { fontSize: 11, fontWeight: 700, color: '#1B3A4B', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12, borderBottom: '2px solid #E2E8F0', paddingBottom: 6 };
 
-// ─── API helpers ───
-async function api(path, options = {}) {
-  const res = await fetch(`${API}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
-  }
-  return res.json();
+function useLang() {
+  const [lang, setLangState] = useState(() => localStorage.getItem('cs-lang') || 'en');
+  const setLang = (l) => { setLangState(l); localStorage.setItem('cs-lang', l); };
+  const t = (key) => LANG[lang]?.[key] || LANG.en[key] || key;
+  return { lang, setLang, t };
 }
 
-// ─── Components ───
-function StatusBadge({ status }) {
-  const colors = {
-    pending: { bg: '#FEF3C7', text: '#92400E', label: 'Pending' },
-    approved: { bg: '#D1FAE5', text: '#065F46', label: 'Approved' },
-    sent: { bg: '#DBEAFE', text: '#1E40AF', label: 'Sent' },
-    complete: { bg: '#E0E7FF', text: '#3730A3', label: 'Complete' },
-    declined: { bg: '#FEE2E2', text: '#991B1B', label: 'Declined' },
-  };
-  const c = colors[status] || colors.pending;
+function LangToggle({ lang, setLang, style }) {
   return (
-    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, letterSpacing: 0.3, background: c.bg, color: c.text, textTransform: 'uppercase' }}>
-      {c.label}
-    </span>
+    <button onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
+      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:20, cursor:'pointer', fontSize:12, fontWeight:700, color:'#fff', letterSpacing:0.5, ...style }}>
+      <span style={{ fontSize:14 }}>{lang === 'en' ? '🇲🇽' : '🇺🇸'}</span>
+      {lang === 'en' ? 'Español' : 'English'}
+    </button>
   );
 }
 
-function Header({ subtitle }) {
+const C = { navy:'#1B3A4B', pink:'#E8548C', pinkLight:'#F9A8C9', bg:'#F8FAFC', card:'#fff', border:'#E2E8F0', text:'#1E293B', muted:'#64748B', light:'#94A3B8', green:'#059669', red:'#DC2626', amber:'#D97706', blue:'#2563EB' };
+const inp = (ex={}) => ({ width:'100%', padding:'10px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:"'DM Sans',sans-serif", background:'#FAFBFC', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s', color:C.text, ...ex });
+const lbl = { display:'block', fontSize:12, fontWeight:600, color:C.muted, marginBottom:4, letterSpacing:0.3 };
+const secHead = (m) => ({ fontSize:m?10:11, fontWeight:700, color:C.navy, textTransform:'uppercase', letterSpacing:1.2, marginBottom:12, borderBottom:`2px solid ${C.pinkLight}`, paddingBottom:6 });
+function Field({ label, children, style }) { return <div style={{ marginBottom:14, ...style }}>{label && <label style={lbl}>{label}</label>}{children}</div>; }
+function Row({ cols=2, gap=12, children, style }) { return <div style={{ display:'grid', gridTemplateColumns:Array(cols).fill('1fr').join(' '), gap, ...style }}>{children}</div>; }
+function useIsMobile() { const [m,setM]=useState(window.innerWidth<768); useEffect(()=>{ const h=()=>setM(window.innerWidth<768); window.addEventListener('resize',h); return()=>window.removeEventListener('resize',h); },[]); return m; }
+async function api(path, opts={}) { const r=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json',...opts.headers},...opts}); if(!r.ok){const e=await r.json().catch(()=>({error:'Failed'})); throw new Error(e.error||`HTTP ${r.status}`);} return r.json(); }
+
+function StatusBadge({ status, vol }) {
+  const nMap = { pending:{bg:'#FEF3C7',t:'#92400E',l:'Pending'}, approved:{bg:'#D1FAE5',t:'#065F46',l:'Approved'}, sent:{bg:'#DBEAFE',t:'#1E40AF',l:'Sent'}, complete:{bg:'#E0E7FF',t:'#3730A3',l:'Complete'}, declined:{bg:'#FEE2E2',t:'#991B1B',l:'Declined'} };
+  const vMap = { registered:{bg:'#E0E7FF',t:'#3730A3',l:'Registered'}, confirmed:{bg:'#D1FAE5',t:'#065F46',l:'Confirmed'}, assigned:{bg:'#DBEAFE',t:'#1E40AF',l:'Assigned'}, attended:{bg:'#FEF3C7',t:'#92400E',l:'Attended'} };
+  const map = vol ? vMap : nMap;
+  const c = map[status] || map[vol?'registered':'pending'];
+  return <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:c.bg, color:c.t, textTransform:'uppercase', letterSpacing:0.3 }}>{c.l}</span>;
+}
+
+function TopNav({ view, navigate }) {
+  const { t: navT } = useLang();
+  const items = [
+    {key:'home',hash:'#/',label:navT('home')},{key:'nominate',hash:'#/nominate',label:navT('nominate')},
+    {key:'volunteer',hash:'#/volunteer',label:navT('volunteer')},
+    {key:'portal',hash:'#/portal',label:navT('portal')},
+    {key:'admin',hash:'#/admin',label:navT('admin')},
+  ];
   return (
-    <div style={{ background: '#1B3A4B', color: '#fff', padding: '16px 16px 14px', textAlign: 'center' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6, marginBottom: 2 }}>
-        Davis Education Foundation
+    <nav style={{ background:C.navy, padding:'0 32px', display:'flex', alignItems:'center', position:'sticky', top:0, zIndex:50 }}>
+      <button onClick={()=>navigate('#/')} style={{ display:'flex', alignItems:'center', gap:10, flex:1, padding:'12px 0', background:'none', border:'none', cursor:'pointer' }}>
+        <div style={{ width:34, height:34, borderRadius:'50%', background:C.pink, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:24,height:24,borderRadius:'50%'}} /></div>
+        <div style={{ textAlign:'left' }}>
+          <div style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:15, fontWeight:700, lineHeight:1 }}>Child Spree 2026</div>
+          <div style={{ color:'rgba(255,255,255,0.45)', fontSize:9, letterSpacing:1.5, textTransform:'uppercase', marginTop:1 }}>Davis Education Foundation</div>
+        </div>
+      </button>
+      <div style={{ display:'flex', gap:4 }}>
+        {items.map(item => { const active=view===item.key; return (
+          <button key={item.key} onClick={()=>navigate(item.hash)} style={{ padding:'8px 14px', background:active?'rgba(255,255,255,0.15)':'none', border:'none', borderRadius:6, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:active?1:0.65 }}>{item.label}</button>
+        ); })}
       </div>
-      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 800 }}>
-        Child Spree 2026
-      </div>
-      {subtitle && <div style={{ fontSize: 12, opacity: 0.5, marginTop: 2 }}>{subtitle}</div>}
+    </nav>
+  );
+}
+function MobileHeader({ onHome }) {
+  return (
+    <div style={{ background:C.navy, color:'#fff', padding:'14px 16px 12px', textAlign:'center' }}>
+      <button onClick={onHome} style={{ background:'none', border:'none', cursor:'pointer' }}>
+        <div style={{ marginBottom:4 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:64,height:64}} /></div>
+        <div style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:800 }}>Child Spree 2026</div>
+        <div style={{ fontSize:9, fontWeight:500, letterSpacing:1.5, textTransform:'uppercase', opacity:0.5, marginTop:1 }}>Davis Education Foundation</div>
+      </button>
+    </div>
+  );
+}
+function MobileNav({ view, navigate }) {
+  const { t: mnavT } = useLang();
+  const items = [{key:'home',hash:'#/',icon:'🏠',label:mnavT('home')},{key:'nominate',hash:'#/nominate',icon:'📋',label:mnavT('nominate')},{key:'volunteer',hash:'#/volunteer',icon:'🛒',label:mnavT('volunteer')},{key:'portal',hash:'#/portal',icon:'📋',label:mnavT('portal')},{key:'admin',hash:'#/admin',icon:'⚙️',label:mnavT('admin')}];
+  return (
+    <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'#fff', borderTop:`1px solid ${C.border}`, display:'flex', justifyContent:'space-around', padding:'8px 0 16px', boxShadow:'0 -2px 8px rgba(0,0,0,0.04)', zIndex:100 }}>
+      {items.map(item => { const active=view===item.key; return (
+        <button key={item.key} onClick={()=>navigate(item.hash)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2, opacity:active?1:0.4 }}>
+          <span style={{ fontSize:18 }}>{item.icon}</span>
+          <span style={{ fontSize:9, fontWeight:700, letterSpacing:0.5, color:active?C.pink:C.light, textTransform:'uppercase' }}>{item.label}</span>
+        </button>
+      ); })}
     </div>
   );
 }
 
-// ─── Nomination Form ───
+// ─── LANDING ───
+function LandingPage({ navigate }) {
+  const isMobile = useIsMobile();
+  const [photoIdx, setPhotoIdx] = useState(0);
+  useEffect(() => { const t=setInterval(()=>setPhotoIdx(i=>(i+1)%PHOTOS.length),4000); return()=>clearInterval(t); }, []);
+  const stats = [{num:'500+',label:'Students served each August'},{num:'$150',label:'Per child — head to toe'},{num:'400+',label:'Volunteers before sunrise'},{num:'1',label:'Day that changes a year'}];
+  const journey = [
+    {icon:'✏️',title:'A teacher sees the need',body:'It starts in the classroom. An educator notices a student wearing the same worn-out clothes. They fill out a quiet nomination. No awkward conversations. Just someone who cares taking the first step.'},
+    {icon:'🎬',title:'A child shares their dream outfit',body:"Families share sizes and students record a short video. Favorite colors. The shoes they've been dreaming about. For many, it's the first time anyone has asked what they actually want to wear."},
+    {icon:'🛒',title:'A stranger wakes up early to shop',body:"Before sunrise on the first Friday of August, 400+ volunteers arrive at Kohl's. Each one is matched to a single child — they've watched the video, they know the favorite color, they're ready."},
+    {icon:'✨',title:"A child walks in like they own the place",body:"New shoes. New backpack. New everything. The look on a child's face when they realize someone they've never met cared enough to pick out their first new outfit. That's Child Spree."},
+  ];
+  return (
+    <div style={{ background:'#fff' }}>
+      <div style={{ position:'relative', height:isMobile?'60vh':'80vh', overflow:'hidden' }}>
+        {PHOTOS.map((src,i)=>(
+          <div key={i} style={{ position:'absolute', inset:0, transition:'opacity 1.2s ease', opacity:i===photoIdx?1:0 }}>
+            <img src={src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+          </div>
+        ))}
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.25) 0%,rgba(27,58,75,0.88) 100%)' }}/>
+        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', justifyContent:'flex-end', padding:isMobile?'32px 20px':'60px 64px', maxWidth:800 }}>
+          <div style={{ color:'rgba(249,168,201,0.9)', fontSize:isMobile?11:12, fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Every August · Three Davis County Kohl's</div>
+          <h1 style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:isMobile?'2.2rem':'3.8rem', fontWeight:700, lineHeight:1.1, margin:'0 0 16px' }}>
+            500+ students.<br/>Brand new clothes.<br/><em style={{ color:C.pinkLight }}>One unforgettable morning.</em>
+          </h1>
+          <p style={{ color:'rgba(255,255,255,0.8)', fontSize:isMobile?14:16, lineHeight:1.7, maxWidth:540, margin:'0 0 28px' }}>Every August, Davis County volunteers wake up before sunrise to shop for a child they've never met — based on that child's video, their favorite color, their dream outfit.</p>
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            <button onClick={()=>navigate('#/nominate')} style={{ padding:isMobile?'13px 24px':'16px 32px', background:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:isMobile?14:16, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(232,84,140,0.4)' }}>Nominate a Child →</button>
+            <button onClick={()=>navigate('#/volunteer')} style={{ padding:isMobile?'13px 24px':'16px 32px', background:'rgba(255,255,255,0.15)', color:'#fff', border:'1.5px solid rgba(255,255,255,0.4)', borderRadius:10, fontSize:isMobile?14:16, fontWeight:600, cursor:'pointer', backdropFilter:'blur(4px)' }}>Volunteer to Shop</button>
+          </div>
+        </div>
+      </div>
+      <div style={{ background:C.navy, padding:isMobile?'40px 20px':'48px 64px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'repeat(4,1fr)', gap:isMobile?20:32, maxWidth:1100, margin:'0 auto' }}>
+          {stats.map(s=>(
+            <div key={s.num} style={{ textAlign:'center' }}>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?'2.5rem':'3.5rem', fontWeight:700, color:C.pinkLight, lineHeight:1 }}>{s.num}</div>
+              <div style={{ color:'rgba(255,255,255,0.6)', fontSize:isMobile?12:14, marginTop:6, lineHeight:1.4 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:isMobile?'56px 20px':'80px 64px', maxWidth:1100, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:48 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.pink, letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>The Journey</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?'1.8rem':'2.5rem', color:C.navy, margin:'0 0 16px' }}>From a teacher's heart<br/>to a child's first-day smile.</h2>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:24 }}>
+          {journey.map((step,i)=>(
+            <div key={i} style={{ background:C.bg, borderRadius:14, padding:'28px', borderLeft:`4px solid ${C.pink}`, display:'flex', gap:16 }}>
+              <div style={{ fontSize:28, flexShrink:0 }}>{step.icon}</div>
+              <div><h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:17, color:C.navy, marginBottom:8, fontWeight:600 }}>{step.title}</h3><p style={{ color:C.muted, fontSize:13, lineHeight:1.7, margin:0 }}>{step.body}</p></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:isMobile?'0 20px 56px':'0 64px 80px', maxWidth:1100, margin:'0 auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'repeat(3,1fr)', gap:12 }}>
+          {PHOTOS.slice(0,isMobile?4:6).map((src,i)=>(
+            <div key={i} style={{ borderRadius:12, overflow:'hidden', aspectRatio:'4/3' }}>
+              <img src={src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s' }} onMouseEnter={e=>e.target.style.transform='scale(1.04)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ background:C.bg, padding:isMobile?'48px 20px':'64px', display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:24, maxWidth:1100, margin:'0 auto' }}>
+        <div style={{ background:C.navy, borderRadius:16, padding:isMobile?'32px 24px':'40px', color:'#fff' }}>
+          <div style={{ fontSize:36, marginBottom:16 }}>📋</div>
+          <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?20:24, margin:'0 0 12px' }}>Nominate a Child</h3>
+          <p style={{ color:'rgba(255,255,255,0.7)', fontSize:14, lineHeight:1.7, marginBottom:24 }}>Teachers, counselors, and school staff — if you know a student who needs support, nominate them. It takes 3 minutes and could change their entire school year.</p>
+          <button onClick={()=>navigate('#/nominate')} style={{ padding:'13px 28px', background:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Start a Nomination →</button>
+        </div>
+        <div style={{ background:'#fff', border:`1px solid ${C.border}`, borderRadius:16, padding:isMobile?'32px 24px':'40px' }}>
+          <div style={{ fontSize:36, marginBottom:16 }}>🛒</div>
+          <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?20:24, color:C.navy, margin:'0 0 12px' }}>Volunteer to Shop</h3>
+          <p style={{ color:C.muted, fontSize:14, lineHeight:1.7, marginBottom:24 }}>Join 400+ volunteers on the first Friday of August at three Davis County Kohl's locations (Layton, Centerville & Clinton). You'll be matched with one child and shop for them head to toe.</p>
+          <button onClick={()=>navigate('#/volunteer')} style={{ padding:'13px 28px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Sign Up to Volunteer →</button>
+        </div>
+      </div>
+      <div style={{ background:C.navy, padding:isMobile?'48px 20px':'64px', textAlign:'center' }}>
+        <div style={{ fontSize:11, fontWeight:700, color:C.pinkLight, letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Make it possible</div>
+        <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?'1.8rem':'2.5rem', color:'#fff', margin:'0 0 16px' }}>Sponsor a Student</h2>
+        <p style={{ color:'rgba(255,255,255,0.65)', fontSize:isMobile?14:16, lineHeight:1.7, maxWidth:460, margin:'0 auto 28px' }}>$150 covers one child — head to toe. New shoes. New clothes. New backpack. One donation. One complete, unforgettable morning.</p>
+        <a href="https://dsdgive.net/event/2" target="_blank" rel="noreferrer" style={{ display:'inline-block', padding:'16px 36px', background:C.pink, color:'#fff', borderRadius:10, fontSize:16, fontWeight:700, textDecoration:'none', boxShadow:'0 4px 20px rgba(232,84,140,0.4)' }}>Sponsor a Child — $150</a>
+      </div>
+      <div style={{ background:'#0f2634', padding:'28px', textAlign:'center' }}>
+        <p style={{ color:'rgba(255,255,255,0.3)', fontSize:12, margin:'0 0 6px' }}>Child Spree 2026 · Davis Education Foundation · <a href="https://daviskids.org/events-child-spree" target="_blank" rel="noreferrer" style={{ color:'rgba(255,255,255,0.4)' }}>daviskids.org</a></p>
+      </div>
+    </div>
+  );
+}
+
+// ─── NOMINATE ───
 function NominationForm() {
-  const [form, setForm] = useState({
-    childFirst: '', childLast: '', school: '', grade: '',
-    nominatorName: '', nominatorRole: 'Teacher', nominatorEmail: '',
-    parentName: '', parentPhone: '', parentEmail: '',
-    reason: '', siblings: '', additionalNotes: ''
-  });
+  const isMobile = useIsMobile();
+  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:'',parentLanguage:'en'});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
-
-  const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const handleSubmit = async () => {
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  const submit = async() => {
     setError(null);
+    if (!form.childFirst||!form.childLast||!form.school||!form.grade) { setError('Please fill in all child information.'); return; }
+    if (!form.nominatorName||!form.nominatorEmail) { setError('Please fill in your name and email.'); return; }
+    if (!form.parentName) { setError('Parent/guardian name required.'); return; }
+    if (!form.parentPhone&&!form.parentEmail) { setError('Please provide at least one parent contact.'); return; }
     setSubmitting(true);
-    try {
-      await api('/nominations', { method: 'POST', body: JSON.stringify(form) });
-      setSubmitted(true);
-    } catch (err) {
-      setError(err.message);
-    }
+    try { await api('/nominations',{method:'POST',body:JSON.stringify(form)}); setSubmitted(true); } catch(err){setError(err.message);}
     setSubmitting(false);
   };
-
-  if (submitted) {
-    return (
-      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: '#1B3A4B', marginBottom: 8 }}>Nomination Received</h2>
-        <p style={{ color: '#64748B', fontSize: 14, lineHeight: 1.6, maxWidth: 360, margin: '0 auto 24px' }}>
-          Thank you for advocating for this child. The DEF team will review and reach out to the family.
-        </p>
-        <button onClick={() => { setSubmitted(false); setForm({ childFirst: '', childLast: '', school: '', grade: '', nominatorName: '', nominatorRole: 'Teacher', nominatorEmail: '', parentName: '', parentPhone: '', parentEmail: '', reason: '', siblings: '', additionalNotes: '' }); }}
-          style={{ background: '#1B3A4B', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-          Nominate Another Child
-        </button>
-      </div>
-    );
-  }
-
+  if (submitted) return (
+    <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}>
+      <div style={{ fontSize:56, marginBottom:16 }}>✓</div>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>Nomination Received</h2>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>Thank you. The DEF team will review and reach out to the family. You'll receive an email confirmation shortly.</p>
+      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
+    </div>
+  );
+  const maxW = isMobile?'100%':760;
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1B3A4B', marginBottom: 4 }}>Nominate a Child</h2>
-        <p style={{ color: '#94A3B8', fontSize: 13 }}>Back-to-school clothing for students in need</p>
-      </div>
-
-      <div style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 10, padding: '12px 14px', marginBottom: 24, fontSize: 13, color: '#0C4A6E', lineHeight: 1.5 }}>
-        Nominate students whose families may need support with back-to-school clothing. All information is confidential.
-      </div>
-
-      {error && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#991B1B' }}>
-          {error}
+    <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'20px 16px':'32px 40px' }}>
+      {!isMobile && (
+        <div style={{ display:'flex', gap:28, alignItems:'flex-start', marginBottom:28 }}>
+          <div style={{ flex:'0 0 240px', borderRadius:12, overflow:'hidden' }}><img src={PHOTOS[2]} alt="" style={{ width:'100%', height:170, objectFit:'cover', display:'block' }}/></div>
+          <div style={{ flex:1, paddingTop:4 }}>
+            <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, marginBottom:8 }}>Nominate a Child</h2>
+            <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>Be the reason a child walks into school with confidence. Takes about 3 minutes.</p>
+            <div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#0C4A6E' }}>All information is kept strictly confidential. Families are never told who nominated their child.</div>
+          </div>
         </div>
       )}
-
-      <p style={sectionTitle}>Child Information</p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>First Name *</label>
-          <input style={inputStyle} value={form.childFirst} onChange={e => update('childFirst', e.target.value)} placeholder="First" />
+      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={PHOTOS[2]} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Nominate a Child</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Be the reason a child walks into school with confidence.</p></div><div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#0C4A6E' }}>All info is kept confidential. Families are never told who nominated.</div></>}
+      {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
+      <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
+        <div>
+          <p style={secHead(isMobile)}>Child Information</p>
+          <Row cols={2} gap={10}><Field label="First Name *"><input style={inp()} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)} placeholder="First"/></Field><Field label="Last Name *"><input style={inp()} value={form.childLast} onChange={e=>upd('childLast',e.target.value)} placeholder="Last"/></Field></Row>
+          <Row cols={isMobile?2:1} gap={10}><Field label="School *"><select style={{...inp(),appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">Select school...</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Grade *"><select style={{...inp(),appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">Grade</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></Field></Row>
+          <p style={{...secHead(isMobile),marginTop:20}}>Your Information</p>
+          <Field label="Your Name *"><input style={inp()} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)} placeholder="Full name"/></Field>
+          <Row cols={2} gap={10}><Field label="Role *"><select style={{...inp(),appearance:'auto'}} value={form.nominatorRole} onChange={e=>upd('nominatorRole',e.target.value)}>{['Teacher','Counselor','Family Advocate','Administrator','Other'].map(r=><option key={r} value={r}>{r}</option>)}</select></Field><Field label="Email *"><input style={inp()} type="email" value={form.nominatorEmail} onChange={e=>upd('nominatorEmail',e.target.value)} placeholder="you@davis.k12.ut.us"/></Field></Row>
         </div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Last Name *</label>
-          <input style={inputStyle} value={form.childLast} onChange={e => update('childLast', e.target.value)} placeholder="Last" />
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 4 }}>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>School *</label>
-          <select style={{ ...inputStyle, appearance: 'auto' }} value={form.school} onChange={e => update('school', e.target.value)}>
-            <option value="">Select school...</option>
-            {SCHOOLS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Grade *</label>
-          <select style={{ ...inputStyle, appearance: 'auto' }} value={form.grade} onChange={e => update('grade', e.target.value)}>
-            <option value="">Grade</option>
-            {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <p style={{ ...sectionTitle, marginTop: 8 }}>Your Information</p>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Your Name *</label>
-        <input style={inputStyle} value={form.nominatorName} onChange={e => update('nominatorName', e.target.value)} placeholder="Full name" />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Role *</label>
-          <select style={{ ...inputStyle, appearance: 'auto' }} value={form.nominatorRole} onChange={e => update('nominatorRole', e.target.value)}>
-            {['Teacher','Counselor','Family Advocate','Administrator','Other'].map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Email *</label>
-          <input style={inputStyle} type="email" value={form.nominatorEmail} onChange={e => update('nominatorEmail', e.target.value)} placeholder="you@davis.k12.ut.us" />
-        </div>
-      </div>
-
-      <p style={{ ...sectionTitle, marginTop: 8 }}>Parent / Guardian</p>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Name *</label>
-        <input style={inputStyle} value={form.parentName} onChange={e => update('parentName', e.target.value)} placeholder="Full name" />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Phone</label>
-          <input style={inputStyle} type="tel" value={form.parentPhone} onChange={e => update('parentPhone', e.target.value)} placeholder="(801) 555-0000" />
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Email</label>
-          <input style={inputStyle} type="email" value={form.parentEmail} onChange={e => update('parentEmail', e.target.value)} placeholder="parent@email.com" />
+        <div>
+          <p style={secHead(isMobile)}>Parent / Guardian</p>
+          <Field label="Name *"><input style={inp()} value={form.parentName} onChange={e=>upd('parentName',e.target.value)} placeholder="Full name"/></Field>
+          <Row cols={2} gap={10}><Field label="Phone"><input style={inp()} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)} placeholder="(801) 555-0000"/></Field><Field label="Email"><input style={inp()} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)} placeholder="parent@email.com"/></Field></Row>
+          <p style={{...secHead(isMobile),marginTop:20}}>Details</p>
+          <Field label="Why are you nominating this child?"><textarea style={{...inp(),minHeight:isMobile?72:100,resize:'vertical'}} value={form.reason} onChange={e=>upd('reason',e.target.value)} placeholder="Brief explanation — stays confidential"/></Field>
+          <Field label="Additional siblings to nominate?">
+            <div style={{display:'flex', gap:10, alignItems:'center', marginBottom: form.siblingCount > 0 ? 10 : 0}}>
+              <div style={{flex:'0 0 auto'}}>
+                <label style={lbl}>How many siblings?</label>
+                <select style={{...inp({width:100}), appearance:'auto'}} value={form.siblingCount} onChange={e=>upd('siblingCount',parseInt(e.target.value))}>
+                  {[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?'None':n}</option>)}
+                </select>
+              </div>
+              {form.siblingCount > 0 && (
+                <div style={{flex:1}}>
+                  <label style={lbl}>Sibling names & grades</label>
+                  <input style={inp()} value={form.siblingNames} onChange={e=>upd('siblingNames',e.target.value)} placeholder={form.siblingCount===1?'e.g., Maria (3rd)':'e.g., Maria (3rd), James (K)'}/>
+                </div>
+              )}
+            </div>
+            {form.siblingCount > 0 && (
+              <div style={{background:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#92400E',lineHeight:1.5}}>
+                📋 The parent will receive a separate size form for each child. Their notification will note that {form.siblingCount+1} children from their family were nominated.
+              </div>
+            )}
+          </Field>
+          <Field label="Parent's preferred language">
+            <div style={{display:'flex',gap:10}}>
+              {[['en','🇺🇸 English'],['es','🇲🇽 Español']].map(([val,label])=>(
+                <label key={val} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'10px 14px',background:form.parentLanguage===val?C.navy:C.bg,border:`1.5px solid ${form.parentLanguage===val?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s'}}>
+                  <input type="radio" name="parentLanguage" value={val} checked={form.parentLanguage===val} onChange={()=>upd('parentLanguage',val)} style={{accentColor:'#fff',display:'none'}}/>
+                  <span style={{fontSize:15}}>{label.split(' ')[0]}</span>
+                  <span style={{fontSize:13,fontWeight:form.parentLanguage===val?700:400,color:form.parentLanguage===val?'#fff':C.muted}}>{label.split(' ')[1]}</span>
+                  {form.parentLanguage===val&&<span style={{marginLeft:'auto',color:'#fff',fontSize:12}}>✓</span>}
+                </label>
+              ))}
+            </div>
+            <p style={{fontSize:11,color:C.light,margin:'6px 0 0'}}>The parent's intake form link and notification will be sent in this language.</p>
+          </Field>
         </div>
       </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Why are you nominating this child?</label>
-        <textarea style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }} value={form.reason} onChange={e => update('reason', e.target.value)} placeholder="Brief explanation — this stays confidential" />
+      <div style={{ marginTop:24 }}>
+        <button onClick={submit} disabled={submitting} style={{ width:'100%', padding:isMobile?14:16, background:submitting?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting?'default':'pointer', boxShadow:`0 2px 8px rgba(232,84,140,0.3)` }}>{submitting?'Submitting...':'Submit Nomination'}</button>
+        <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:8 }}>All information is strictly confidential.</p>
       </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Siblings to also nominate?</label>
-        <input style={inputStyle} value={form.siblings} onChange={e => update('siblings', e.target.value)} placeholder="e.g., Maria (3rd), James (K)" />
-      </div>
-
-      <button onClick={handleSubmit} disabled={submitting} style={{
-        width: '100%', padding: 14, background: submitting ? '#94A3B8' : '#1B3A4B', color: '#fff',
-        border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting ? 'default' : 'pointer',
-        marginTop: 8, letterSpacing: 0.3, boxShadow: '0 2px 8px rgba(27,58,75,0.25)',
-      }}>
-        {submitting ? 'Submitting...' : 'Submit Nomination'}
-      </button>
-      <p style={{ textAlign: 'center', fontSize: 11, color: '#94A3B8', marginTop: 10 }}>All information is kept strictly confidential.</p>
     </div>
   );
 }
 
-// ─── Admin Dashboard ───
+// ─── VOLUNTEER FORM ───
+function VolunteerForm() {
+  const isMobile = useIsMobile();
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState(null);
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  const submit = async() => {
+    setError(null);
+    if (!form.firstName||!form.lastName) { setError('Please enter your name.'); return; }
+    if (!form.email&&!form.phone) { setError('Please provide email or phone so we can reach you.'); return; }
+    setSubmitting(true);
+    try { await api('/volunteers',{method:'POST',body:JSON.stringify(form)}); setSubmitted(true); } catch(err){setError(err.message);}
+    setSubmitting(false);
+  };
+  if (submitted) return (
+    <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}>
+      <div style={{ fontSize:56, marginBottom:16 }}>🛒</div>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>You're Registered!</h2>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:420, margin:'0 auto 12px' }}>Thank you for signing up to volunteer at Child Spree 2026. Check your email for a confirmation. We'll be in touch as the event approaches!</p>
+      <p style={{ color:C.muted, fontSize:13, marginBottom:28 }}>📅 First Friday of August · Three Kohl's locations · Davis County · Before sunrise</p>
+      <a href="https://daviskids.org/events-child-spree" target="_blank" rel="noreferrer" style={{ display:'inline-block', padding:'12px 28px', background:C.navy, color:'#fff', borderRadius:8, fontSize:14, fontWeight:700, textDecoration:'none' }}>Learn More About the Event →</a>
+    </div>
+  );
+  const photo = PHOTOS[1];
+  return (
+    <div style={{ maxWidth:isMobile?'100%':760, margin:'0 auto', padding:isMobile?'20px 16px':'32px 40px' }}>
+      {!isMobile && (
+        <div style={{ display:'flex', gap:28, alignItems:'flex-start', marginBottom:28 }}>
+          <div style={{ flex:'0 0 240px', borderRadius:12, overflow:'hidden' }}><img src={photo} alt="" style={{ width:'100%', height:170, objectFit:'cover', display:'block' }}/></div>
+          <div style={{ flex:1, paddingTop:4 }}>
+            <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, marginBottom:8 }}>Volunteer to Shop</h2>
+            <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>Join 400+ volunteers on the first Friday of August at three Davis County Kohl's locations (Layton, Centerville & Clinton). You'll be matched to one child and shop for them head to toe.</p>
+            <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div>
+          </div>
+        </div>
+      )}
+      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={photo} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Volunteer to Shop</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Join 400+ volunteers. Be matched to one child. Shop for them like they're family.</p></div><div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div></>}
+      {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
+      <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
+        <div>
+          <p style={secHead(isMobile)}>Your Information</p>
+          <Row cols={2} gap={10}><Field label="First Name *"><input style={inp()} value={form.firstName} onChange={e=>upd('firstName',e.target.value)} placeholder="First"/></Field><Field label="Last Name *"><input style={inp()} value={form.lastName} onChange={e=>upd('lastName',e.target.value)} placeholder="Last"/></Field></Row>
+          <Field label="Email *"><input style={inp()} type="email" value={form.email} onChange={e=>upd('email',e.target.value)} placeholder="you@example.com"/></Field>
+          <Field label="Phone (for text updates)"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
+          <Field label="Organization / School / Company"><input style={inp()} value={form.organization} onChange={e=>upd('organization',e.target.value)} placeholder="Optional"/></Field>
+          <Field label="Group type"><select style={{...inp(),appearance:'auto'}} value={form.groupType} onChange={e=>upd('groupType',e.target.value)}>{['Individual','Corporate Group','Church Group','School Group','Family','Other'].map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
+        </div>
+        <div>
+          <p style={secHead(isMobile)}>Event Details</p>
+          <Field label="T-shirt size"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Select size...</option>{VOL_SHIRTS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
+          <Field label="Arrival time slot *">
+            <select style={{...inp(),appearance:'auto'}} value={form.arrivalTime} onChange={e=>upd('arrivalTime',e.target.value)}>
+              <option value="">Select a time...</option>
+              <option value="6:30 AM">6:30 AM — Early setup crew</option>
+              <option value="7:00 AM">7:00 AM — Main shopping shift</option>
+              <option value="7:30 AM">7:30 AM — Second wave</option>
+            </select>
+          </Field>
+          <Field label="Any experience with shopping for or working with kids?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — helps us match you"/></Field>
+          <Field label="Preferred Kohl's location *">
+            <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
+              <option value="">Select a store...</option>
+              {["Kohl's · Layton, Centerville, Clinton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </Field>
+          <Field label="How did you hear about Child Spree?"><select style={{...inp(),appearance:'auto'}} value={form.hearAbout} onChange={e=>upd('hearAbout',e.target.value)}><option value="">Select...</option>{['School or teacher','DEF newsletter','Social media','Friend or coworker','My employer','Church','Other'].map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
+          <label style={{ display:'flex', alignItems:'flex-start', gap:8, cursor:'pointer', marginTop:8 }}>
+            <input type="checkbox" checked={form.smsOptIn} onChange={e=>upd('smsOptIn',e.target.checked)} style={{ marginTop:2, accentColor:C.pink }}/>
+            <span style={{ fontSize:12, color:C.muted, lineHeight:1.5 }}>I agree to receive text message updates about volunteering at Child Spree 2026. Reply STOP to opt out anytime.</span>
+          </label>
+        </div>
+      </div>
+      <div style={{ marginTop:24 }}>
+        <button onClick={submit} disabled={submitting} style={{ width:'100%', padding:isMobile?14:16, background:submitting?C.light:C.navy, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting?'default':'pointer' }}>{submitting?'Registering...':'Sign Up to Volunteer'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── VIDEO CAPTURE ───
+function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
+  const { t } = useLang();
+  const isMobile = useIsMobile();
+  const [mode, setMode] = useState('choose'); // choose | camera | preview | uploading | done
+  const [stream, setStream] = useState(null);
+  const [recorder, setRecorder] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [countdown, setCountdown] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const liveRef = useRef(null);
+  const playbackRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const elapsedRef = useRef(null);
+
+  const stopStream = useCallback(() => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    setStream(null);
+  }, [stream]);
+  useEffect(() => () => { stopStream(); clearInterval(timerRef.current); clearInterval(elapsedRef.current); }, []);
+
+  // Attach stream to live video element
+  useEffect(() => {
+    if (stream && liveRef.current) {
+      liveRef.current.srcObject = stream;
+      liveRef.current.play().catch(() => {});
+    }
+  }, [stream, mode]);
+
+  // Attach previewUrl to playback element
+  useEffect(() => {
+    if (previewUrl && playbackRef.current) {
+      playbackRef.current.src = previewUrl;
+      playbackRef.current.load();
+    }
+  }, [previewUrl, mode]);
+
+  const startCamera = async () => {
+    setError(null);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      setStream(s);
+      setMode('camera');
+    } catch {
+      setError('Camera access denied. Use the upload option instead.');
+    }
+  };
+
+  const startRecording = () => {
+    if (!stream) return;
+    chunksRef.current = [];
+    const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+    const rec = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 2000000 });
+    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mt });
+      const url = URL.createObjectURL(blob);
+      setRecordedBlob(blob);
+      setPreviewUrl(url);
+      stopStream();
+      setMode('preview');
+    };
+    setRecorder(rec);
+    rec.start(1000);
+    setRecording(true);
+    setCountdown(60);
+    setElapsed(0);
+    timerRef.current = setInterval(() => setCountdown(c => {
+      if (c <= 1) { clearInterval(timerRef.current); clearInterval(elapsedRef.current); rec.stop(); setRecording(false); return 0; }
+      return c - 1;
+    }), 1000);
+    elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+  };
+
+  const stopRecording = () => {
+    clearInterval(timerRef.current);
+    clearInterval(elapsedRef.current);
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    setRecording(false);
+  };
+
+  const handleFile = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 100 * 1024 * 1024) { setError('Video must be under 100MB'); return; }
+    const url = URL.createObjectURL(file);
+    setUploadedFile(file);
+    setPreviewUrl(url);
+    setMode('preview');
+  };
+
+  const retake = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setRecordedBlob(null); setUploadedFile(null); setPreviewUrl(null);
+    setElapsed(0); setCountdown(0);
+    setMode('choose');
+  };
+
+  const upload = async () => {
+    const blob = recordedBlob || uploadedFile;
+    if (!blob) return;
+    setMode('uploading'); setProgress(0);
+    try {
+      const fd = new FormData();
+      const ext = uploadedFile?.name?.split('.').pop() || 'webm';
+      fd.append('video', blob, `video.${ext}`);
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
+        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
+        xhr.onerror = reject;
+        xhr.open('POST', `${API}/upload/${token}`);
+        xhr.send(fd);
+      });
+      setMode('done');
+    } catch {
+      setError('Upload failed. Please try again.');
+      setMode('preview');
+    }
+  };
+
+  // ── DONE ──
+  if (mode === 'done') return (
+    <div style={{ textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
+      <div style={{ fontSize: 52, marginBottom: 12 }}>🎬</div>
+      <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: C.navy, marginBottom: 8 }}>Video received!</h3>
+      <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, maxWidth: 340, margin: '0 auto 24px' }}>
+        A volunteer will watch this before they shop for {childFirst}. It makes a huge difference.
+      </p>
+      <button onClick={onDone} style={{ background: C.pink, color: '#fff', border: 'none', padding: '13px 36px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(232,84,140,0.35)' }}>
+        All done ✓
+      </button>
+    </div>
+  );
+
+  // ── UPLOADING ──
+  if (mode === 'uploading') return (
+    <div style={{ textAlign: 'center', padding: '56px 20px' }}>
+      <div style={{ fontSize: 40, marginBottom: 16 }}>📤</div>
+      <p style={{ color: C.navy, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Uploading your video...</p>
+      <div style={{ height: 10, background: C.border, borderRadius: 5, maxWidth: 300, margin: '0 auto 10px' }}>
+        <div style={{ height: 10, background: C.pink, borderRadius: 5, width: `${progress}%`, transition: 'width 0.3s' }}/>
+      </div>
+      <div style={{ fontSize: 13, color: C.muted }}>{progress}%</div>
+    </div>
+  );
+
+  const maxW = isMobile ? '100%' : 500;
+
+  return (
+    <div style={{ maxWidth: maxW, margin: '0 auto', padding: isMobile ? '0 16px 32px' : '0 40px 40px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 36, marginBottom: 8 }}>🎬</div>
+        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: C.navy, marginBottom: 4 }}>
+          Optional: Record a short video
+        </h3>
+        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.5, maxWidth: 340, margin: '0 auto' }}>
+          30–60 seconds. Tell us {childFirst}'s favorite color, what they love, the shoes they've been dreaming about!
+        </p>
+      </div>
+
+      {error && (
+        <div style={{ background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#991B1B' }}>{error}</div>
+      )}
+
+      {/* CHOOSE */}
+      {mode === 'choose' && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <button onClick={startCamera} style={{ padding: '28px 12px', background: C.navy, color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.7 }}>
+              <div style={{ fontSize: 32, marginBottom: 4 }}>📷</div>
+              Record now
+              <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.6, marginTop: 2 }}>Uses your camera</div>
+            </button>
+            <label style={{ padding: '28px 12px', background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.7, display: 'block', color: C.navy }}>
+              <div style={{ fontSize: 32, marginBottom: 4 }}>📁</div>
+              Upload a video
+              <div style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginTop: 2 }}>From your phone</div>
+              <input type="file" accept="video/*" onChange={handleFile} style={{ display: 'none' }}/>
+            </label>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <button onClick={onDone} style={{ background: 'none', border: 'none', color: C.light, fontSize: 13, cursor: 'pointer', padding: '8px 20px' }}>Skip — no video</button>
+          </div>
+        </div>
+      )}
+
+      {/* CAMERA — mirrored live preview */}
+      {mode === 'camera' && (
+        <div>
+          <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            {/* Mirror the live preview so it feels like a selfie */}
+            <video ref={liveRef} muted playsInline style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }}/>
+
+            {/* Recording indicator + timers */}
+            {recording && (
+              <div style={{ position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 14px', pointerEvents: 'none' }}>
+                <div style={{ background: 'rgba(220,38,38,0.9)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, background: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1s infinite' }}/>
+                  REC {elapsed}s
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>
+                  {countdown}s left
+                </div>
+              </div>
+            )}
+
+            {/* Progress bar when recording */}
+            {recording && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(255,255,255,0.2)' }}>
+                <div style={{ height: 4, background: C.pink, width: `${((60 - countdown) / 60) * 100}%`, transition: 'width 1s linear' }}/>
+              </div>
+            )}
+          </div>
+
+          {/* Controls */}
+          {!recording ? (
+            <button onClick={startRecording} style={{ width: '100%', padding: 16, background: C.pink, color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 2px 12px rgba(232,84,140,0.35)' }}>
+              <span style={{ width: 14, height: 14, background: '#fff', borderRadius: '50%', display: 'inline-block' }}/>
+              Start Recording
+            </button>
+          ) : (
+            <button onClick={stopRecording} style={{ width: '100%', padding: 16, background: '#DC2626', color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <span style={{ width: 14, height: 14, background: '#fff', borderRadius: 2, display: 'inline-block' }}/>
+              Stop & Review
+            </button>
+          )}
+          <div style={{ textAlign: 'center', marginTop: 10 }}>
+            <button onClick={() => { stopStream(); setMode('choose'); }} style={{ background: 'none', border: 'none', color: C.light, fontSize: 13, cursor: 'pointer' }}>← Back</button>
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW — review before uploading */}
+      {mode === 'preview' && previewUrl && (
+        <div>
+          <div style={{ borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', position: 'relative' }}>
+            <video ref={playbackRef} controls playsInline style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block' }}/>
+            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(5,150,105,0.9)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
+              ✓ Preview
+            </div>
+          </div>
+
+          {/* Duration info */}
+          {recordedBlob && elapsed > 0 && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: C.muted, marginBottom: 12 }}>
+              Recorded {elapsed} second{elapsed !== 1 ? 's' : ''} · {(recordedBlob.size / 1024 / 1024).toFixed(1)} MB
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <button onClick={retake} style={{ flex: 1, padding: 13, background: '#F1F5F9', color: C.navy, border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              ↩ Redo
+            </button>
+            <button onClick={upload} style={{ flex: 2, padding: 13, background: C.green, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(5,150,105,0.3)' }}>
+              ✓ Looks good — Upload
+            </button>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <button onClick={onDone} style={{ background: 'none', border: 'none', color: C.light, fontSize: 12, cursor: 'pointer' }}>Skip — don't include video</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── PARENT INTAKE ───
+function ParentIntake({ token }) {
+  const { lang, setLang, t } = useLang();
+  const isMobile = useIsMobile();
+  const [child, setChild] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [form, setForm] = useState({ gender:'', department:'', shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'', parentConsent:false });
+  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState('form');
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  useEffect(() => { (async()=>{ try{ const data=await api(`/intake/${token}`); setChild(data); if(data.parentLanguage && data.parentLanguage !== 'en') setLang(data.parentLanguage); if(data.alreadySubmitted)setStep('done'); }catch(err){setError(err.message);} setLoading(false); })(); }, [token]);
+  const submit = async () => {
+    if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
+    if (!form.parentConsent) { alert(t('consentRequired')); return; }
+    setSubmitting(true);
+    try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify({...form,language:lang})}); setStep('video'); } catch(err){setError(err.message);}
+    setSubmitting(false);
+  };
+  if (loading) return <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>;
+  if (error) return <div style={{ textAlign:'center', padding:60 }}><div style={{ fontSize:48, marginBottom:16 }}>🔒</div><p style={{ color:'#991B1B', fontSize:14 }}>{error}</p></div>;
+  if (step === 'done') return <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}><div style={{ marginBottom:16 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:72,height:72}} /></div><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>All Done!</h2><p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto' }}>We have everything we need for {child?.childFirst}. A volunteer will shop brand new clothes just for them.</p></div>;
+  if (step === 'video') return <VideoCapture token={token} childFirst={child?.childFirst} onDone={()=>setStep('done')} lang={lang}/>;
+  const maxW = isMobile ? '100%' : 680;
+  return (
+    <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'20px 16px':'32px 40px' }}>
+      <div style={{ textAlign:'center', marginBottom:isMobile?24:32 }}>
+        <div style={{ marginBottom:8 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:isMobile?48:64,height:isMobile?48:64}} /></div>
+        <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?22:28, color:C.navy, marginBottom:4 }}>Sizes for {child?.childFirst}</h2>
+        <p style={{ color:C.muted, fontSize:14, lineHeight:1.5, maxWidth:400, margin:'0 auto' }}>A volunteer will shop brand new clothes for your child. Takes about 2 minutes.</p>
+      </div>
+      <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:10, padding:'12px 16px', marginBottom:24, fontSize:13, color:'#9A3412' }}>Everything shared here is confidential and used only for shopping.</div>
+      {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
+      <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
+        <div>
+          <p style={secHead(isMobile)}>{t('aboutTitle')} {child?.childFirst}</p>
+          <Row cols={2} gap={10}>
+            <Field label="Gender">
+              <select style={{...inp(),appearance:'auto'}} value={form.gender} onChange={e=>upd('gender',e.target.value)}>
+                <option value="">Select...</option>
+                {['Girl','Boy','Non-binary / Other'].map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </Field>
+            <Field label="Preferred shopping department">
+              <select style={{...inp(),appearance:'auto'}} value={form.department} onChange={e=>upd('department',e.target.value)}>
+                <option value="">Select...</option>
+                {["Girls' section","Boys' section","Either is fine"].map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
+            </Field>
+          </Row>
+          <p style={secHead(isMobile)}>{t('clothingSizes')}</p>
+          <Row cols={3} gap={8}><Field label="Shirt *"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Size</option>{SHIRT_SIZES.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Pants *"><select style={{...inp(),appearance:'auto'}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}><option value="">Size</option>{PANT_SIZES.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Shoe *"><input style={inp()} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)} placeholder="e.g., 4Y"/></Field></Row>
+        </div>
+        <div>
+          <p style={secHead(isMobile)}>Preferences <span style={{ fontWeight:400, textTransform:'none', letterSpacing:0, fontSize:10, color:C.light }}>optional</span></p>
+          <Field label="Favorite colors, styles, characters?"><input style={inp()} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)} placeholder="e.g., Blue, dinosaurs, soccer"/></Field>
+          <Field label="Colors or styles to avoid?"><input style={inp()} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)} placeholder="e.g., No pink, no ruffles"/></Field>
+          <Field label="Allergies or sensory needs?"><input style={inp()} value={form.allergies} onChange={e=>upd('allergies',e.target.value)} placeholder="e.g., No wool, needs soft fabrics"/></Field>
+        </div>
+      </div>
+      {/* Consent checkbox */}
+      <div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'14px 16px', marginTop:20 }}>
+        <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
+          <input type="checkbox" checked={form.parentConsent} onChange={e=>upd('parentConsent',e.target.checked)}
+            style={{ marginTop:2, width:18, height:18, accentColor:C.pink, flexShrink:0, cursor:'pointer' }}/>
+          <span style={{ fontSize:13, color:'#0C4A6E', lineHeight:1.6 }}>{t('consentLabel')}</span>
+        </label>
+      </div>
+      <button onClick={submit} disabled={submitting||!form.parentConsent} style={{ width:'100%', padding:isMobile?14:16, background:submitting||!form.parentConsent?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting||!form.parentConsent?'default':'pointer', marginTop:12 }}>
+        {submitting ? t('submitIntakeSaving') : t('submitIntake')}
+      </button>
+    </div>
+  );
+}
+
+// ─── ADMIN ───
 function AdminDashboard() {
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('nominations');
+  const [authed, setAuthed] = useState(!!sessionStorage.getItem('cs-admin'));
+  const [pw, setPw] = useState('');
+  const [pwErr, setPwErr] = useState(false);
+  const login = () => { if(pw==='childspree2026'){sessionStorage.setItem('cs-admin',pw);setAuthed(true);}else{setPwErr(true);setTimeout(()=>setPwErr(false),2000);}};
+  if (!authed) return (
+    <div style={{ maxWidth:360, margin:isMobile?'60px auto 0':'80px auto 0', padding:'0 16px' }}>
+      <div style={{ background:C.card, borderRadius:16, padding:32, boxShadow:'0 2px 20px rgba(0,0,0,0.08)', textAlign:'center' }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
+        <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:20 }}>Admin Access</h2>
+        <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="Password" style={{...inp(), marginBottom:12, textAlign:'center', border:`1.5px solid ${pwErr?'#EF4444':C.border}`}}/>
+        <button onClick={login} style={{ width:'100%', padding:12, background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Enter</button>
+        {pwErr && <div style={{ color:'#EF4444', fontSize:13, marginTop:8 }}>Incorrect password</div>}
+      </div>
+    </div>
+  );
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'advocates', icon:'🏫', label:'Advocates' }];
+  return (
+    <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
+      <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+        {tabs.map(t => (
+          <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{ padding:isMobile?'8px 14px':'10px 20px', borderRadius:8, border:`1.5px solid ${activeTab===t.key?C.navy:C.border}`, background:activeTab===t.key?C.navy:'#fff', color:activeTab===t.key?'#fff':C.muted, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+      {activeTab === 'nominations' && <NominationsTab isMobile={isMobile}/>}
+      {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
+      {activeTab === 'advocates' && <AdvocatesTab isMobile={isMobile}/>}
+    </div>
+  );
+}
+
+function NominationsTab({ isMobile }) {
   const [nominations, setNominations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
-
   const load = useCallback(async () => {
-    try {
-      const params = new URLSearchParams();
-      if (filter !== 'all') params.set('status', filter);
-      if (search) params.set('search', search);
-      const data = await api(`/nominations?${params}`);
-      setNominations(data.nominations);
-    } catch (err) {
-      console.error(err);
-    }
+    try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/nominations?${p}`,{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setNominations(data.nominations); } catch(e){console.error(e);}
     setLoading(false);
   }, [filter, search]);
-
   useEffect(() => { load(); }, [load]);
-
-  const updateStatus = async (id, status) => {
-    await api(`/nominations/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
-    load();
-  };
-
-  const counts = { all: nominations.length, pending: 0, approved: 0, sent: 0, complete: 0, declined: 0 };
-  nominations.forEach(n => counts[n.status] = (counts[n.status] || 0) + 1);
-
+  const updateStatus = async(id, status) => { await api(`/nominations/${id}`,{method:'PATCH',body:JSON.stringify({status}),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); load(); };
+  const copyLink = (token) => { navigator.clipboard.writeText(`${window.location.origin}/#/intake/${token}`); };
+  const counts = { all:nominations.length, pending:0, approved:0, sent:0, complete:0, declined:0 };
+  nominations.forEach(n => { counts[n.status] = (counts[n.status]||0)+1; });
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: '20px 12px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1B3A4B', marginBottom: 4 }}>Nominations</h2>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
-        {[
-          { label: 'Total', value: counts.all, color: '#1B3A4B' },
-          { label: 'Pending', value: counts.pending, color: '#D97706' },
-          { label: 'Approved', value: counts.approved, color: '#059669' },
-          { label: 'Complete', value: counts.complete, color: '#2563EB' },
-        ].map(s => (
-          <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '10px 8px', textAlign: 'center', border: '1px solid #F1F5F9' }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
+    <div>
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(6,1fr)', gap:isMobile?8:12, marginBottom:20 }}>
+        {[{label:'Total',v:counts.all,c:C.navy},{label:'Pending',v:counts.pending,c:C.amber},{label:'Approved',v:counts.approved,c:C.green},{label:'Sent',v:counts.sent,c:C.blue},{label:'Complete',v:counts.complete,c:'#7C3AED'},{label:'Declined',v:counts.declined,c:C.red}].slice(0,isMobile?3:6).map(s=>(
+          <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px 12px', textAlign:'center', border:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:isMobile?20:28, fontWeight:800, color:s.c }}>{s.v}</div>
+            <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
           </div>
         ))}
       </div>
-
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-        {['all','pending','approved','sent','complete'].map(k => (
-          <button key={k} onClick={() => setFilter(k)} style={{
-            padding: '6px 12px', borderRadius: 20, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-            background: filter === k ? '#1B3A4B' : '#F1F5F9', color: filter === k ? '#fff' : '#64748B',
-          }}>
-            {k.charAt(0).toUpperCase() + k.slice(1)}
-          </button>
-        ))}
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, alignItems:'center' }}>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', flex:1 }}>
+          {['all','pending','approved','sent','complete'].map(k=>(
+            <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'6px 10px':'6px 14px', borderRadius:20, border:'none', fontSize:isMobile?11:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
+              {k.charAt(0).toUpperCase()+k.slice(1)} {k!=='all'?`(${counts[k]})`:'' }
+            </button>
+          ))}
+        </div>
+        <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), width:isMobile?'100%':200, fontSize:13}}/>
       </div>
-
-      <input placeholder="Search child, school, nominator..." value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{ ...inputStyle, marginBottom: 12, fontSize: 13 }} />
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#94A3B8' }}>Loading...</div>
-      ) : nominations.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#94A3B8', fontSize: 14 }}>
-          No nominations yet. Share the link with counselors and teachers.
+      {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
+      : nominations.length===0 ? <div style={{ textAlign:'center', padding:60, color:C.light, fontSize:14 }}>No nominations yet.</div>
+      : !isMobile ? (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
+              {['Child','School / Grade','Nominator','Parent','Status','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {nominations.map(n => (<>
+                <tr key={n.id} onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ borderBottom:`1px solid ${C.border}`, cursor:'pointer', background:expandedId===n.id?'#FFFBF5':'#fff' }}>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div><div style={{ fontSize:11, color:C.light, marginTop:2 }}>{n.grade}</div></td>
+                  <td style={{ padding:'12px 14px', color:C.text }}>{n.school}</td>
+                  <td style={{ padding:'12px 14px' }}><div>{n.nominatorName}</div><div style={{ fontSize:11, color:C.light }}>{n.nominatorRole}</div></td>
+                  <td style={{ padding:'12px 14px' }}><div>{n.parentName}</div><div style={{ fontSize:11, color:C.light }}>{n.parentPhone||n.parentEmail||''}</div></td>
+                  <td style={{ padding:'12px 14px' }}><StatusBadge status={n.status}/></td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {n.status==='pending'&&<><button onClick={e=>{e.stopPropagation();updateStatus(n.id,'approved');}} style={{ padding:'5px 10px', background:C.green, color:'#fff', border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>Approve</button><button onClick={e=>{e.stopPropagation();updateStatus(n.id,'declined');}} style={{ padding:'5px 10px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>Decline</button></>}
+                      {n.status==='approved'&&<button onClick={e=>{e.stopPropagation();updateStatus(n.id,'sent');}} style={{ padding:'5px 10px', background:C.blue, color:'#fff', border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>Send to Parent ✉️</button>}
+                      {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={e=>{e.stopPropagation();copyLink(n.parentToken);}} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
+                    </div>
+                  </td>
+                </tr>
+                {expandedId===n.id&&(
+                  <tr key={n.id+'-exp'}><td colSpan={6} style={{ background:'#FFFBF5', padding:'0 14px 14px', borderBottom:`1px solid ${C.border}` }}>
+                    {n.reason&&<div style={{ padding:'8px 12px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5, marginTop:8, marginBottom:8 }}><strong>Reason:</strong> {n.reason}</div>}
+                    {n.parentIntake ? (
+                      <div style={{ display:'flex', gap:20, padding:'10px 12px', background:'#F0FDF4', borderRadius:8, border:`1px solid #BBF7D0`, fontSize:13 }}>
+                        <span>👕 <strong>{n.parentIntake.shirtSize}</strong></span><span>👖 <strong>{n.parentIntake.pantSize}</strong></span><span>👟 <strong>{n.parentIntake.shoeSize}</strong></span>
+                        <span>🎬 <strong>{n.parentIntake.hasVideo?'Video ✓':'No video'}</strong></span>
+                        {n.parentIntake.favoriteColors&&<span>❤️ {n.parentIntake.favoriteColors}</span>}
+                        {n.parentIntake.avoidColors&&<span>✗ {n.parentIntake.avoidColors}</span>}
+                      </div>
+                    ):<div style={{ fontSize:12, color:C.light, fontStyle:'italic', marginTop:8 }}>No parent intake yet.</div>}
+                  </td></tr>
+                )}
+              </>))}
+            </tbody>
+          </table>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {nominations.map(n => (
-            <div key={n.id} style={{ background: '#fff', borderRadius: 10, border: '1px solid #F1F5F9', overflow: 'hidden' }}>
-              <div onClick={() => setExpandedId(expandedId === n.id ? null : n.id)}
-                style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1B3A4B' }}>{n.childFirst} {n.childLast}</div>
-                  <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{n.school} · {n.grade} · by {n.nominatorName}</div>
-                </div>
-                <StatusBadge status={n.status} />
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {nominations.map(n=>(
+            <div key={n.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+              <div onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ padding:'12px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div><div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div><div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.school} · {n.grade}</div></div>
+                <StatusBadge status={n.status}/>
               </div>
-
-              {expandedId === n.id && (
-                <div style={{ padding: '0 14px 14px', borderTop: '1px solid #F1F5F9' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12, fontSize: 12 }}>
-                    <div><span style={{ color: '#94A3B8' }}>Nominator:</span> {n.nominatorName} ({n.nominatorRole})</div>
-                    <div><span style={{ color: '#94A3B8' }}>Email:</span> {n.nominatorEmail}</div>
-                    <div><span style={{ color: '#94A3B8' }}>Parent:</span> {n.parentName}</div>
-                    <div><span style={{ color: '#94A3B8' }}>Phone:</span> {n.parentPhone || '—'}</div>
-                  </div>
-                  {n.reason && (
-                    <div style={{ marginTop: 10, padding: '8px 10px', background: '#FFFBEB', borderRadius: 6, fontSize: 12, color: '#78350F', lineHeight: 1.5 }}>
-                      <strong>Reason:</strong> {n.reason}
-                    </div>
-                  )}
-                  {n.parentIntake && (
-                    <div style={{ marginTop: 10, padding: 10, background: '#F0FDF4', borderRadius: 6, border: '1px solid #BBF7D0' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase', marginBottom: 6 }}>Parent Response</div>
-                      <div style={{ fontSize: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                        <div>Shirt: {n.parentIntake.shirtSize}</div>
-                        <div>Pants: {n.parentIntake.pantSize}</div>
-                        <div>Shoe: {n.parentIntake.shoeSize}</div>
-                        <div>Video: {n.parentIntake.hasVideo ? '✓' : '—'}</div>
-                      </div>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    {n.status === 'pending' && (
-                      <>
-                        <button onClick={() => updateStatus(n.id, 'approved')} style={{ flex: 1, padding: 8, background: '#059669', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Approve</button>
-                        <button onClick={() => updateStatus(n.id, 'declined')} style={{ padding: '8px 16px', background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Decline</button>
-                      </>
-                    )}
-                    {n.status === 'approved' && (
-                      <button onClick={() => updateStatus(n.id, 'sent')} style={{ flex: 1, padding: 8, background: '#2563EB', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                        Mark Sent to Parent →
-                      </button>
-                    )}
-                    {n.status === 'sent' && n.parentToken && (
-                      <div style={{ fontSize: 12, color: '#64748B' }}>
-                        Parent link: <code style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: 4 }}>childspree.org/#/intake/{n.parentToken}</code>
-                      </div>
-                    )}
+              {expandedId===n.id&&(
+                <div style={{ padding:'0 14px 14px', borderTop:`1px solid ${C.border}` }}>
+                  {n.reason&&<div style={{ marginTop:8, padding:'8px 10px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5 }}><strong>Reason:</strong> {n.reason}</div>}
+                  {n.parentIntake&&<div style={{ marginTop:8, padding:10, background:'#F0FDF4', borderRadius:6, border:`1px solid #BBF7D0`, fontSize:12, display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}><div>👕 <strong>{n.parentIntake.shirtSize}</strong></div><div>👖 <strong>{n.parentIntake.pantSize}</strong></div><div>👟 <strong>{n.parentIntake.shoeSize}</strong></div><div>🎬 <strong>{n.parentIntake.hasVideo?'Video ✓':'No video'}</strong></div></div>}
+                  <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                    {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ flex:1, padding:8, background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'8px 12px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Decline</button></>}
+                    {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ flex:1, padding:8, background:C.blue, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Send to Parent ✉️</button>}
+                    {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ flex:1, padding:8, background:'#F1F5F9', color:C.navy, border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
                   </div>
                 </div>
               )}
@@ -363,188 +999,933 @@ function AdminDashboard() {
   );
 }
 
-// ─── Parent Intake ───
-function ParentIntake({ token }) {
-  const [child, setChild] = useState(null);
+function VolunteersTab({ isMobile }) {
+  const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [form, setForm] = useState({
-    shirtSize: '', pantSize: '', shoeSize: '', favoriteColors: '',
-    avoidColors: '', allergies: '', preferences: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
+  const [msgModal, setMsgModal] = useState(false);
+  const [msg, setMsg] = useState({ channel:'both', to:'all', subject:'', message:'' });
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await api(`/intake/${token}`);
-        setChild(data);
-        if (data.alreadySubmitted) setSubmitted(true);
-      } catch (err) {
-        setError(err.message);
-      }
-      setLoading(false);
-    })();
-  }, [token]);
+  const load = useCallback(async () => {
+    try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`,{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setVolunteers(data.volunteers); } catch(e){console.error(e);}
+    setLoading(false);
+  }, [filter, search]);
+  useEffect(() => { load(); }, [load]);
 
-  const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      await api(`/intake/${token}`, { method: 'POST', body: JSON.stringify(form) });
-      setSubmitted(true);
-    } catch (err) {
-      setError(err.message);
-    }
-    setSubmitting(false);
+  const updateStatus = async(id, status) => {
+    await api(`/volunteers/${id}`,{method:'PATCH',body:JSON.stringify({status}),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); load();
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#94A3B8' }}>Loading...</div>;
-  if (error) return (
-    <div style={{ textAlign: 'center', padding: 60 }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <p style={{ color: '#991B1B', fontSize: 14 }}>{error}</p>
-    </div>
-  );
+  const sendMessage = async() => {
+    if (!msg.message.trim()) return;
+    setSending(true); setSendResult(null);
+    try {
+      const res = await api('/volunteers/message', { method:'POST', body:JSON.stringify(msg), headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}});
+      setSendResult(res);
+    } catch(e) { setSendResult({ error: e.message }); }
+    setSending(false);
+  };
 
-  if (submitted) {
-    return (
-      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🎒</div>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: '#1B3A4B', marginBottom: 8 }}>Thank You!</h2>
-        <p style={{ color: '#64748B', fontSize: 14, lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
-          We have {child?.childFirst}'s information. A volunteer will shop for brand new clothes just for them.
-        </p>
-      </div>
-    );
-  }
+  const counts = { all:volunteers.length, registered:0, confirmed:0, assigned:0, attended:0 };
+  volunteers.forEach(v => { counts[v.status] = (counts[v.status]||0)+1; });
+  const statColors = { registered:'#7C3AED', confirmed:C.green, assigned:C.blue, attended:C.amber };
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>🎒</div>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1B3A4B', marginBottom: 4 }}>
-          Sizes for {child?.childFirst}
-        </h2>
-        <p style={{ color: '#94A3B8', fontSize: 13, lineHeight: 1.5, maxWidth: 320, margin: '0 auto' }}>
-          A volunteer will shop for brand new clothes for your child.
-        </p>
+    <div>
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(4,1fr)', gap:isMobile?8:12, marginBottom:20 }}>
+        {[{label:'Total',v:counts.all,c:C.navy},{label:'Registered',v:counts.registered,c:'#7C3AED'},{label:'Confirmed',v:counts.confirmed,c:C.green},{label:'Assigned',v:counts.assigned,c:C.blue}].map(s=>(
+          <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px 12px', textAlign:'center', border:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:isMobile?20:28, fontWeight:800, color:s.c }}>{s.v}</div>
+            <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
+          </div>
+        ))}
       </div>
-
-      <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 10, padding: '12px 14px', marginBottom: 24, fontSize: 13, color: '#9A3412', lineHeight: 1.5 }}>
-        Everything shared here is confidential.
-      </div>
-
-      <p style={sectionTitle}>Sizes</p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
-        <div>
-          <label style={labelStyle}>Shirt *</label>
-          <select style={{ ...inputStyle, appearance: 'auto' }} value={form.shirtSize} onChange={e => update('shirtSize', e.target.value)}>
-            <option value="">Size</option>
-            {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, alignItems:'center' }}>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', flex:1 }}>
+          {['all','registered','confirmed','assigned'].map(k=>(
+            <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'6px 10px':'6px 14px', borderRadius:20, border:'none', fontSize:isMobile?11:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
+              {k.charAt(0).toUpperCase()+k.slice(1)} {k!=='all'?`(${counts[k]})`:'' }
+            </button>
+          ))}
         </div>
-        <div>
-          <label style={labelStyle}>Pants *</label>
-          <select style={{ ...inputStyle, appearance: 'auto' }} value={form.pantSize} onChange={e => update('pantSize', e.target.value)}>
-            <option value="">Size</option>
-            {PANT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Shoe *</label>
-          <input style={inputStyle} value={form.shoeSize} onChange={e => update('shoeSize', e.target.value)} placeholder="e.g., 4Y" />
-        </div>
+        <button onClick={()=>setMsgModal(true)} style={{ padding:isMobile?'6px 12px':'8px 16px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>📣 Send Message</button>
+        <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), width:isMobile?'100%':180, fontSize:13}}/>
       </div>
 
-      <p style={sectionTitle}>Preferences</p>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Favorite colors or styles?</label>
-        <input style={inputStyle} value={form.favoriteColors} onChange={e => update('favoriteColors', e.target.value)} placeholder="e.g., Blue, dinosaurs" />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Colors or styles to avoid?</label>
-        <input style={inputStyle} value={form.avoidColors} onChange={e => update('avoidColors', e.target.value)} placeholder="e.g., No pink" />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Allergies or sensory needs?</label>
-        <input style={inputStyle} value={form.allergies} onChange={e => update('allergies', e.target.value)} placeholder="e.g., No wool" />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Anything else?</label>
-        <textarea style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} value={form.preferences} onChange={e => update('preferences', e.target.value)} />
-      </div>
+      {/* Send Message Modal */}
+      {msgModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, padding:28, width:'100%', maxWidth:480, boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:20 }}>📣 Message Volunteers</h3>
+            {sendResult ? (
+              <div>
+                {sendResult.error ? (
+                  <div style={{ background:'#FEF2F2', borderRadius:8, padding:14, color:'#991B1B', fontSize:13 }}>Error: {sendResult.error}</div>
+                ) : (
+                  <div style={{ background:'#F0FDF4', borderRadius:8, padding:14 }}>
+                    <p style={{ color:C.green, fontWeight:700, marginBottom:6 }}>✅ Message sent!</p>
+                    <p style={{ fontSize:13, color:'#166534' }}>SMS sent: {sendResult.smsSent} · Emails sent: {sendResult.emailSent} · Total recipients: {sendResult.total}</p>
+                    {sendResult.smsErrors?.length > 0 && <p style={{ fontSize:12, color:C.red, marginTop:4 }}>SMS errors: {sendResult.smsErrors.join(', ')}</p>}
+                  </div>
+                )}
+                <button onClick={()=>{setMsgModal(false);setSendResult(null);setMsg({channel:'both',to:'all',subject:'',message:''});}} style={{ width:'100%', padding:12, background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer', marginTop:16 }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <Row cols={2} gap={12}>
+                  <Field label="Send to">
+                    <select style={{...inp(),appearance:'auto'}} value={msg.to} onChange={e=>setMsg(p=>({...p,to:e.target.value}))}>
+                      <option value="all">All volunteers ({counts.all})</option>
+                      <option value="confirmed">Confirmed only ({counts.confirmed})</option>
+                      <option value="assigned">Confirmed + Assigned</option>
+                    </select>
+                  </Field>
+                  <Field label="Channel">
+                    <select style={{...inp(),appearance:'auto'}} value={msg.channel} onChange={e=>setMsg(p=>({...p,channel:e.target.value}))}>
+                      <option value="both">SMS + Email</option>
+                      <option value="sms">SMS only</option>
+                      <option value="email">Email only</option>
+                    </select>
+                  </Field>
+                </Row>
+                {(msg.channel==='email'||msg.channel==='both') && <Field label="Email subject"><input style={inp()} value={msg.subject} onChange={e=>setMsg(p=>({...p,subject:e.target.value}))} placeholder="Child Spree 2026 — Volunteer Update"/></Field>}
+                <Field label="Message *"><textarea style={{...inp(),minHeight:100,resize:'vertical'}} value={msg.message} onChange={e=>setMsg(p=>({...p,message:e.target.value}))} placeholder="Hi [Name] — reminder: Child Spree is this Saturday..."/></Field>
+                <div style={{ display:'flex', gap:10, marginTop:4 }}>
+                  <button onClick={()=>setMsgModal(false)} style={{ flex:1, padding:12, background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancel</button>
+                  <button onClick={sendMessage} disabled={sending||!msg.message.trim()} style={{ flex:2, padding:12, background:sending?C.light:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:sending?'default':'pointer' }}>{sending?'Sending...':'Send Message'}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-      <button onClick={handleSubmit} disabled={submitting} style={{
-        width: '100%', padding: 14, background: submitting ? '#94A3B8' : '#1B3A4B', color: '#fff',
-        border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting ? 'default' : 'pointer',
-        boxShadow: '0 2px 8px rgba(27,58,75,0.25)',
-      }}>
-        {submitting ? 'Submitting...' : 'Submit Sizes & Preferences'}
-      </button>
+      {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
+      : volunteers.length===0 ? <div style={{ textAlign:'center', padding:60, color:C.light, fontSize:14 }}>No volunteers registered yet.</div>
+      : !isMobile ? (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
+              {['Name','Contact','Org / Group','Shirt','Early','Status','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {volunteers.map(v => (<>
+                <tr key={v.id} onClick={()=>setExpandedId(expandedId===v.id?null:v.id)} style={{ borderBottom:`1px solid ${C.border}`, cursor:'pointer', background:expandedId===v.id?'#F0FDF4':'#fff' }}>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{v.firstName} {v.lastName}</div><div style={{ fontSize:11, color:C.light, marginTop:2 }}>Signed up {v.createdAt?.slice(0,10)}</div></td>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontSize:12, color:C.text }}>{v.email||'—'}</div><div style={{ fontSize:11, color:C.muted }}>{v.phone||'—'}</div></td>
+                  <td style={{ padding:'12px 14px', fontSize:12, color:C.text }}>{v.organization||'—'}<br/><span style={{ fontSize:11, color:C.light }}>{v.groupType||'Individual'}</span></td>
+                  <td style={{ padding:'12px 14px', fontSize:13, fontWeight:600, color:C.navy }}>{v.shirtSize||'—'}</td>
+                  <td style={{ padding:'12px 14px', fontSize:20 }}>{v.earlyArrival?'✅':'—'}</td>
+                  <td style={{ padding:'12px 14px' }}><StatusBadge status={v.status} vol/></td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <select value={v.status} onChange={e=>{e.stopPropagation();updateStatus(v.id,e.target.value);}} style={{ padding:'5px 8px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:12, cursor:'pointer', background:'#fff' }} onClick={e=>e.stopPropagation()}>
+                      {['registered','confirmed','assigned','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                    </select>
+                  </td>
+                </tr>
+                {expandedId===v.id&&v.experience&&(
+                  <tr key={v.id+'-exp'}><td colSpan={7} style={{ background:'#F0FDF4', padding:'0 14px 12px', borderBottom:`1px solid ${C.border}` }}>
+                    <div style={{ padding:'8px 12px', background:'#fff', borderRadius:6, fontSize:12, color:C.muted, border:`1px solid ${C.border}`, marginTop:8 }}><strong>Experience:</strong> {v.experience}</div>
+                  </td></tr>
+                )}
+              </>))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {volunteers.map(v=>(
+            <div key={v.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+              <div onClick={()=>setExpandedId(expandedId===v.id?null:v.id)} style={{ padding:'12px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div><div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{v.firstName} {v.lastName}</div><div style={{ fontSize:12, color:C.light, marginTop:2 }}>{v.organization||v.groupType||'Individual'}</div></div>
+                <StatusBadge status={v.status} vol/>
+              </div>
+              {expandedId===v.id&&(
+                <div style={{ padding:'0 14px 14px', borderTop:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:12, color:C.muted, marginTop:8 }}>{v.email&&<div>✉️ {v.email}</div>}{v.phone&&<div>📱 {v.phone}</div>}{v.shirtSize&&<div>👕 {v.shirtSize}</div>}<div>{v.earlyArrival?'✅ Early arrival':'Regular arrival'}</div></div>
+                  <select value={v.status} onChange={e=>updateStatus(v.id,e.target.value)} style={{ width:'100%', padding:'8px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, marginTop:10 }}>
+                    {['registered','confirmed','assigned','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── App Router ───
-export default function App() {
-  const [route, setRoute] = useState(window.location.hash || '#/');
+
+// ─── FA VIDEO PAGE — recorded by advocate at school ──────────────────────────
+function FAVideoPage({ faToken, nominationId, navigate }) {
+  const isMobile = useIsMobile();
+  const [nom, setNom] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [mode, setMode] = useState('intro'); // intro | camera | preview | uploading | done
+  const [stream, setStream] = useState(null);
+  const [facingMode, setFacingMode] = useState('user');
+  const [recorder, setRecorder] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [countdown, setCountdown] = useState(0);
+  const liveRef = useRef(null);
+  const playbackRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const elapsedRef = useRef(null);
 
   useEffect(() => {
-    const handler = () => setRoute(window.location.hash || '#/');
-    window.addEventListener('hashchange', handler);
-    return () => window.removeEventListener('hashchange', handler);
-  }, []);
+    (async () => {
+      try {
+        const data = await api(`/fa/${faToken}`);
+        const n = data.nominations.find(n => n.id === nominationId);
+        if (!n) { setError('Nomination not found.'); } else { setNom(n); }
+      } catch(e) { setError(e.message); }
+      setLoading(false);
+    })();
+  }, [faToken, nominationId]);
 
-  const navigate = (hash) => { window.location.hash = hash; };
+  const stopStream = useCallback(() => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    setStream(null);
+  }, [stream]);
 
-  // Parse route
-  let view = 'nominate';
-  let token = null;
-  if (route.startsWith('#/admin')) view = 'admin';
-  else if (route.startsWith('#/intake/')) {
-    view = 'parent';
-    token = route.replace('#/intake/', '');
-  }
+  useEffect(() => () => { stopStream(); clearInterval(timerRef.current); clearInterval(elapsedRef.current); }, []);
 
-  // Parent intake has no nav — it's a standalone link
-  if (view === 'parent' && token) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%)' }}>
-        <Header subtitle="Parent Information" />
-        <ParentIntake token={token} />
+  useEffect(() => {
+    if (stream && liveRef.current) {
+      liveRef.current.srcObject = stream;
+      liveRef.current.play().catch(() => {});
+    }
+  }, [stream, mode]);
+
+  useEffect(() => {
+    if (previewUrl && playbackRef.current) {
+      playbackRef.current.src = previewUrl;
+      playbackRef.current.load();
+    }
+  }, [previewUrl, mode]);
+
+  const startCamera = async (facing = facingMode) => {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); }
+    setError(null);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 1280 } },
+        audio: true,
+      });
+      setStream(s);
+      setMode('camera');
+    } catch { setError('Camera access denied.'); }
+  };
+
+  const flipCamera = async () => {
+    const next = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(next);
+    await startCamera(next);
+  };
+
+  const startRecording = () => {
+    if (!stream) return;
+    chunksRef.current = [];
+    const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+    const rec = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 2000000 });
+    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mt });
+      const url = URL.createObjectURL(blob);
+      setRecordedBlob(blob); setPreviewUrl(url);
+      stopStream(); setMode('preview');
+    };
+    setRecorder(rec); rec.start(1000);
+    setRecording(true); setCountdown(90); setElapsed(0);
+    timerRef.current = setInterval(() => setCountdown(c => {
+      if (c <= 1) { clearInterval(timerRef.current); clearInterval(elapsedRef.current); rec.stop(); setRecording(false); return 0; }
+      return c - 1;
+    }), 1000);
+    elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+  };
+
+  const stopRecording = () => {
+    clearInterval(timerRef.current); clearInterval(elapsedRef.current);
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    setRecording(false);
+  };
+
+  const retake = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setRecordedBlob(null); setPreviewUrl(null); setElapsed(0); setCountdown(0);
+    setMode('intro');
+  };
+
+  const upload = async () => {
+    if (!recordedBlob) return;
+    setMode('uploading'); setProgress(0);
+    try {
+      const fd = new FormData();
+      fd.append('video', recordedBlob, 'video.webm');
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded/e.total*100)); };
+        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject();
+        xhr.onerror = reject;
+        xhr.open('POST', `${API}/upload/${nom.parentToken}`);
+        xhr.send(fd);
+      });
+      // Mark video uploaded
+      await fetch(`${API}/fa/video/${nominationId}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+      setMode('done');
+    } catch { setError('Upload failed. Try again.'); setMode('preview'); }
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading...</div>;
+  if (error) return <div style={{ textAlign:'center', padding:80 }}><p style={{ color:C.red }}>{error}</p></div>;
+
+  const maxW = isMobile ? '100%' : 480;
+  const isPortrait = window.innerHeight > window.innerWidth;
+
+  if (mode === 'done') return (
+    <div style={{ textAlign:'center', padding:'60px 20px' }}>
+      <div style={{ fontSize:56, marginBottom:12 }}>🎬</div>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, color:C.navy, marginBottom:8 }}>Video uploaded!</h2>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:360, margin:'0 auto 28px' }}>
+        The volunteer who shops for {nom.childFirst} will watch this video before they go. It makes all the difference.
+      </p>
+      <button onClick={() => navigate(`#/fa/${faToken}`)} style={{ background:C.navy, color:'#fff', border:'none', padding:'13px 32px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+        ← Back to my kids
+      </button>
+    </div>
+  );
+
+  if (mode === 'uploading') return (
+    <div style={{ textAlign:'center', padding:'60px 20px' }}>
+      <div style={{ fontSize:40, marginBottom:16 }}>📤</div>
+      <p style={{ color:C.navy, fontWeight:700, fontSize:16, marginBottom:20 }}>Uploading...</p>
+      <div style={{ height:10, background:C.border, borderRadius:5, maxWidth:280, margin:'0 auto 10px' }}>
+        <div style={{ height:10, background:C.pink, borderRadius:5, width:`${progress}%`, transition:'width 0.3s' }}/>
       </div>
-    );
-  }
+      <p style={{ color:C.muted, fontSize:13 }}>{progress}%</p>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%)', paddingBottom: 72 }}>
-      <Header />
-      {view === 'nominate' && <NominationForm />}
-      {view === 'admin' && <AdminDashboard />}
+    <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'0 0 32px':'20px 24px 40px' }}>
+      {/* Header */}
+      <div style={{ background:C.navy, padding:'16px 20px', textAlign:'center', marginBottom:0 }}>
+        <button onClick={() => navigate(`#/fa/${faToken}`)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', float:'left', padding:'4px 0' }}>← Back</button>
+        <div style={{ color:'#fff', fontWeight:700, fontSize:15 }}>🎬 {nom.childFirst}'s Video</div>
+        <div style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginTop:2 }}>{nom.grade} · {nom.school}</div>
+      </div>
 
-      {/* Nav */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff',
-        borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-around',
-        padding: '8px 0 12px', boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
-      }}>
-        {[
-          { key: '#/', icon: '📋', label: 'Nominate' },
-          { key: '#/admin', icon: '⚙️', label: 'Admin' },
-        ].map(item => (
-          <button key={item.key} onClick={() => navigate(item.key)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            opacity: route === item.key || (item.key === '#/' && route === '#/') ? 1 : 0.5,
-          }}>
-            <span style={{ fontSize: 20 }}>{item.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: '#1B3A4B', textTransform: 'uppercase' }}>{item.label}</span>
+      {error && <div style={{ background:'#FEF2F2', padding:'10px 16px', fontSize:13, color:C.red }}>{error}</div>}
+
+      {/* INTRO / INSTRUCTIONS */}
+      {mode === 'intro' && (
+        <div style={{ padding:'24px 20px' }}>
+          <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:12, padding:'16px 18px', marginBottom:20 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:'#166534', margin:'0 0 10px' }}>📋 Before you record:</p>
+            <ul style={{ margin:0, padding:'0 0 0 18px', fontSize:13, color:'#166534', lineHeight:2 }}>
+              <li>Find a quiet spot with good light</li>
+              <li>Ask {nom.childFirst} to face the camera and smile</li>
+              <li>Aim for <strong>30–60 seconds</strong> (90 max)</li>
+              <li>Hold phone <strong>vertically</strong> (portrait)</li>
+            </ul>
+          </div>
+          <div style={{ background:'#EFF6FF', border:`1px solid #BAE6FD`, borderRadius:12, padding:'14px 18px', marginBottom:20 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:'#1E40AF', margin:'0 0 8px' }}>🎤 What to ask {nom.childFirst}:</p>
+            <ol style={{ margin:0, padding:'0 0 0 18px', fontSize:13, color:'#1E40AF', lineHeight:2 }}>
+              <li>"What's your name and what grade are you in?"</li>
+              <li>"What's your favorite color?"</li>
+              <li>"What do you love — sports, characters, hobbies?"</li>
+              <li>"Is there anything specific you've been wanting?"</li>
+              <li>"What makes you excited about a new outfit?"</li>
+            </ol>
+          </div>
+          {nom.parentIntake && (
+            <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:12, padding:'14px 18px', marginBottom:20, fontSize:13, color:'#92400E' }}>
+              <p style={{ fontWeight:700, margin:'0 0 6px' }}>👕 Parent already filled out sizes:</p>
+              <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
+                {nom.parentIntake.shirtSize && <span>Shirt: <strong>{nom.parentIntake.shirtSize}</strong></span>}
+                {nom.parentIntake.pantSize && <span>Pants: <strong>{nom.parentIntake.pantSize}</strong></span>}
+                {nom.parentIntake.shoeSize && <span>Shoe: <strong>{nom.parentIntake.shoeSize}</strong></span>}
+                {nom.parentIntake.favoriteColors && <span>Loves: <strong>{nom.parentIntake.favoriteColors}</strong></span>}
+              </div>
+            </div>
+          )}
+          <button onClick={() => startCamera()} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow:'0 2px 12px rgba(232,84,140,0.35)' }}>
+            <span style={{ fontSize:20 }}>📷</span> Start Recording {nom.childFirst}
           </button>
+        </div>
+      )}
+
+      {/* CAMERA */}
+      {mode === 'camera' && (
+        <div>
+          <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
+            <video ref={liveRef} muted playsInline
+              style={{ width:'100%', maxHeight: isMobile ? '70vh' : 500, objectFit:'cover', display:'block',
+                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
+            {/* Top controls overlay */}
+            <div style={{ position:'absolute', top:12, left:12, right:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              {recording ? (
+                <div style={{ background:'rgba(220,38,38,0.9)', color:'#fff', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+                  <span style={{ width:8, height:8, background:'#fff', borderRadius:'50%', display:'inline-block' }}/>
+                  REC {elapsed}s
+                </div>
+              ) : <div/>}
+              {/* Flip button */}
+              <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.5)', border:'1.5px solid rgba(255,255,255,0.4)', color:'#fff', borderRadius:'50%', width:44, height:44, fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(4px)' }}>
+                🔄
+              </button>
+            </div>
+            {/* Countdown + progress */}
+            {recording && (
+              <>
+                <div style={{ position:'absolute', bottom:60, right:14, background:'rgba(0,0,0,0.6)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:600 }}>
+                  {countdown}s left
+                </div>
+                <div style={{ position:'absolute', bottom:0, left:0, right:0, height:5, background:'rgba(255,255,255,0.2)' }}>
+                  <div style={{ height:5, background:C.pink, width:`${((90-countdown)/90)*100}%`, transition:'width 1s linear' }}/>
+                </div>
+              </>
+            )}
+            {/* Portrait guide */}
+            {!recording && (
+              <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', border:'2px dashed rgba(255,255,255,0.3)', borderRadius:16, width:'55%', height:'70%', pointerEvents:'none' }}/>
+            )}
+          </div>
+          <div style={{ padding:'14px 16px' }}>
+            {!recording ? (
+              <button onClick={startRecording} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                <span style={{ width:14, height:14, background:'#fff', borderRadius:'50%', display:'inline-block' }}/> Start Recording
+              </button>
+            ) : (
+              <button onClick={stopRecording} style={{ width:'100%', padding:16, background:'#DC2626', color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                <span style={{ width:14, height:14, background:'#fff', borderRadius:2, display:'inline-block' }}/> Stop & Preview
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW */}
+      {mode === 'preview' && previewUrl && (
+        <div style={{ padding:'0 16px 16px' }}>
+          <div style={{ borderRadius:16, overflow:'hidden', background:'#000', marginBottom:14, position:'relative' }}>
+            <video ref={playbackRef} controls playsInline style={{ width:'100%', maxHeight:isMobile?'65vh':480, objectFit:'contain', display:'block', background:'#000' }}/>
+            <div style={{ position:'absolute', top:10, left:10, background:'rgba(5,150,105,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>✓ Preview</div>
+          </div>
+          <div style={{ fontSize:12, color:C.muted, textAlign:'center', marginBottom:12 }}>
+            {elapsed}s recorded · {recordedBlob ? (recordedBlob.size/1024/1024).toFixed(1) : '?'} MB
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={retake} style={{ flex:1, padding:13, background:'#F1F5F9', color:C.navy, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}>↩ Redo</button>
+            <button onClick={upload} style={{ flex:2, padding:13, background:C.green, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>✓ Upload Video</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── FA PORTAL ────────────────────────────────────────────────────────────────
+function FAPortal({ faToken, navigate }) {
+  const isMobile = useIsMobile();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [nudging, setNudging] = useState(null);
+  const [nudgeResult, setNudgeResult] = useState({});
+
+  useEffect(() => {
+    (async () => {
+      try { const d = await api(`/fa/${faToken}`); setData(d); }
+      catch(e) { setError('Invalid or expired link.'); }
+      setLoading(false);
+    })();
+  }, [faToken]);
+
+  const nudgeParent = async (nomId) => {
+    setNudging(nomId);
+    try {
+      const r = await api(`/fa/${faToken}`, { method:'POST', body: JSON.stringify({ action:'nudge', nominationId: nomId }) });
+      setNudgeResult(prev => ({ ...prev, [nomId]: r.smsSent || r.emailSent ? '✅ Reminder sent!' : '⚠️ No contact info' }));
+    } catch { setNudgeResult(prev => ({ ...prev, [nomId]: '❌ Failed' })); }
+    setNudging(null);
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading your portal...</div>;
+  if (error) return <div style={{ textAlign:'center', padding:80 }}><div style={{ fontSize:48, marginBottom:16 }}>🔒</div><p style={{ color:C.red }}>{error}</p></div>;
+
+  const { fa, nominations } = data;
+  const intakeDone = nominations.filter(n => n.parentIntake).length;
+  const videoDone = nominations.filter(n => n.parentIntake?.hasVideo).length;
+
+  return (
+    <div style={{ maxWidth: isMobile ? '100%' : 700, margin:'0 auto' }}>
+      {/* Header */}
+      <div style={{ background:C.navy, padding:'24px 20px', textAlign:'center' }}>
+        <div style={{ fontSize:36, marginBottom:8 }}>🏫</div>
+        <h2 style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:22, margin:'0 0 4px' }}>
+          {fa.firstName} {fa.lastName}
+        </h2>
+        {fa.school && <p style={{ color:'rgba(255,255,255,0.6)', fontSize:13, margin:0 }}>{fa.school}</p>}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:C.border }}>
+        {[
+          { label:'Nominated', v:nominations.length, c:C.navy },
+          { label:'Sizes in', v:intakeDone, c:C.green },
+          { label:'Videos done', v:videoDone, c:C.pink },
+        ].map(s => (
+          <div key={s.label} style={{ background:'#fff', padding:'16px 12px', textAlign:'center' }}>
+            <div style={{ fontSize:28, fontWeight:800, color:s.c }}>{s.v}</div>
+            <div style={{ fontSize:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
+          </div>
         ))}
       </div>
+
+      {/* Kids list */}
+      <div style={{ padding:isMobile?'16px':'20px' }}>
+        {nominations.length === 0 ? (
+          <div style={{ textAlign:'center', padding:48, color:C.light }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
+            <p style={{ fontSize:14 }}>No nominations yet. Nominations you submit will appear here.</p>
+          </div>
+        ) : nominations.map(n => {
+          const hasSizes = !!n.parentIntake;
+          const hasVideo = n.parentIntake?.hasVideo;
+          return (
+            <div key={n.id} style={{ background:'#fff', borderRadius:12, border:`1px solid ${C.border}`, marginBottom:12, overflow:'hidden' }}>
+              {/* Child header */}
+              <div style={{ padding:'14px 16px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
+                  <div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.grade} · {n.school}</div>
+                </div>
+                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, textTransform:'uppercase',
+                    background: hasSizes ? '#D1FAE5' : '#FEF3C7',
+                    color: hasSizes ? '#065F46' : '#92400E' }}>
+                    {hasSizes ? '✓ Sizes' : 'No sizes'}
+                  </span>
+                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, textTransform:'uppercase',
+                    background: hasVideo ? '#E0E7FF' : '#F1F5F9',
+                    color: hasVideo ? '#3730A3' : C.light }}>
+                    {hasVideo ? '✓ Video' : 'No video'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sizes preview if available */}
+              {hasSizes && (
+                <div style={{ padding:'0 16px 10px', display:'flex', gap:14, flexWrap:'wrap', fontSize:12, color:C.muted }}>
+                  {n.parentIntake.shirtSize && <span>👕 {n.parentIntake.shirtSize}</span>}
+                  {n.parentIntake.pantSize && <span>👖 {n.parentIntake.pantSize}</span>}
+                  {n.parentIntake.shoeSize && <span>👟 {n.parentIntake.shoeSize}</span>}
+                  {n.parentIntake.favoriteColors && <span>❤️ {n.parentIntake.favoriteColors}</span>}
+                  {n.parentIntake.gender && <span>· {n.parentIntake.gender}</span>}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ padding:'10px 16px 14px', borderTop:`1px solid ${C.border}`, display:'flex', gap:8, flexWrap:'wrap' }}>
+                {/* Nudge parent if no sizes yet */}
+                {!hasSizes && (
+                  <button
+                    onClick={() => nudgeParent(n.id)}
+                    disabled={nudging === n.id}
+                    style={{ flex:1, minWidth:120, padding:'8px 12px', background:'#FFF7ED', color:'#92400E', border:`1px solid #FED7AA`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    {nudging === n.id ? 'Sending...' : nudgeResult[n.id] || '📲 Remind Parent'}
+                  </button>
+                )}
+                {/* Record video button */}
+                {hasSizes && !hasVideo && (
+                  <button
+                    onClick={() => navigate(`#/fa/${faToken}/video/${n.id}`)}
+                    style={{ flex:1, padding:'8px 12px', background:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 1px 6px rgba(232,84,140,0.3)' }}>
+                    🎬 Record Video
+                  </button>
+                )}
+                {hasVideo && (
+                  <button
+                    onClick={() => navigate(`#/fa/${faToken}/video/${n.id}`)}
+                    style={{ flex:1, padding:'8px 12px', background:'#F0FDF4', color:'#166534', border:`1px solid #BBF7D0`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    ✓ Video done — Re-record?
+                  </button>
+                )}
+                {!hasSizes && nudgeResult[n.id] && (
+                  <span style={{ fontSize:12, color:C.green, alignSelf:'center' }}>{nudgeResult[n.id]}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+
+function AdvocatesTab({ isMobile }) {
+  const [fas, setFas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', school:'', notes:'' });
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(null);
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const load = useCallback(async () => {
+    try { const d = await api('/fa',{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setFas(d.fas); } catch(e){console.error(e);}
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const addFA = async () => {
+    if (!form.firstName||!form.lastName) return;
+    if (!form.email&&!form.phone) return;
+    setSaving(true);
+    try {
+      await api('/fa',{method:'POST',body:JSON.stringify(form),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}});
+      setForm({ firstName:'',lastName:'',email:'',phone:'',school:'',notes:'' });
+      setShowAdd(false);
+      load();
+    } catch(e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const copyLink = (token, id) => {
+    navigator.clipboard.writeText(`https://childspree.org/#/fa/${token}`);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <div style={{ fontSize:13, color:C.muted }}>{fas.length} family advocate{fas.length!==1?'s':''}</div>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{ padding:'8px 18px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          + Add Advocate
+        </button>
+      </div>
+
+      {showAdd && (
+        <div style={{ background:'#F8FAFC', border:`1px solid ${C.border}`, borderRadius:12, padding:20, marginBottom:20 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:C.navy, textTransform:'uppercase', letterSpacing:1, marginBottom:14 }}>New Family Advocate</p>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12 }}>
+            <Field label="First Name *"><input style={inp()} value={form.firstName} onChange={e=>upd('firstName',e.target.value)} placeholder="First"/></Field>
+            <Field label="Last Name *"><input style={inp()} value={form.lastName} onChange={e=>upd('lastName',e.target.value)} placeholder="Last"/></Field>
+            <Field label="Email"><input style={inp()} type="email" value={form.email} onChange={e=>upd('email',e.target.value)} placeholder="fa@davis.k12.ut.us"/></Field>
+            <Field label="Phone"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
+            <Field label="School"><input style={inp()} value={form.school} onChange={e=>upd('school',e.target.value)} placeholder="Adams Elementary"/></Field>
+            <Field label="Notes"><input style={inp()} value={form.notes} onChange={e=>upd('notes',e.target.value)} placeholder="Optional"/></Field>
+          </div>
+          <div style={{ display:'flex', gap:10, marginTop:14 }}>
+            <button onClick={()=>setShowAdd(false)} style={{ padding:'10px 20px', background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancel</button>
+            <button onClick={addFA} disabled={saving} style={{ padding:'10px 24px', background:saving?C.light:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:saving?'default':'pointer' }}>
+              {saving ? 'Creating...' : 'Create + Send Portal Link'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div style={{ textAlign:'center', padding:48, color:C.light }}>Loading...</div>
+      : fas.length === 0 ? (
+        <div style={{ textAlign:'center', padding:48, color:C.light, fontSize:14 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>🏫</div>
+          No family advocates yet. Add one above to get started.
+        </div>
+      ) : (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
+              {['Name','School','Contact','Kids','Portal','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {fas.map(fa => (
+                <tr key={fa.id} style={{ borderBottom:`1px solid ${C.border}`, background:'#fff' }}>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{fa.firstName} {fa.lastName}</div></td>
+                  <td style={{ padding:'12px 14px', color:C.muted, fontSize:12 }}>{fa.school||'—'}</td>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontSize:12, color:C.text }}>{fa.email||'—'}</div><div style={{ fontSize:11, color:C.light }}>{fa.phone||''}</div></td>
+                  <td style={{ padding:'12px 14px', textAlign:'center' }}>
+                    <span style={{ fontWeight:700, color:C.navy }}>{fa.nominationCount}</span>
+                    {fa.completeCount > 0 && <span style={{ fontSize:11, color:C.green, marginLeft:4 }}>({fa.completeCount} done)</span>}
+                  </td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <a href={`/#/fa/${fa.portalToken}`} target="_blank" rel="noreferrer" style={{ fontSize:11, color:C.blue }}>Open portal →</a>
+                  </td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <button onClick={() => copyLink(fa.portalToken, fa.id)} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                      {copied===fa.id ? '✅ Copied' : '📋 Copy Link'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── APP ROUTER ───
+export default function App() {
+  const isMobile = useIsMobile();
+  const [route, setRoute] = useState(window.location.hash || '#/');
+  useEffect(() => {
+    const h = () => setRoute(window.location.hash || '#/');
+    window.addEventListener('hashchange', h);
+    return () => window.removeEventListener('hashchange', h);
+  }, []);
+  const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
+
+  let view = 'home', token = null, faToken = null, faVideoNomId = null;
+  if (route.startsWith('#/nominate')) view = 'nominate';
+  else if (route.startsWith('#/volunteer')) view = 'volunteer';
+  else if (route.startsWith('#/admin')) view = 'admin';
+  else if (route.startsWith('#/intake/')) { view = 'parent'; token = route.replace('#/intake/',''); }
+  else if (route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/)) {
+    const m = route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/);
+    view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
+  }
+  else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
+  else if (route === '#/' || route === '#' || route === '') view = 'home';
+
+  if (view === 'parent' && token) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
+      <ParentIntake token={token}/>
+      {isMobile && <div style={{ height:72 }}/>}
+    </div>
+  );
+
+  if (view === 'fa' && faToken) return (
+    <div style={{ minHeight:'100vh', background:C.bg }}>
+      <FAPortal faToken={faToken} navigate={navigate}/>
+    </div>
+  );
+
+  if (view === 'fa-video' && faToken && faVideoNomId) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <FAVideoPage faToken={faToken} nominationId={faVideoNomId} navigate={navigate}/>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:isMobile?72:0 }}>
+      {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
+      {view === 'home' && <LandingPage navigate={navigate}/>}
+      {view === 'nominate' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><NominationForm/></div>}
+      {view === 'volunteer' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><VolunteerForm/></div>}
+      {view === 'portal' && <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto' }}><FAPortal/></div>}
+      {view === 'admin' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><AdminDashboard/></div>}
+      {isMobile && <MobileNav view={view} navigate={navigate}/>}
+    </div>
+  );
+}
+
+// ─── FA PORTAL ─────────────────────────────────────────────────────────────
+function FAPortal() {
+  const isMobile = useIsMobile();
+  const { lang, setLang, t } = useLang();
+  const [email, setEmail] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [error, setError] = useState(null);
+  const [session, setSession] = useState(() => {
+    const s = sessionStorage.getItem('fa-session');
+    return s ? JSON.parse(s) : null;
+  });
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {
+    setError(null); setLoggingIn(true);
+    try {
+      const res = await api('/portal/login', { method:'POST', body:JSON.stringify({ email }) });
+      const s = { token: res.token, email: res.email };
+      sessionStorage.setItem('fa-session', JSON.stringify(s));
+      setSession(s);
+    } catch(err) {
+      setError(err.message);
+    }
+    setLoggingIn(false);
+  };
+
+  const logout = () => { sessionStorage.removeItem('fa-session'); setSession(null); setDashboard(null); };
+
+  useEffect(() => {
+    if (!session) return;
+    setLoading(true);
+    api('/portal/dashboard', { headers:{ 'X-FA-Token': session.token } })
+      .then(d => setDashboard(d))
+      .catch(err => { if (err.message.includes('expired')) { logout(); } else { setError(err.message); } })
+      .finally(() => setLoading(false));
+  }, [session]);
+
+  const pad = isMobile ? '20px 16px' : '32px 40px';
+
+  // ── LOGIN ──
+  if (!session) return (
+    <div style={{ maxWidth:420, margin: isMobile?'48px auto 0':'80px auto 0', padding:'0 16px' }}>
+      <div style={{ background:C.card, borderRadius:16, padding:36, boxShadow:'0 4px 24px rgba(0,0,0,0.08)' }}>
+        <div style={{ textAlign:'center', marginBottom:28 }}>
+          <div style={{ fontSize:44, marginBottom:10 }}>📋</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:6 }}>{t('portalTitle')}</h2>
+          <p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>{t('portalSubtitle')}</p>
+        </div>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
+          <LangToggle lang={lang} setLang={setLang} style={{ background:'rgba(27,58,75,0.08)', border:'1px solid rgba(27,58,75,0.2)', color:C.navy }}/>
+        </div>
+        {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
+        <label style={lbl}>{t('portalEmailLabel')}</label>
+        <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
+          placeholder={t('portalEmailPlaceholder')} style={{...inp(), marginBottom:14, fontSize:15 }}/>
+        <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:14, background:loggingIn||!email.trim()?C.light:C.navy, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>
+          {loggingIn ? t('portalLoggingIn') : t('portalLogin')}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── LOADING ──
+  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading your dashboard...</div>;
+
+  // ── DASHBOARD ──
+  if (!dashboard) return null;
+
+  const { stats, nominations, nominatorName } = dashboard;
+  const needsVideo = nominations.filter(n => n.intake.submitted && !n.intake.videoRecorded);
+  const statusColor = { pending:'#F59E0B', approved:'#10B981', sent:'#3B82F6', complete:'#8B5CF6', declined:'#EF4444' };
+  const statusLabel = { pending:'Pending Review', approved:'Approved', sent:'Sent to Parent', complete:'Complete', declined:'Declined' };
+
+  return (
+    <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto', padding:pad }}>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <p style={{ color:C.muted, fontSize:13, margin:'0 0 2px' }}>{t('portalWelcome')}</p>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?20:26, color:C.navy, margin:0 }}>{nominatorName || session.email}</h2>
+        </div>
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          <LangToggle lang={lang} setLang={setLang} style={{ background:'rgba(27,58,75,0.08)', border:'1px solid rgba(27,58,75,0.2)', color:C.navy }}/>
+          <button onClick={logout} style={{ padding:'8px 16px', background:'#F1F5F9', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', color:C.muted }}>{t('portalLogout')}</button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(6,1fr)', gap:isMobile?8:12, marginBottom:28 }}>
+        {[
+          { label:t('portalTotal'), v:stats.total, c:C.navy },
+          { label:t('portalIntake'), v:stats.intakeComplete, c:C.green },
+          { label:t('portalConsent'), v:stats.consented, c:'#8B5CF6' },
+          { label:t('portalNeedsVideo'), v:stats.needsVideo, c:C.amber },
+          { label:t('portalAwaiting'), v:stats.awaitingParent, c:C.blue },
+          { label:t('portalPending'), v:stats.pending, c:C.muted },
+        ].slice(0, isMobile?3:6).map(s=>(
+          <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px', textAlign:'center', border:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:isMobile?22:30, fontWeight:800, color:s.c, lineHeight:1 }}>{s.v}</div>
+            <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.4, marginTop:4, lineHeight:1.3 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Needs Video Alert */}
+      {needsVideo.length > 0 && (
+        <div style={{ background:'#FFF7ED', border:`1.5px solid #FED7AA`, borderRadius:12, padding:'16px 20px', marginBottom:24 }}>
+          <h3 style={{ color:'#92400E', fontFamily:"'Playfair Display',serif", fontSize:16, margin:'0 0 12px' }}>{t('portalNeedsVideoTitle')}</h3>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {needsVideo.map(n => (
+              <div key={n.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', borderRadius:8, padding:'10px 14px', border:`1px solid #FED7AA` }}>
+                <div>
+                  <span style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</span>
+                  <span style={{ fontSize:12, color:C.muted, marginLeft:8 }}>{n.grade} · {n.school}</span>
+                </div>
+                <span style={{ fontSize:12, color:'#92400E', fontWeight:600 }}>⚠️ No video</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {needsVideo.length === 0 && stats.intakeComplete > 0 && (
+        <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:13, color:'#166534' }}>
+          ✅ {t('portalNeedsVideoEmpty')}
+        </div>
+      )}
+
+      {/* All nominations table */}
+      <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?16:18, color:C.navy, marginBottom:14 }}>{t('portalAllTitle')}</h3>
+      {nominations.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:C.light, fontSize:14 }}>No nominations yet.</div>
+      ) : !isMobile ? (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
+              {[t('portalChildCol'),t('portalStatusCol'),'School / Grade',t('portalIntakeCol'),t('portalConsentCol'),t('portalVideoCol')].map(h=>(
+                <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.4 }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {nominations.map(n => (
+                <tr key={n.id} style={{ borderBottom:`1px solid ${C.border}` }}>
+                  <td style={{ padding:'12px 14px' }}>
+                    <div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
+                    <div style={{ fontSize:11, color:C.light, marginTop:1 }}>{n.parentName} · {n.parentPhone||n.parentEmail||''}</div>
+                  </td>
+                  <td style={{ padding:'12px 14px' }}>
+                    <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>
+                      {statusLabel[n.status]||n.status}
+                    </span>
+                  </td>
+                  <td style={{ padding:'12px 14px', fontSize:12, color:C.text }}>{n.school}<br/><span style={{ color:C.light }}>{n.grade}</span></td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? t('portalIntakeDone') : t('portalIntakePending')}</td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.consent ? t('portalConsentYes') : t('portalConsentNo')}</td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? (n.intake.videoRecorded ? t('portalVideoYes') : t('portalVideoNeeded')) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {nominations.map(n => (
+            <div key={n.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:'14px 16px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontWeight:700, color:C.navy, fontSize:15 }}>{n.childFirst} {n.childLast}</div>
+                <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>{statusLabel[n.status]||n.status}</span>
+              </div>
+              <div style={{ fontSize:12, color:C.muted, marginBottom:8 }}>{n.grade} · {n.school}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
+                  <div style={{ color:C.muted, marginBottom:2 }}>Intake</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? '✅' : '⏳'}</div>
+                </div>
+                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
+                  <div style={{ color:C.muted, marginBottom:2 }}>Consent</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.consent ? '✅' : '—'}</div>
+                </div>
+                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
+                  <div style={{ color:C.muted, marginBottom:2 }}>Video</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? (n.intake.videoRecorded ? '🎬' : '⚠️') : '—'}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

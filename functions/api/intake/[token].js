@@ -1,15 +1,16 @@
-// GET /api/intake/:token — get child info for parent form (by parent_token)
-// POST /api/intake/:token — submit sizes, preferences
+// GET /api/intake/:token
+// POST /api/intake/:token — submit sizes + notify admin
 
-function cors(response) {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-  return response;
-}
+import { notifyIntakeComplete, notifyFAVideoNeeded } from '../_notify.js';
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
+}
+function cors(r) {
+  r.headers.set('Access-Control-Allow-Origin', '*');
+  r.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  r.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  return r;
 }
 
 export async function onRequestOptions() {
@@ -18,73 +19,67 @@ export async function onRequestOptions() {
 
 export async function onRequestGet(context) {
   const { env, params } = context;
-  const token = params.token;
-
   const nom = await env.DB.prepare(
-    'SELECT id, child_first, child_last, school, grade, status FROM nominations WHERE parent_token = ?'
-  ).bind(token).first();
-
-  if (!nom) {
-    return cors(Response.json({ error: 'Invalid or expired link' }, { status: 404 }));
-  }
-
+    'SELECT id, child_first, child_last, school, grade, status, parent_language FROM nominations WHERE parent_token = ?'
+  ).bind(params.token).first();
+  if (!nom) return cors(Response.json({ error: 'Invalid or expired link' }, { status: 404 }));
   if (nom.status !== 'sent' && nom.status !== 'complete') {
     return cors(Response.json({ error: 'This link is not yet active' }, { status: 403 }));
   }
-
-  // Check if already submitted
-  const existing = await env.DB.prepare(
-    'SELECT id FROM parent_intake WHERE nomination_id = ?'
-  ).bind(nom.id).first();
-
+  const existing = await env.DB.prepare('SELECT id FROM parent_intake WHERE nomination_id = ?').bind(nom.id).first();
   return cors(Response.json({
-    childFirst: nom.child_first,
-    childLast: nom.child_last,
-    school: nom.school,
-    grade: nom.grade,
-    alreadySubmitted: !!existing,
+    childFirst: nom.child_first, childLast: nom.child_last,
+    school: nom.school, grade: nom.grade, alreadySubmitted: !!existing,
+    parentLanguage: nom.parent_language || 'en',
   }));
 }
 
 export async function onRequestPost(context) {
   const { env, params, request } = context;
-  const token = params.token;
   const body = await request.json();
 
-  const nom = await env.DB.prepare(
-    'SELECT id, status FROM nominations WHERE parent_token = ?'
-  ).bind(token).first();
-
-  if (!nom) {
-    return cors(Response.json({ error: 'Invalid or expired link' }, { status: 404 }));
-  }
-
-  if (nom.status !== 'sent') {
-    return cors(Response.json({ error: 'Intake already submitted or link not active' }, { status: 400 }));
-  }
-
+  const nom = await env.DB.prepare('SELECT * FROM nominations WHERE parent_token = ?').bind(params.token).first();
+  if (!nom) return cors(Response.json({ error: 'Invalid or expired link' }, { status: 404 }));
+  if (nom.status !== 'sent') return cors(Response.json({ error: 'Intake already submitted or not active' }, { status: 400 }));
   if (!body.shirtSize || !body.pantSize || !body.shoeSize) {
-    return cors(Response.json({ error: 'Shirt, pant, and shoe sizes are required' }, { status: 400 }));
+    return cors(Response.json({ error: 'Shirt, pant, and shoe sizes required' }, { status: 400 }));
   }
 
   const intakeId = generateId();
-
   await env.DB.prepare(`
-    INSERT INTO parent_intake (id, nomination_id, shirt_size, pant_size, shoe_size,
-      favorite_colors, avoid_colors, allergies, preferences)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    intakeId, nom.id,
-    body.shirtSize, body.pantSize, body.shoeSize,
-    body.favoriteColors || null, body.avoidColors || null,
-    body.allergies || null, body.preferences || null
+    INSERT INTO parent_intake (id, nomination_id, gender, department, shirt_size, pant_size, shoe_size,
+      favorite_colors, avoid_colors, allergies, preferences, parent_consent, language)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(intakeId, nom.id, body.gender||null, body.department||null, body.shirtSize, body.pantSize, body.shoeSize,
+    body.favoriteColors||null, body.avoidColors||null, body.allergies||null, body.preferences||null,
+    body.parentConsent ? 1 : 0, body.language||"en"
   ).run();
 
-  // Update nomination status to complete
   const now = new Date().toISOString();
   await env.DB.prepare(
     'UPDATE nominations SET status = ?, updated_at = ?, completed_at = ? WHERE id = ?'
   ).bind('complete', now, now, nom.id).run();
+
+  // Notify admin
+  context.waitUntil((async () => {
+    await notifyIntakeComplete(env, {
+      childFirst: nom.child_first, childLast: nom.child_last,
+      school: nom.school, grade: nom.grade,
+    }, {
+      gender: body.gender, department: body.department, shirtSize: body.shirtSize, pantSize: body.pantSize, shoeSize: body.shoeSize,
+      favoriteColors: body.favoriteColors, avoidColors: body.avoidColors,
+      allergies: body.allergies, preferences: body.preferences, videoUploaded: false,
+    });
+    if (nom.fa_id) {
+      const fa = await env.DB.prepare('SELECT * FROM family_advocates WHERE id=?').bind(nom.fa_id).first();
+      if (fa) {
+        await notifyFAVideoNeeded(env, {
+          fa, nom,
+          intake: { shirt_size: body.shirtSize, gender: body.gender, favorite_colors: body.favoriteColors },
+        });
+      }
+    }
+  })());
 
   return cors(Response.json({ id: intakeId, status: 'complete' }, { status: 201 }));
 }
