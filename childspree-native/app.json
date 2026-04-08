@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Child Spree",
+    "slug": "childspree",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E8548C"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "org.fosterlabs.childspree",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to record a short video to help volunteers shop for your child.",
+        "NSMicrophoneUsageDescription": "Used to record audio with your video.",
+        "NSPhotoLibraryUsageDescription": "Used to save videos to your photo library."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E8548C"
+      },
+      "package": "org.fosterlabs.childspree",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "scheme": "childspree",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Used to record a short video for your child's shopping experience."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#E8548C"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "childspree"
+      }
+    }
+  }
+}
