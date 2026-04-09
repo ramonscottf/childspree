@@ -215,7 +215,7 @@ function getMsalLoginUrl() {
   sessionStorage.setItem('ms_nonce', nonce);
   const params = new URLSearchParams({
     client_id: AZURE_CLIENT_ID,
-    response_type: 'id_token token',
+    response_type: 'id_token',
     redirect_uri: AZURE_REDIRECT_URI,
     scope: AZURE_SCOPES,
     response_mode: 'fragment',
