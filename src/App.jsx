@@ -1620,7 +1620,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const intake = n.intake || {};
+  const intake = n.intake || { submitted: false, consent: false, videoRecorded: false };
   const [form, setForm] = useState({
     shirtSize: intake.shirtSize||'', pantSize: intake.pantSize||'', shoeSize: intake.shoeSize||'',
     favoriteColors: intake.favoriteColors||'', avoidColors: intake.avoidColors||'',
@@ -1938,7 +1938,7 @@ function FAPortal() {
                   <span style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</span>
                   <span style={{ fontSize:12, color:C.muted, marginLeft:8 }}>{n.grade} · {n.school}</span>
                 </div>
-                <button onClick={()=>navigate(`#/fa/${session?.token?.split('-')[0]||''}/video/${n.id}`)} style={{ padding:'6px 14px', background:C.pink, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer' }}>🎬 Record Now</button>
+                <button onClick={()=>navigate(`#/fa/_/video/${n.id}`)} style={{ padding:'6px 14px', background:C.pink, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer' }}>🎬 Record Now</button>
               </div>
             ))}
           </div>
