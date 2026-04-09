@@ -370,7 +370,7 @@ function NominationForm() {
         <div>
           <p style={secHead(isMobile)}>Child Information</p>
           <Row cols={2} gap={10}><Field label="First Name *"><input style={inp()} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)} placeholder="First"/></Field><Field label="Last Name *"><input style={inp()} value={form.childLast} onChange={e=>upd('childLast',e.target.value)} placeholder="Last"/></Field></Row>
-          <Row cols={2} gap={10}><Field label="Student ID"><input style={inp()} value={form.studentId} onChange={e=>upd('studentId',e.target.value)} placeholder="e.g. 123456"/></Field><div/></Row>
+          <Field label="Student ID (optional)"><input style={inp()} value={form.studentId} onChange={e=>upd('studentId',e.target.value)} placeholder="e.g. 123456 — helps track the child in our system"/></Field>
           <Row cols={isMobile?2:1} gap={10}><Field label="School *"><select style={{...inp(),appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">Select school...</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Grade *"><select style={{...inp(),appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">Grade</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></Field></Row>
           <p style={{...secHead(isMobile),marginTop:20}}>Your Information</p>
           <Field label="Your Name *"><input style={inp()} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)} placeholder="Full name"/></Field>
@@ -402,10 +402,21 @@ function NominationForm() {
                       upd('siblings',next);
                     };
                     return (
-                      <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
-                        <div style={{width:20,height:20,borderRadius:'50%',background:'#E8548C',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>{i+1}</div>
-                        <input style={{...inp(),flex:2,marginBottom:0}} value={sib.name} onChange={e=>updateSib('name',e.target.value)} placeholder={'Sibling '+(i+1)+' full name'}/>
-                        <input style={{...inp(),flex:1,marginBottom:0}} value={sib.studentId} onChange={e=>updateSib('studentId',e.target.value)} placeholder='Student ID'/>
+                      <div key={i} style={{marginBottom:14}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                          <div style={{width:20,height:20,borderRadius:'50%',background:'#E8548C',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>{i+1}</div>
+                          <span style={{fontSize:12,fontWeight:600,color:'#1b2e5a'}}>Sibling {i+1}</span>
+                        </div>
+                        <div style={{display:'flex',gap:8}}>
+                          <div style={{flex:2}}>
+                            <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>First &amp; Last Name</label>
+                            <input style={{...inp(),marginBottom:0}} value={sib.name} onChange={e=>updateSib('name',e.target.value)} placeholder="e.g. Maria Torres"/>
+                          </div>
+                          <div style={{flex:1}}>
+                            <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Student ID</label>
+                            <input style={{...inp(),marginBottom:0}} value={sib.studentId} onChange={e=>updateSib('studentId',e.target.value)} placeholder="e.g. 123456"/>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
