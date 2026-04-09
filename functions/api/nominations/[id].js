@@ -73,15 +73,33 @@ export async function onRequestPatch(context) {
         // Multi-child family — auto-create sibling nominations then send one family email
         const siblings = [];
 
-        // Parse sibling names into individual children
-        // e.g. "Maria (3rd), James (K)" → [{name: "Maria", grade: "3rd"}, ...]
-        const rawNames = (nom.sibling_names || '').split(',').map(s => s.trim()).filter(Boolean);
+        // Parse siblings — try JSON array first (new format with studentIds), fall back to string
+        let siblingDefs = [];
+        try {
+          const parsed = JSON.parse(nom.sibling_names || '[]');
+          if (Array.isArray(parsed)) {
+            siblingDefs = parsed.map(s => ({
+              name: s.name || '',
+              studentId: s.studentId || '',
+              grade: nom.grade,
+            })).filter(s => s.name);
+          }
+        } catch(e) {
+          // old string format: "Maria (3rd), James (K)"
+          siblingDefs = (nom.sibling_names || '').split(',').map(s => s.trim()).filter(Boolean).map(raw => {
+            const match = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+            return { name: match ? match[1].trim() : raw, grade: match ? match[2].trim() : nom.grade, studentId: '' };
+          }).filter(s => s.name);
+        }
 
-        for (const raw of rawNames) {
-          const match = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
-          const firstName = match ? match[1].trim() : raw;
-          const grade = match ? match[2].trim() : nom.grade;
-          const lastName = nom.child_last;
+        for (const sibDef of siblingDefs) {
+          const raw = sibDef.name;
+          // Split first/last name
+          const parts = raw.split(' ');
+          const firstName = parts[0] || raw;
+          const grade = sibDef.grade || nom.grade;
+          const lastName = parts.slice(1).join(' ') || nom.child_last;
+          const studentId = sibDef.studentId || '';
 
           const sibId = generateId();
           const sibToken = generateToken();
