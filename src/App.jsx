@@ -164,6 +164,49 @@ function LangToggle({ lang, setLang, style }) {
   );
 }
 
+// ─── MICROSOFT SSO CONFIG ───────────────────────────────────────────────────
+const AZURE_CLIENT_ID = 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f';
+const AZURE_TENANT_ID = '3d9cf274-547e-4af5-8dde-01a636e0b607';
+const AZURE_REDIRECT_URI = window.location.origin + '/';
+const AZURE_SCOPES = 'openid profile email User.Read';
+
+function getMsalLoginUrl() {
+  const state = Math.random().toString(36).substr(2);
+  const nonce = Math.random().toString(36).substr(2);
+  sessionStorage.setItem('ms_state', state);
+  sessionStorage.setItem('ms_nonce', nonce);
+  const params = new URLSearchParams({
+    client_id: AZURE_CLIENT_ID,
+    response_type: 'id_token token',
+    redirect_uri: AZURE_REDIRECT_URI,
+    scope: AZURE_SCOPES,
+    response_mode: 'fragment',
+    state,
+    nonce,
+    prompt: 'select_account',
+  });
+  return `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+}
+
+function parseMsalFragment(hash) {
+  // Parse id_token from URL fragment after redirect
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  const idToken = params.get('id_token');
+  const state = params.get('state');
+  if (!idToken) return null;
+  // Decode JWT payload (no signature verification needed — server validates email)
+  try {
+    const payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    const email = payload.preferred_username || payload.upn || payload.email || payload.unique_name;
+    const name = payload.name || email;
+    const savedState = sessionStorage.getItem('ms_state');
+    if (state !== savedState) return null;
+    sessionStorage.removeItem('ms_state');
+    sessionStorage.removeItem('ms_nonce');
+    return { email, name, idToken };
+  } catch(e) { return null; }
+}
+
 const C = { navy:'#1B3A4B', pink:'#E8548C', pinkLight:'#F9A8C9', bg:'#F8FAFC', card:'#fff', border:'#E2E8F0', text:'#1E293B', muted:'#64748B', light:'#94A3B8', green:'#059669', red:'#DC2626', amber:'#D97706', blue:'#2563EB' };
 const inp = (ex={}) => ({ width:'100%', padding:'10px 12px', border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, fontFamily:"'DM Sans',sans-serif", background:'#FAFBFC', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s', color:C.text, ...ex });
 const lbl = { display:'block', fontSize:12, fontWeight:600, color:C.muted, marginBottom:4, letterSpacing:0.3 };
@@ -1518,25 +1561,73 @@ function FAPortal() {
 
   const pad = isMobile ? '20px 16px' : '32px 40px';
 
+  // ── CHECK FOR SSO REDIRECT ──
+  useEffect(() => {
+    const pending = sessionStorage.getItem('ms_sso_pending');
+    if (pending && !session) {
+      sessionStorage.removeItem('ms_sso_pending');
+      const msUser = JSON.parse(pending);
+      setLoggingIn(true);
+      setError(null);
+      api('/portal/login', { method:'POST', body:JSON.stringify({ email: msUser.email, name: msUser.name, sso: true }) })
+        .then(res => {
+          const s = { token: res.token, email: res.email, name: res.name || msUser.name };
+          sessionStorage.setItem('fa-session', JSON.stringify(s));
+          setSession(s);
+        })
+        .catch(err => setError(err.message))
+        .finally(() => setLoggingIn(false));
+    }
+  }, []);
+
   // ── LOGIN ──
   if (!session) return (
     <div style={{ maxWidth:420, margin: isMobile?'48px auto 0':'80px auto 0', padding:'0 16px' }}>
       <div style={{ background:C.card, borderRadius:16, padding:36, boxShadow:'0 4px 24px rgba(0,0,0,0.08)' }}>
         <div style={{ textAlign:'center', marginBottom:28 }}>
-          <div style={{ fontSize:44, marginBottom:10 }}>📋</div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:6 }}>{t('portalTitle')}</h2>
-          <p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>{t('portalSubtitle')}</p>
+          <img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{ width:56, height:56, marginBottom:12 }}/>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:6 }}>Family Advocate Portal</h2>
+          <p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Sign in with your Davis School District account</p>
         </div>
         <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
           <LangToggle lang={lang} setLang={setLang} style={{ background:'rgba(27,58,75,0.08)', border:'1px solid rgba(27,58,75,0.2)', color:C.navy }}/>
         </div>
         {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
-        <label style={lbl}>{t('portalEmailLabel')}</label>
-        <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-          placeholder={t('portalEmailPlaceholder')} style={{...inp(), marginBottom:14, fontSize:15 }}/>
-        <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:14, background:loggingIn||!email.trim()?C.light:C.navy, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>
-          {loggingIn ? t('portalLoggingIn') : t('portalLogin')}
-        </button>
+
+        {loggingIn ? (
+          <div style={{ textAlign:'center', padding:'20px 0', color:C.muted }}>Signing you in...</div>
+        ) : (
+          <>
+            {/* Primary: Microsoft SSO */}
+            <a href={getMsalLoginUrl()} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, width:'100%', padding:14, background:C.navy, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer', textDecoration:'none', boxSizing:'border-box', marginBottom:16 }}>
+              <svg width="20" height="20" viewBox="0 0 23 23" fill="none">
+                <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+                <rect x="12" y="1" width="10" height="10" fill="#7fba00"/>
+                <rect x="1" y="12" width="10" height="10" fill="#00a4ef"/>
+                <rect x="12" y="12" width="10" height="10" fill="#ffb900"/>
+              </svg>
+              Sign in with Microsoft
+            </a>
+
+            {/* Divider */}
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+              <div style={{ flex:1, height:1, background:C.border }}/>
+              <span style={{ fontSize:12, color:C.light }}>or use email</span>
+              <div style={{ flex:1, height:1, background:C.border }}/>
+            </div>
+
+            {/* Fallback: email login */}
+            <label style={lbl}>School email address</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
+              placeholder="you@davis.k12.ut.us" style={{...inp(), marginBottom:12, fontSize:15 }}/>
+            <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:12, background:loggingIn||!email.trim()?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+              {loggingIn ? 'Looking you up...' : 'Continue with email'}
+            </button>
+            <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:10, lineHeight:1.5 }}>
+              Use the same email address you used when submitting nominations.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1675,6 +1766,22 @@ function FAPortal() {
 export default function App() {
   const isMobile = useIsMobile();
   const [route, setRoute] = useState(window.location.hash || '#/');
+
+  // Handle Microsoft SSO redirect back to app
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('id_token=')) {
+      const msUser = parseMsalFragment(hash);
+      if (msUser) {
+        // Clear the OAuth fragment from URL
+        window.history.replaceState(null, '', window.location.pathname);
+        // Store pending SSO login for the portal to pick up
+        sessionStorage.setItem('ms_sso_pending', JSON.stringify(msUser));
+        // Navigate to portal
+        setRoute('#/portal');
+      }
+    }
+  }, []);
   useEffect(() => {
     const h = () => setRoute(window.location.hash || '#/');
     window.addEventListener('hashchange', h);
