@@ -1614,6 +1614,148 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
   );
 }
 
+// ─── PORTAL NOMINATION CARD (expandable + editable) ─────────────────────────
+function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobile, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [form, setForm] = useState({
+    shirtSize: n.intake.shirtSize||'', pantSize: n.intake.pantSize||'', shoeSize: n.intake.shoeSize||'',
+    favoriteColors: n.intake.favoriteColors||'', avoidColors: n.intake.avoidColors||'',
+    allergies: n.intake.allergies||'', preferences: n.intake.preferences||'',
+  });
+  const upd = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const save = async () => {
+    setSaving(true); setSaved(false);
+    try {
+      await api(`/portal/nomination/${n.id}`, {
+        method:'PATCH',
+        headers: { 'X-FA-Token': session.token, 'Content-Type':'application/json' },
+        body: JSON.stringify(form),
+      });
+      setSaved(true); setEditing(false);
+      if (onUpdate) onUpdate();
+      setTimeout(()=>setSaved(false), 3000);
+    } catch(e) { alert('Save failed: ' + e.message); }
+    setSaving(false);
+  };
+
+  const pill = (label, done) => (
+    <span style={{ display:'inline-block', padding:'3px 8px', borderRadius:12, fontSize:10, fontWeight:600, marginRight:6,
+      background: done ? '#D1FAE5' : '#FEF3C7', color: done ? '#065F46' : '#92400E' }}>
+      {done ? '✅' : '⏳'} {label}
+    </span>
+  );
+
+  return (
+    <div style={{ background:C.card, borderRadius:12, border:`1px solid ${open?C.navy+'33':C.border}`, overflow:'hidden', transition:'border 0.2s' }}>
+      {/* Header — always visible, clickable */}
+      <div onClick={()=>setOpen(!open)} style={{ padding:'14px 18px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <span style={{ fontWeight:700, color:C.navy, fontSize:15 }}>{n.childFirst} {n.childLast}</span>
+            <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>
+              {statusLabel[n.status]||n.status}
+            </span>
+          </div>
+          <div style={{ fontSize:12, color:C.muted, marginTop:3 }}>{n.grade} · {n.school} · Parent: {n.parentName}</div>
+          {!open && n.intake.submitted && (
+            <div style={{ marginTop:6 }}>
+              {pill('Intake', true)}
+              {pill('Consent', n.intake.consent)}
+              {pill('Video', n.intake.videoRecorded)}
+            </div>
+          )}
+          {!open && !n.intake.submitted && <div style={{ marginTop:6 }}>{pill('Awaiting parent', false)}</div>}
+        </div>
+        <span style={{ fontSize:18, color:C.light, transition:'transform 0.2s', transform:open?'rotate(180deg)':'rotate(0)' }}>▼</span>
+      </div>
+
+      {/* Expanded content */}
+      {open && (
+        <div style={{ borderTop:`1px solid ${C.border}`, padding:'16px 18px' }}>
+          {/* Status row */}
+          <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
+            {pill('Intake', n.intake.submitted)}
+            {pill('Consent', n.intake.consent)}
+            {pill('Video', n.intake.videoRecorded)}
+            {n.intake.submitted && !n.intake.videoRecorded && (
+              <button onClick={()=>navigate(`#/fa/_/video/${n.id}`)} style={{ padding:'4px 12px', background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer' }}>🎬 Record Video</button>
+            )}
+          </div>
+
+          {n.intake.submitted ? (
+            <>
+              {/* Sizes section */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>Clothing sizes</span>
+                  {!editing ? (
+                    <button onClick={()=>setEditing(true)} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.navy }}>✏️ Edit</button>
+                  ) : (
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button onClick={save} disabled={saving} style={{ padding:'4px 12px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>{saving?'Saving...':'Save'}</button>
+                      <button onClick={()=>{setEditing(false);setForm({shirtSize:n.intake.shirtSize||'',pantSize:n.intake.pantSize||'',shoeSize:n.intake.shoeSize||'',favoriteColors:n.intake.favoriteColors||'',avoidColors:n.intake.avoidColors||'',allergies:n.intake.allergies||'',preferences:n.intake.preferences||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
+                    </div>
+                  )}
+                </div>
+                {saved && <div style={{ background:'#D1FAE5', color:'#065F46', padding:'6px 12px', borderRadius:6, fontSize:12, marginBottom:10, fontWeight:600 }}>✅ Saved!</div>}
+
+                {editing ? (
+                  <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr', gap:10 }}>
+                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shirt size</label><input style={{...inp(),marginBottom:0}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}/></div>
+                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Pant size</label><input style={{...inp(),marginBottom:0}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}/></div>
+                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoe size</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
+                    <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Favorite colors</label><input style={{...inp(),marginBottom:0}} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)}/></div>
+                    <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Colors to avoid</label><input style={{...inp(),marginBottom:0}} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)}/></div>
+                    <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Allergies / notes</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
+                    <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Preferences / special requests</label><input style={{...inp(),marginBottom:0}} value={form.preferences} onChange={e=>upd('preferences',e.target.value)}/></div>
+                  </div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr 1fr':'repeat(5,1fr)', gap:8 }}>
+                    {[
+                      { label:'Shirt', val:n.intake.shirtSize, icon:'👕' },
+                      { label:'Pants', val:n.intake.pantSize, icon:'👖' },
+                      { label:'Shoes', val:n.intake.shoeSize, icon:'👟' },
+                      { label:'Loves', val:n.intake.favoriteColors, icon:'❤️' },
+                      { label:'Avoid', val:n.intake.avoidColors, icon:'✗' },
+                    ].filter(s=>s.val).map(s=>(
+                      <div key={s.label} style={{ background:'#F8FAFC', borderRadius:8, padding:'8px 10px', textAlign:'center' }}>
+                        <div style={{ fontSize:16 }}>{s.icon}</div>
+                        <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginTop:2 }}>{s.val}</div>
+                        <div style={{ fontSize:10, color:C.light }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!editing && (n.intake.allergies || n.intake.preferences) && (
+                  <div style={{ marginTop:10, fontSize:12, color:C.text, lineHeight:1.6 }}>
+                    {n.intake.allergies && <div><strong>Allergies:</strong> {n.intake.allergies}</div>}
+                    {n.intake.preferences && <div><strong>Preferences:</strong> {n.intake.preferences}</div>}
+                  </div>
+                )}
+              </div>
+
+              {/* Video section */}
+              {n.intake.videoRecorded && (
+                <div style={{ background:'#F0FDF4', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#166534' }}>
+                  🎬 Video recorded and ready for volunteers
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ background:'#FFFBEB', borderRadius:8, padding:'12px 16px', fontSize:13, color:'#92400E', lineHeight:1.6 }}>
+              ⏳ Waiting for parent to complete the sizing form. Once they submit, you'll be notified to record a video with {n.childFirst} at school.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── FA PORTAL ─────────────────────────────────────────────────────────────
 function FAPortal() {
   const isMobile = useIsMobile();
@@ -1807,69 +1949,17 @@ function FAPortal() {
         </div>
       )}
 
-      {/* All nominations table */}
+      {/* All nominations — expandable cards */}
       <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?16:18, color:C.navy, marginBottom:14 }}>{t('portalAllTitle')}</h3>
       {nominations.length === 0 ? (
         <div style={{ textAlign:'center', padding:40, color:C.light, fontSize:14 }}>No nominations yet.</div>
-      ) : !isMobile ? (
-        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
-            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
-              {[t('portalChildCol'),t('portalStatusCol'),'School / Grade',t('portalIntakeCol'),t('portalConsentCol'),t('portalVideoCol')].map(h=>(
-                <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.4 }}>{h}</th>
-              ))}
-            </tr></thead>
-            <tbody>
-              {nominations.map(n => (
-                <tr key={n.id} style={{ borderBottom:`1px solid ${C.border}` }}>
-                  <td style={{ padding:'12px 14px' }}>
-                    <div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
-                    <div style={{ fontSize:11, color:C.light, marginTop:1 }}>{n.parentName} · {n.parentPhone||n.parentEmail||''}</div>
-                  </td>
-                  <td style={{ padding:'12px 14px' }}>
-                    <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>
-                      {statusLabel[n.status]||n.status}
-                    </span>
-                  </td>
-                  <td style={{ padding:'12px 14px', fontSize:12, color:C.text }}>{n.school}<br/><span style={{ color:C.light }}>{n.grade}</span></td>
-                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? t('portalIntakeDone') : t('portalIntakePending')}</td>
-                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.consent ? t('portalConsentYes') : t('portalConsentNo')}</td>
-                  <td style={{ padding:'12px 14px', fontSize:13 }}>
-                    {n.intake.submitted
-                      ? n.intake.videoRecorded
-                        ? <span style={{color:C.green,fontWeight:600}}>🎬 Recorded</span>
-                        : <button onClick={()=>navigate(`#/fa/${session.token}/video/${n.id}`)} style={{padding:'4px 10px',background:C.pink,color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>🎬 Record</button>
-                      : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {nominations.map(n => (
-            <div key={n.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:'14px 16px' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
-                <div style={{ fontWeight:700, color:C.navy, fontSize:15 }}>{n.childFirst} {n.childLast}</div>
-                <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor[n.status]+'22', color:statusColor[n.status] }}>{statusLabel[n.status]||n.status}</span>
-              </div>
-              <div style={{ fontSize:12, color:C.muted, marginBottom:8 }}>{n.grade} · {n.school}</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
-                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
-                  <div style={{ color:C.muted, marginBottom:2 }}>Intake</div>
-                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? '✅' : '⏳'}</div>
-                </div>
-                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
-                  <div style={{ color:C.muted, marginBottom:2 }}>Consent</div>
-                  <div style={{ fontWeight:600 }}>{n.intake.consent ? '✅' : '—'}</div>
-                </div>
-                <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
-                  <div style={{ color:C.muted, marginBottom:2 }}>Video</div>
-                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? (n.intake.videoRecorded ? '🎬' : <button onClick={()=>navigate(`#/fa/${session.token}/video/${n.id}`)} style={{padding:'3px 8px',background:C.pink,color:'#fff',border:'none',borderRadius:4,fontSize:10,fontWeight:700,cursor:'pointer'}}>Record</button>) : '—'}</div>
-                </div>
-              </div>
-            </div>
+            <PortalNomCard key={n.id} n={n} session={session} navigate={navigate} statusColor={statusColor} statusLabel={statusLabel} isMobile={isMobile} onUpdate={()=>{
+              // Refresh dashboard
+              api('/portal/dashboard', { headers:{ 'X-FA-Token': session.token } }).then(d => setDashboard(d)).catch(()=>{});
+            }}/>
           ))}
         </div>
       )}
