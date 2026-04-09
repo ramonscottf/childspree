@@ -1,4 +1,42 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { PublicClientApplication } from '@azure/msal-browser';
+
+// ─── MICROSOFT SSO ──────────────────────────────────────────────────────────
+const MSAL_CONFIG = {
+  auth: {
+    clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
+    authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
+    redirectUri: window.location.origin,
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
+};
+const MSAL_SCOPES = ['openid', 'profile', 'email', 'User.Read'];
+let _msal = null;
+async function getMsal() {
+  if (!_msal) { _msal = new PublicClientApplication(MSAL_CONFIG); await _msal.initialize(); }
+  return _msal;
+}
+async function msalSignIn() {
+  const msal = await getMsal();
+  const result = await msal.loginPopup({ scopes: MSAL_SCOPES, prompt: 'select_account' });
+  const claims = result.idTokenClaims || {};
+  const user = {
+    displayName: claims.name || result.account?.name || result.account?.username,
+    email: (claims.preferred_username || result.account?.username || '').toLowerCase(),
+  };
+  sessionStorage.setItem('cs-ms-user', JSON.stringify(user));
+  return user;
+}
+async function msalSignOut() {
+  const msal = await getMsal();
+  const accounts = msal.getAllAccounts();
+  if (accounts[0]) await msal.logoutPopup({ account: accounts[0] });
+  sessionStorage.removeItem('cs-ms-user');
+}
+function getMsSession() {
+  try { return JSON.parse(sessionStorage.getItem('cs-ms-user') || 'null'); } catch { return null; }
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 const API = '/api';
 const SHIRT_SIZES = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10-12)","Youth XL (14-16)","Adult S","Adult M","Adult L","Adult XL","Adult 2XL"];
@@ -226,12 +264,25 @@ function StatusBadge({ status, vol }) {
 
 function TopNav({ view, navigate }) {
   const { t: navT } = useLang();
+  const [msUser, setMsUser] = useState(getMsSession);
   const items = [
     {key:'home',hash:'#/',label:navT('home')},{key:'nominate',hash:'#/nominate',label:navT('nominate')},
     {key:'volunteer',hash:'#/volunteer',label:navT('volunteer')},
     {key:'portal',hash:'#/portal',label:navT('portal')},
     {key:'admin',hash:'#/admin',label:navT('admin')},
   ];
+  const handleSignIn = async () => {
+    try {
+      const user = await msalSignIn();
+      setMsUser(user);
+      window.dispatchEvent(new CustomEvent('cs-ms-login', { detail: user }));
+    } catch(e) { alert('Sign-in failed. Make sure pop-ups are allowed for this site.'); }
+  };
+  const handleSignOut = async () => {
+    await msalSignOut();
+    setMsUser(null);
+    window.dispatchEvent(new CustomEvent('cs-ms-logout'));
+  };
   return (
     <nav style={{ background:C.navy, padding:'0 32px', display:'flex', alignItems:'center', position:'sticky', top:0, zIndex:50 }}>
       <button onClick={()=>navigate('#/')} style={{ display:'flex', alignItems:'center', gap:10, flex:1, padding:'12px 0', background:'none', border:'none', cursor:'pointer' }}>
@@ -241,10 +292,23 @@ function TopNav({ view, navigate }) {
           <div style={{ color:'rgba(255,255,255,0.45)', fontSize:9, letterSpacing:1.5, textTransform:'uppercase', marginTop:1 }}>Davis Education Foundation</div>
         </div>
       </button>
-      <div style={{ display:'flex', gap:4 }}>
+      <div style={{ display:'flex', gap:4, alignItems:'center' }}>
         {items.map(item => { const active=view===item.key; return (
           <button key={item.key} onClick={()=>navigate(item.hash)} style={{ padding:'8px 14px', background:active?'rgba(255,255,255,0.15)':'none', border:'none', borderRadius:6, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:active?1:0.65 }}>{item.label}</button>
         ); })}
+        {msUser ? (
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginLeft:8, paddingLeft:12, borderLeft:'1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ width:28, height:28, borderRadius:'50%', background:C.pink, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0 }}>
+              {(msUser.displayName||'?').charAt(0).toUpperCase()}
+            </div>
+            <span style={{ fontSize:12, color:'rgba(255,255,255,0.85)', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{msUser.displayName||msUser.email}</span>
+            <button onClick={handleSignOut} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'rgba(255,255,255,0.6)', fontSize:11, cursor:'pointer', borderRadius:4, padding:'3px 8px' }}>Sign out</button>
+          </div>
+        ) : (
+          <button onClick={handleSignIn} style={{ marginLeft:8, background:C.pink, border:'none', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', borderRadius:6, padding:'6px 14px', whiteSpace:'nowrap' }}>
+            Sign In (DSD)
+          </button>
+        )}
       </div>
     </nav>
   );
@@ -376,6 +440,19 @@ function NominationForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  useEffect(() => {
+    const ms = getMsSession();
+    if (ms) {
+      if (!form.nominatorName && ms.displayName) upd('nominatorName', ms.displayName);
+      if (!form.nominatorEmail && ms.email) upd('nominatorEmail', ms.email);
+    }
+    const handler = (e) => {
+      if (e.detail?.displayName) upd('nominatorName', e.detail.displayName);
+      if (e.detail?.email) upd('nominatorEmail', e.detail.email);
+    };
+    window.addEventListener('cs-ms-login', handler);
+    return () => window.removeEventListener('cs-ms-login', handler);
+  }, []);
   const submit = async() => {
     setError(null);
     if (!form.childFirst||!form.childLast||!form.school||!form.grade) { setError('Please fill in all child information.'); return; }
@@ -516,6 +593,19 @@ function VolunteerForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  useEffect(() => {
+    const ms = getMsSession();
+    if (ms) {
+      if (!form.nominatorName && ms.displayName) upd('nominatorName', ms.displayName);
+      if (!form.nominatorEmail && ms.email) upd('nominatorEmail', ms.email);
+    }
+    const handler = (e) => {
+      if (e.detail?.displayName) upd('nominatorName', e.detail.displayName);
+      if (e.detail?.email) upd('nominatorEmail', e.detail.email);
+    };
+    window.addEventListener('cs-ms-login', handler);
+    return () => window.removeEventListener('cs-ms-login', handler);
+  }, []);
   const submit = async() => {
     setError(null);
     if (!form.firstName||!form.lastName) { setError('Please enter your name.'); return; }
@@ -879,6 +969,19 @@ function ParentIntake({ token }) {
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form');
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+  useEffect(() => {
+    const ms = getMsSession();
+    if (ms) {
+      if (!form.nominatorName && ms.displayName) upd('nominatorName', ms.displayName);
+      if (!form.nominatorEmail && ms.email) upd('nominatorEmail', ms.email);
+    }
+    const handler = (e) => {
+      if (e.detail?.displayName) upd('nominatorName', e.detail.displayName);
+      if (e.detail?.email) upd('nominatorEmail', e.detail.email);
+    };
+    window.addEventListener('cs-ms-login', handler);
+    return () => window.removeEventListener('cs-ms-login', handler);
+  }, []);
   useEffect(() => { (async()=>{ try{ const data=await api(`/intake/${token}`); setChild(data); if(data.parentLanguage && data.parentLanguage !== 'en') setLang(data.parentLanguage); if(data.alreadySubmitted)setStep('done'); }catch(err){setError(err.message);} setLoading(false); })(); }, [token]);
   const submit = async () => {
     if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
@@ -1549,6 +1652,18 @@ function FAPortal() {
   };
 
   const logout = () => { sessionStorage.removeItem('fa-session'); setSession(null); setDashboard(null); };
+  const msLogin = async () => {
+    try {
+      setLoggingIn(true); setError(null);
+      const user = await msalSignIn();
+      const res = await api('/portal/login', { method:'POST', body:JSON.stringify({ email: user.email }) });
+      const s = { token: res.token, email: res.email };
+      sessionStorage.setItem('fa-session', JSON.stringify(s));
+      setSession(s);
+    } catch(e) {
+      setError(e.message === 'user_cancelled' ? null : (e.message || 'Sign-in failed'));
+    } finally { setLoggingIn(false); }
+  };
 
   useEffect(() => {
     if (!session) return;
