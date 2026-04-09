@@ -1359,13 +1359,16 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
   useEffect(() => {
     (async () => {
       try {
-        const data = await api(`/fa/${faToken}`);
-        const n = data.nominations.find(n => n.id === nominationId);
-        if (!n) { setError('Nomination not found.'); } else { setNom(n); }
+        // Use session token to load nomination
+        const sessionData = sessionStorage.getItem('fa-session');
+        const session = sessionData ? JSON.parse(sessionData) : null;
+        if (!session?.token) { setError('Please log in first.'); setLoading(false); return; }
+        const data = await api(`/portal/nomination/${nominationId}`, { headers: { 'X-FA-Token': session.token } });
+        setNom(data);
       } catch(e) { setError(e.message); }
       setLoading(false);
     })();
-  }, [faToken, nominationId]);
+  }, [nominationId]);
 
   const stopStream = useCallback(() => {
     if (stream) stream.getTracks().forEach(t => t.stop());
@@ -1474,7 +1477,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
       <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:360, margin:'0 auto 28px' }}>
         The volunteer who shops for {nom.childFirst} will watch this video before they go. It makes all the difference.
       </p>
-      <button onClick={() => navigate(`#/fa/${faToken}`)} style={{ background:C.navy, color:'#fff', border:'none', padding:'13px 32px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+      <button onClick={() => navigate('#/portal')} style={{ background:C.navy, color:'#fff', border:'none', padding:'13px 32px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
         ← Back to my kids
       </button>
     </div>
@@ -1495,7 +1498,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'0 0 32px':'20px 24px 40px' }}>
       {/* Header */}
       <div style={{ background:C.navy, padding:'16px 20px', textAlign:'center', marginBottom:0 }}>
-        <button onClick={() => navigate(`#/fa/${faToken}`)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', float:'left', padding:'4px 0' }}>← Back</button>
+        <button onClick={() => navigate('#/portal')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', float:'left', padding:'4px 0' }}>← Back</button>
         <div style={{ color:'#fff', fontWeight:700, fontSize:15 }}>🎬 {nom.childFirst}'s Video</div>
         <div style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginTop:2 }}>{nom.grade} · {nom.school}</div>
       </div>
