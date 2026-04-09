@@ -60,32 +60,46 @@ export async function onRequestPatch(context) {
     await env.DB.prepare(`UPDATE nominations SET status = ?, updated_at = ?${extra} WHERE id = ?`).bind(...binds).run();
 
     if (body.status === 'sent') {
-      const siblingCount = nom.sibling_count || 0;
+      const familyGroup = nom.family_group;
 
-      if (siblingCount === 0) {
-        // Single child — normal flow
+      if (familyGroup) {
+        // Family group — update ALL family members to 'sent' and send one family email
+        await env.DB.prepare(`UPDATE nominations SET status = 'sent', sent_at = ?, updated_at = ? WHERE family_group = ? AND status IN ('pending','approved')`)
+          .bind(now, now, familyGroup).run();
+
+        // Get all family members
+        const { results: familyMembers } = await env.DB.prepare(
+          `SELECT child_first, child_last, grade, parent_token FROM nominations WHERE family_group = ?`
+        ).bind(familyGroup).all();
+
+        const allChildren = familyMembers.map(m => ({
+          childFirst: m.child_first, childLast: m.child_last, grade: m.grade, parentToken: m.parent_token,
+        }));
+
+        context.waitUntil(notifyParentFamilyIntakeReady(env, {
+          parentName: nom.parent_name, parentPhone: nom.parent_phone, parentEmail: nom.parent_email,
+          children: allChildren, lang: nom.parent_language || 'en',
+        }));
+      } else if ((nom.sibling_count || 0) === 0) {
+        // Single child, no family group — normal flow
         context.waitUntil(notifyParentIntakeReady(env, {
           parentName: nom.parent_name, parentPhone: nom.parent_phone, parentEmail: nom.parent_email,
           parentToken: nom.parent_token, childFirst: nom.child_first, childLast: nom.child_last,
           siblingCount: 0, lang: nom.parent_language || 'en',
         }));
       } else {
-        // Multi-child family — auto-create sibling nominations then send one family email
+        // Legacy: old nominations with sibling_count > 0 but no family_group (pre-migration)
+        // Fall back to old sibling creation logic
         const siblings = [];
-
-        // Parse siblings — try JSON array first (new format with studentIds), fall back to string
         let siblingDefs = [];
         try {
           const parsed = JSON.parse(nom.sibling_names || '[]');
           if (Array.isArray(parsed)) {
             siblingDefs = parsed.map(s => ({
-              name: s.name || '',
-              studentId: s.studentId || '',
-              grade: nom.grade,
+              name: s.name || '', studentId: s.studentId || '', grade: nom.grade,
             })).filter(s => s.name);
           }
         } catch(e) {
-          // old string format: "Maria (3rd), James (K)"
           siblingDefs = (nom.sibling_names || '').split(',').map(s => s.trim()).filter(Boolean).map(raw => {
             const match = raw.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
             return { name: match ? match[1].trim() : raw, grade: match ? match[2].trim() : nom.grade, studentId: '' };
@@ -94,13 +108,10 @@ export async function onRequestPatch(context) {
 
         for (const sibDef of siblingDefs) {
           const raw = sibDef.name;
-          // Split first/last name
           const parts = raw.split(' ');
           const firstName = parts[0] || raw;
           const grade = sibDef.grade || nom.grade;
           const lastName = parts.slice(1).join(' ') || nom.child_last;
-          const studentId = sibDef.studentId || '';
-
           const sibId = generateId();
           const sibToken = generateToken();
 
@@ -119,13 +130,11 @@ export async function onRequestPatch(context) {
           siblings.push({ childFirst: firstName, childLast: lastName, grade, parentToken: sibToken });
         }
 
-        // Build full family array: primary child first, then siblings
         const allChildren = [
           { childFirst: nom.child_first, childLast: nom.child_last, grade: nom.grade, parentToken: nom.parent_token },
           ...siblings,
         ];
 
-        // Send ONE family email/SMS with all intake links
         context.waitUntil(notifyParentFamilyIntakeReady(env, {
           parentName: nom.parent_name, parentPhone: nom.parent_phone, parentEmail: nom.parent_email,
           children: allChildren, lang: nom.parent_language || 'en',

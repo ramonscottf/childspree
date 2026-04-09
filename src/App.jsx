@@ -1039,7 +1039,7 @@ function NominationsTab({ isMobile }) {
             <tbody>
               {nominations.map(n => (<>
                 <tr key={n.id} onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ borderBottom:`1px solid ${C.border}`, cursor:'pointer', background:expandedId===n.id?'#FFFBF5':'#fff' }}>
-                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div><div style={{ fontSize:11, color:C.light, marginTop:2 }}>{n.grade}</div></td>
+                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div><div style={{ fontSize:11, color:C.light, marginTop:2 }}>{n.grade}{n.studentId ? ` · ID: ${n.studentId}` : ''}</div>{n.familyGroup&&<div style={{ marginTop:3 }}><span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👨‍👩‍👧 Family</span></div>}</td>
                   <td style={{ padding:'12px 14px', color:C.text }}>{n.school}</td>
                   <td style={{ padding:'12px 14px' }}><div>{n.nominatorName}</div><div style={{ fontSize:11, color:C.light }}>{n.nominatorRole}</div></td>
                   <td style={{ padding:'12px 14px' }}><div>{n.parentName}</div><div style={{ fontSize:11, color:C.light }}>{n.parentPhone||n.parentEmail||''}</div></td>
@@ -1074,7 +1074,7 @@ function NominationsTab({ isMobile }) {
           {nominations.map(n=>(
             <div key={n.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:'hidden' }}>
               <div onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ padding:'12px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div><div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div><div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.school} · {n.grade}</div></div>
+                <div><div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}{n.familyGroup&&<span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4, marginLeft:8, verticalAlign:'middle' }}>👨‍👩‍👧 Family</span>}</div><div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.school} · {n.grade}</div></div>
                 <StatusBadge status={n.status}/>
               </div>
               {expandedId===n.id&&(

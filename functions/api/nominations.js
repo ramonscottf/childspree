@@ -39,10 +39,11 @@ export async function onRequestGet(context) {
 
   const nominations = results.map(r => ({
     id: r.id, status: r.status, parentToken: r.parent_token,
-    childFirst: r.child_first, childLast: r.child_last, school: r.school, grade: r.grade,
+    childFirst: r.child_first, childLast: r.child_last, studentId: r.student_id, school: r.school, grade: r.grade,
     nominatorName: r.nominator_name, nominatorRole: r.nominator_role, nominatorEmail: r.nominator_email,
     parentName: r.parent_name, parentPhone: r.parent_phone, parentEmail: r.parent_email,
     reason: r.reason, siblingCount: r.sibling_count||0, siblingNames: r.sibling_names||null, additionalNotes: r.additional_notes, parentLanguage: r.parent_language||'en',
+    familyGroup: r.family_group || null,
     createdAt: r.created_at, updatedAt: r.updated_at,
     parentIntake: r.shirt_size ? {
       shirtSize: r.shirt_size, pantSize: r.pant_size, shoeSize: r.shoe_size,
@@ -70,19 +71,63 @@ export async function onRequestPost(context) {
   const id = generateId();
   const token = generateToken();
 
+  // Parse siblings data
+  let siblingDefs = [];
+  if (body.siblingsData) {
+    try {
+      const parsed = JSON.parse(body.siblingsData);
+      if (Array.isArray(parsed)) {
+        siblingDefs = parsed.filter(s => s.name && s.name.trim());
+      }
+    } catch(e) {}
+  }
+
+  // If there are siblings, create a family group
+  const familyGroup = siblingDefs.length > 0 ? `fam_${id}` : null;
+
   await env.DB.prepare(`
-    INSERT INTO nominations (id, parent_token, child_first, child_last, school, grade,
+    INSERT INTO nominations (id, parent_token, child_first, child_last, student_id, school, grade,
       nominator_name, nominator_role, nominator_email,
       parent_name, parent_phone, parent_email,
-      reason, sibling_count, sibling_names, additional_notes, parent_language)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      reason, sibling_count, sibling_names, additional_notes, parent_language, family_group)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id, token,
-    body.childFirst, body.childLast, body.school, body.grade,
+    body.childFirst, body.childLast, body.studentId || null, body.school, body.grade,
     body.nominatorName, body.nominatorRole || 'Teacher', body.nominatorEmail,
     body.parentName, body.parentPhone || null, body.parentEmail || null,
-    body.reason || null, body.siblingCount || 0, body.siblingNames || null, body.additionalNotes || null, body.parentLanguage || 'en'
+    body.reason || null, body.siblingCount || 0, body.siblingNames || null, body.additionalNotes || null, body.parentLanguage || 'en',
+    familyGroup
   ).run();
+
+  // Create separate nomination rows for each sibling immediately
+  const siblingIds = [];
+  for (const sibDef of siblingDefs) {
+    const raw = sibDef.name.trim();
+    const parts = raw.split(' ');
+    const firstName = parts[0] || raw;
+    const lastName = parts.slice(1).join(' ') || body.childLast;
+    const studentId = sibDef.studentId || null;
+
+    const sibId = generateId();
+    const sibToken = generateToken();
+
+    await env.DB.prepare(`
+      INSERT INTO nominations (id, parent_token, child_first, child_last, student_id, school, grade,
+        nominator_name, nominator_role, nominator_email,
+        parent_name, parent_phone, parent_email,
+        reason, sibling_count, sibling_names, additional_notes, parent_language, family_group)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, ?, ?)
+    `).bind(
+      sibId, sibToken, firstName, lastName, studentId, body.school, body.grade,
+      body.nominatorName, body.nominatorRole || 'Teacher', body.nominatorEmail,
+      body.parentName, body.parentPhone || null, body.parentEmail || null,
+      body.reason || null, body.parentLanguage || 'en',
+      familyGroup
+    ).run();
+
+    siblingIds.push(sibId);
+  }
 
   // Fire notifications async (don't block response)
   context.waitUntil(notifyNewNomination(env, {
@@ -94,5 +139,5 @@ export async function onRequestPost(context) {
     reason: body.reason, siblingCount: body.siblingCount||0, siblingNames: body.siblingNames||null, parentLanguage: body.parentLanguage||'en',
   }));
 
-  return cors(Response.json({ id, parentToken: token, status: 'pending' }, { status: 201 }));
+  return cors(Response.json({ id, parentToken: token, status: 'pending', siblingIds }, { status: 201 }));
 }
