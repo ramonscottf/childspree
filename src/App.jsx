@@ -1521,10 +1521,11 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
           <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:12, padding:'16px 18px', marginBottom:20 }}>
             <p style={{ fontSize:13, fontWeight:700, color:'#166534', margin:'0 0 10px' }}>📋 Before you record:</p>
             <ul style={{ margin:0, padding:'0 0 0 18px', fontSize:13, color:'#166534', lineHeight:2 }}>
-              <li>Find a quiet spot with good light</li>
+              <li>Find a quiet spot at school with good light</li>
               <li>Ask {nom.childFirst} to face the camera and smile</li>
-              <li>Aim for <strong>30–60 seconds</strong> (90 max)</li>
-              <li>Hold phone <strong>vertically</strong> (portrait)</li>
+              <li>Aim for <strong>30–60 seconds</strong> (90 sec max)</li>
+              <li>Hold phone <strong>vertically</strong> — portrait mode</li>
+              <li>Use the 🔄 button to flip between front and back camera</li>
             </ul>
           </div>
           <div style={{ background:'#EFF6FF', border:`1px solid #BAE6FD`, borderRadius:12, padding:'14px 18px', marginBottom:20 }}>
@@ -1557,10 +1558,9 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
       {/* CAMERA */}
       {mode === 'camera' && (
         <div>
-          <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
+          <div style={{ position: isMobile ? 'fixed' : 'relative', top:0, left:0, right:0, bottom:0, background:'#000', overflow:'hidden', zIndex: isMobile ? 999 : 'auto' }}>
             <video ref={liveRef} muted playsInline
-              style={{ width:'100%', maxHeight: isMobile ? '70vh' : 500, objectFit:'cover', display:'block',
-                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
+              style={{ width:'100%', height: isMobile ? '100svh' : 500, maxHeight: isMobile ? '100svh' : 500, objectFit:'cover', display:'block', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
             {/* Top controls overlay */}
             <div style={{ position:'absolute', top:12, left:12, right:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               {recording ? (
@@ -1570,7 +1570,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
                 </div>
               ) : <div/>}
               {/* Flip button */}
-              <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.5)', border:'1.5px solid rgba(255,255,255,0.4)', color:'#fff', borderRadius:'50%', width:44, height:44, fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(4px)' }}>
+              <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.6)', border:'2px solid rgba(255,255,255,0.7)', color:'#fff', borderRadius:'50%', width:52, height:52, fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 🔄
               </button>
             </div>
@@ -1590,7 +1590,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
               <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', border:'2px dashed rgba(255,255,255,0.3)', borderRadius:16, width:'55%', height:'70%', pointerEvents:'none' }}/>
             )}
           </div>
-          <div style={{ padding:'14px 16px' }}>
+          <div style={{ position: isMobile ? 'fixed' : 'relative', bottom: isMobile ? 40 : 'auto', left:0, right:0, padding:'14px 24px', zIndex:1000, background: isMobile ? 'transparent' : 'none' }}>
             {!recording ? (
               <button onClick={startRecording} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
                 <span style={{ width:14, height:14, background:'#fff', borderRadius:'50%', display:'inline-block' }}/> Start Recording
