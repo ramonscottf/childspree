@@ -43,7 +43,7 @@ const SHIRT_SIZES = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10
 const PANT_SIZES = ["Youth 4","Youth 5","Youth 6","Youth 6X/7","Youth 8","Youth 10","Youth 12","Youth 14","Youth 16","Adult 18","Adult 20","Adult 24W","Adult 26W","Adult 28W","Adult 30W","Adult 32W"];
 const VOL_SHIRTS = ["YS","YM","YL","AS","AM","AL","AXL","A2XL"];
 const SCHOOLS = ["Adams Elementary","Antelope Elementary","Bountiful Elementary","Burton Elementary","Clinton Elementary","Columbia Elementary","Cook Elementary","Doxey Elementary","Eagle Bay Elementary","East Layton Elementary","Ellison Park Elementary","Endeavour Elementary","Farmington Elementary","Foxboro Elementary","Heritage Elementary","Holt Elementary","Kay's Creek Elementary","Knowlton Elementary","Lake View Elementary","Lincoln Elementary","Meadowbrook Elementary","Morgan Elementary","Mountain View Elementary","Muir Elementary","Oak Hills Elementary","Orchard Elementary","Parkside Elementary","Reading Elementary","Rosecrest Elementary","Sand Springs Elementary","Snow Horse Elementary","South Clearfield Elementary","Stewart Elementary","Sunset Elementary","Syracuse Elementary","Taylor Elementary","Tolman Elementary","Vae View Elementary","Valley View Elementary","Wasatch Elementary","Washington Elementary","West Bountiful Elementary","West Clinton Elementary","West Point Elementary","Whitesides Elementary","Woods Cross Elementary","Centerville Junior High","Central Davis Junior High","Fairfield Junior High","Legacy Junior High","Lakeridge Junior High","Mueller Park Junior High","North Davis Junior High","North Layton Junior High","South Davis Junior High","Sunset Junior High","Syracuse Junior High","West Point Junior High","Bountiful High","Clearfield High","Davis High","Farmington High","Layton High","Northridge High","Syracuse High","Viewmont High","Woods Cross High"];
-const GRADES = ["Pre-K","K","1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th","11th","12th"];
+const GRADES = ["Pre-K","K","1st","2nd","3rd","4th","5th","6th"];
 const PHOTOS = [
   "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/edac9afc-9cc4-4880-ad8a-6c858f765f28/child-spree-america-first-volunteers-group.jpg?disposition=inline",
   "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/ddb3a7a7-2722-4d47-ac13-f2ce041042ef/child-spree-citi-volunteers-group.jpg?disposition=inline",
@@ -504,7 +504,7 @@ function NominationForm() {
           <p style={secHead(isMobile)}>Child Information</p>
           <Row cols={2} gap={10}><Field label="First Name *"><input style={inp()} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)} placeholder="First"/></Field><Field label="Last Name *"><input style={inp()} value={form.childLast} onChange={e=>upd('childLast',e.target.value)} placeholder="Last"/></Field></Row>
           <Field label="Student ID (optional)"><input style={inp()} value={form.studentId} onChange={e=>upd('studentId',e.target.value)} placeholder="e.g. 123456 — helps track the child in our system"/></Field>
-          <Row cols={isMobile?2:1} gap={10}><Field label="School *"><select style={{...inp(),appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">Select school...</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Grade *"><select style={{...inp(),appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">Grade</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></Field></Row>
+          <Row cols={isMobile?2:1} gap={10}><Field label="School *"><select style={{...inp(),appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">Select school...</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Grade *"><select style={{...inp(),appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">Grade</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select><p style={{fontSize:11,color:C.light,margin:'4px 0 0'}}>Elementary students only (Pre-K – 6th grade)</p></Field></Row>
           <p style={{...secHead(isMobile),marginTop:20}}>Your Information</p>
           <Field label="Your Name *"><input style={inp()} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)} placeholder="Full name"/></Field>
           <Row cols={2} gap={10}><Field label="Role *"><select style={{...inp(),appearance:'auto'}} value={form.nominatorRole} onChange={e=>upd('nominatorRole',e.target.value)}>{['Teacher','Counselor','Family Advocate','Administrator','Other'].map(r=><option key={r} value={r}>{r}</option>)}</select></Field><Field label="Email *"><input style={inp()} type="email" value={form.nominatorEmail} onChange={e=>upd('nominatorEmail',e.target.value)} placeholder="you@davis.k12.ut.us"/></Field></Row>
@@ -513,19 +513,29 @@ function NominationForm() {
           <p style={secHead(isMobile)}>Parent / Guardian</p>
           <Field label="Name *"><input style={inp()} value={form.parentName} onChange={e=>upd('parentName',e.target.value)} placeholder="Full name"/></Field>
           <Row cols={2} gap={10}><Field label="Phone"><input style={inp()} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)} placeholder="(801) 555-0000"/></Field><Field label="Email"><input style={inp()} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)} placeholder="parent@email.com"/></Field></Row>
+          <Field label="Preferred language">
+            <div style={{display:'flex',gap:10}}>
+              {[['en','🇺🇸 English'],['es','🇲🇽 Español']].map(([val,label])=>(
+                <label key={val} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'10px 14px',background:form.parentLanguage===val?C.navy:C.bg,border:`1.5px solid ${form.parentLanguage===val?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s'}}>
+                  <input type="radio" name="parentLanguage" value={val} checked={form.parentLanguage===val} onChange={()=>upd('parentLanguage',val)} style={{accentColor:'#fff',display:'none'}}/>
+                  <span style={{fontSize:15}}>{label.split(' ')[0]}</span>
+                  <span style={{fontSize:13,fontWeight:form.parentLanguage===val?700:400,color:form.parentLanguage===val?'#fff':C.muted}}>{label.split(' ')[1]}</span>
+                  {form.parentLanguage===val&&<span style={{marginLeft:'auto',color:'#fff',fontSize:12}}>✓</span>}
+                </label>
+              ))}
+            </div>
+            <p style={{fontSize:11,color:C.light,margin:'6px 0 0'}}>Notifications and forms will be sent in this language.</p>
+          </Field>
           <p style={{...secHead(isMobile),marginTop:20}}>Details</p>
           <Field label="Why are you nominating this child?"><textarea style={{...inp(),minHeight:isMobile?72:100,resize:'vertical'}} value={form.reason} onChange={e=>upd('reason',e.target.value)} placeholder="Brief explanation — stays confidential"/></Field>
           <Field label="Additional siblings to nominate?">
-            <div style={{display:'flex', gap:10, alignItems:'center', marginBottom: form.siblingCount > 0 ? 10 : 0}}>
-              <div style={{flex:'0 0 auto'}}>
-                <label style={lbl}>How many siblings?</label>
-                <select style={{...inp({width:100}), appearance:'auto'}} value={form.siblingCount} onChange={e=>upd('siblingCount',parseInt(e.target.value))}>
-                  {[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?'None':n}</option>)}
-                </select>
-              </div>
+            <div>
+              <label style={lbl}>How many siblings?</label>
+              <select style={{...inp({width:100}), appearance:'auto', marginBottom: form.siblingCount > 0 ? 12 : 0}} value={form.siblingCount} onChange={e=>upd('siblingCount',parseInt(e.target.value))}>
+                {[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?'None':n}</option>)}
+              </select>
               {form.siblingCount > 0 && (
-                <div style={{flex:1, marginTop:8}}>
-                  <label style={lbl}>Sibling details</label>
+                <div>
                   {Array.from({length:form.siblingCount}).map((_,i)=>{
                     const sib = form.siblings[i]||{name:'',studentId:''};
                     const updateSib = (field,val) => {
@@ -561,19 +571,6 @@ function NominationForm() {
                 📋 The parent will receive a separate size form for each child. Their notification will note that {form.siblingCount+1} children from their family were nominated.
               </div>
             )}
-          </Field>
-          <Field label="Parent's preferred language">
-            <div style={{display:'flex',gap:10}}>
-              {[['en','🇺🇸 English'],['es','🇲🇽 Español']].map(([val,label])=>(
-                <label key={val} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'10px 14px',background:form.parentLanguage===val?C.navy:C.bg,border:`1.5px solid ${form.parentLanguage===val?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s'}}>
-                  <input type="radio" name="parentLanguage" value={val} checked={form.parentLanguage===val} onChange={()=>upd('parentLanguage',val)} style={{accentColor:'#fff',display:'none'}}/>
-                  <span style={{fontSize:15}}>{label.split(' ')[0]}</span>
-                  <span style={{fontSize:13,fontWeight:form.parentLanguage===val?700:400,color:form.parentLanguage===val?'#fff':C.muted}}>{label.split(' ')[1]}</span>
-                  {form.parentLanguage===val&&<span style={{marginLeft:'auto',color:'#fff',fontSize:12}}>✓</span>}
-                </label>
-              ))}
-            </div>
-            <p style={{fontSize:11,color:C.light,margin:'6px 0 0'}}>The parent's intake form link and notification will be sent in this language.</p>
           </Field>
         </div>
       </div>
