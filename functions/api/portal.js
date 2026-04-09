@@ -39,9 +39,21 @@ export async function onRequest(context) {
       "SELECT COUNT(*) as count FROM nominations WHERE LOWER(nominator_email) = ?"
     ).bind(norm).first();
 
-    if (!faRecord && (!nomCheck || nomCheck.count === 0)) {
+    const isSSOLogin = body.sso === true;
+    const isDSDEmail = norm.endsWith('@dsdmail.net');
+
+    // SSO logins from @dsdmail.net are always allowed — Microsoft already authenticated them
+    if (!isSSOLogin && !faRecord && (!nomCheck || nomCheck.count === 0)) {
       return cors(Response.json({
         error: 'Email not found. Please use your @dsdmail.net school email address.',
+        notFound: true,
+      }, { status: 404 }));
+    }
+
+    // Non-DSD emails that aren't in FA registry and have no nominations — reject even with SSO
+    if (isSSOLogin && !isDSDEmail && !faRecord && (!nomCheck || nomCheck.count === 0)) {
+      return cors(Response.json({
+        error: 'This email is not registered for Child Spree.',
         notFound: true,
       }, { status: 404 }));
     }
@@ -53,7 +65,8 @@ export async function onRequest(context) {
       'INSERT INTO fa_sessions (token, nominator_email, expires_at) VALUES (?, ?, ?)'
     ).bind(token, norm, expires).run();
 
-    return cors(Response.json({ token, email: norm, name: faRecord ? faRecord.first_name + ' ' + faRecord.last_name : null, school: faRecord?.school, languages: faRecord?.languages }));
+    const displayName = body.name || (faRecord ? faRecord.first_name + ' ' + faRecord.last_name : null);
+    return cors(Response.json({ token, email: norm, name: displayName, school: faRecord?.school, languages: faRecord?.languages }));
   }
 
   // GET /api/portal/dashboard
