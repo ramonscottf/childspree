@@ -1620,10 +1620,11 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const intake = n.intake || {};
   const [form, setForm] = useState({
-    shirtSize: n.intake.shirtSize||'', pantSize: n.intake.pantSize||'', shoeSize: n.intake.shoeSize||'',
-    favoriteColors: n.intake.favoriteColors||'', avoidColors: n.intake.avoidColors||'',
-    allergies: n.intake.allergies||'', preferences: n.intake.preferences||'',
+    shirtSize: intake.shirtSize||'', pantSize: intake.pantSize||'', shoeSize: intake.shoeSize||'',
+    favoriteColors: intake.favoriteColors||'', avoidColors: intake.avoidColors||'',
+    allergies: intake.allergies||'', preferences: intake.preferences||'',
   });
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
 
@@ -1661,14 +1662,14 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
             </span>
           </div>
           <div style={{ fontSize:12, color:C.muted, marginTop:3 }}>{n.grade} · {n.school} · Parent: {n.parentName}</div>
-          {!open && n.intake.submitted && (
+          {!open && intake.submitted && (
             <div style={{ marginTop:6 }}>
               {pill('Intake', true)}
-              {pill('Consent', n.intake.consent)}
-              {pill('Video', n.intake.videoRecorded)}
+              {pill('Consent', intake.consent)}
+              {pill('Video', intake.videoRecorded)}
             </div>
           )}
-          {!open && !n.intake.submitted && <div style={{ marginTop:6 }}>{pill('Awaiting parent', false)}</div>}
+          {!open && !intake.submitted && <div style={{ marginTop:6 }}>{pill('Awaiting parent', false)}</div>}
         </div>
         <span style={{ fontSize:18, color:C.light, transition:'transform 0.2s', transform:open?'rotate(180deg)':'rotate(0)' }}>▼</span>
       </div>
@@ -1678,15 +1679,15 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
         <div style={{ borderTop:`1px solid ${C.border}`, padding:'16px 18px' }}>
           {/* Status row */}
           <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
-            {pill('Intake', n.intake.submitted)}
-            {pill('Consent', n.intake.consent)}
-            {pill('Video', n.intake.videoRecorded)}
-            {n.intake.submitted && !n.intake.videoRecorded && (
+            {pill('Intake', intake.submitted)}
+            {pill('Consent', intake.consent)}
+            {pill('Video', intake.videoRecorded)}
+            {intake.submitted && !intake.videoRecorded && (
               <button onClick={()=>navigate(`#/fa/_/video/${n.id}`)} style={{ padding:'4px 12px', background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer' }}>🎬 Record Video</button>
             )}
           </div>
 
-          {n.intake.submitted ? (
+          {intake.submitted ? (
             <>
               {/* Sizes section */}
               <div style={{ marginBottom:16 }}>
@@ -1697,7 +1698,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                   ) : (
                     <div style={{ display:'flex', gap:6 }}>
                       <button onClick={save} disabled={saving} style={{ padding:'4px 12px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>{saving?'Saving...':'Save'}</button>
-                      <button onClick={()=>{setEditing(false);setForm({shirtSize:n.intake.shirtSize||'',pantSize:n.intake.pantSize||'',shoeSize:n.intake.shoeSize||'',favoriteColors:n.intake.favoriteColors||'',avoidColors:n.intake.avoidColors||'',allergies:n.intake.allergies||'',preferences:n.intake.preferences||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
+                      <button onClick={()=>{setEditing(false);setForm({shirtSize:intake.shirtSize||'',pantSize:intake.pantSize||'',shoeSize:intake.shoeSize||'',favoriteColors:intake.favoriteColors||'',avoidColors:intake.avoidColors||'',allergies:intake.allergies||'',preferences:intake.preferences||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
                     </div>
                   )}
                 </div>
@@ -1716,11 +1717,11 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                 ) : (
                   <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr 1fr':'repeat(5,1fr)', gap:8 }}>
                     {[
-                      { label:'Shirt', val:n.intake.shirtSize, icon:'👕' },
-                      { label:'Pants', val:n.intake.pantSize, icon:'👖' },
-                      { label:'Shoes', val:n.intake.shoeSize, icon:'👟' },
-                      { label:'Loves', val:n.intake.favoriteColors, icon:'❤️' },
-                      { label:'Avoid', val:n.intake.avoidColors, icon:'✗' },
+                      { label:'Shirt', val:intake.shirtSize, icon:'👕' },
+                      { label:'Pants', val:intake.pantSize, icon:'👖' },
+                      { label:'Shoes', val:intake.shoeSize, icon:'👟' },
+                      { label:'Loves', val:intake.favoriteColors, icon:'❤️' },
+                      { label:'Avoid', val:intake.avoidColors, icon:'✗' },
                     ].filter(s=>s.val).map(s=>(
                       <div key={s.label} style={{ background:'#F8FAFC', borderRadius:8, padding:'8px 10px', textAlign:'center' }}>
                         <div style={{ fontSize:16 }}>{s.icon}</div>
@@ -1730,16 +1731,16 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                     ))}
                   </div>
                 )}
-                {!editing && (n.intake.allergies || n.intake.preferences) && (
+                {!editing && (intake.allergies || intake.preferences) && (
                   <div style={{ marginTop:10, fontSize:12, color:C.text, lineHeight:1.6 }}>
-                    {n.intake.allergies && <div><strong>Allergies:</strong> {n.intake.allergies}</div>}
-                    {n.intake.preferences && <div><strong>Preferences:</strong> {n.intake.preferences}</div>}
+                    {intake.allergies && <div><strong>Allergies:</strong> {intake.allergies}</div>}
+                    {intake.preferences && <div><strong>Preferences:</strong> {intake.preferences}</div>}
                   </div>
                 )}
               </div>
 
               {/* Video section */}
-              {n.intake.videoRecorded && (
+              {intake.videoRecorded && (
                 <div style={{ background:'#F0FDF4', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#166534' }}>
                   🎬 Video recorded and ready for volunteers
                 </div>
