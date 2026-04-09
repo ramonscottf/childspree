@@ -328,7 +328,7 @@ function LandingPage({ navigate }) {
 // ─── NOMINATE ───
 function NominationForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:'',parentLanguage:'en'});
+  const [form, setForm] = useState({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -348,7 +348,7 @@ function NominationForm() {
       <div style={{ fontSize:56, marginBottom:16 }}>✓</div>
       <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>Nomination Received</h2>
       <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>Thank you. The DEF team will review and reach out to the family. You'll receive an email confirmation shortly.</p>
-      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblingNames:'',additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
+      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
     </div>
   );
   const maxW = isMobile?'100%':760;
@@ -390,9 +390,24 @@ function NominationForm() {
                 </select>
               </div>
               {form.siblingCount > 0 && (
-                <div style={{flex:1}}>
-                  <label style={lbl}>Sibling names & grades</label>
-                  <input style={inp()} value={form.siblingNames} onChange={e=>upd('siblingNames',e.target.value)} placeholder={form.siblingCount===1?'e.g., Maria (3rd)':'e.g., Maria (3rd), James (K)'}/>
+                <div style={{flex:1, marginTop:8}}>
+                  <label style={lbl}>Sibling details</label>
+                  {Array.from({length:form.siblingCount}).map((_,i)=>{
+                    const sib = form.siblings[i]||{name:'',studentId:''};
+                    const updateSib = (field,val) => {
+                      const next = [...(form.siblings||[])];
+                      while(next.length<=i) next.push({name:'',studentId:''});
+                      next[i]={...next[i],[field]:val};
+                      upd('siblings',next);
+                    };
+                    return (
+                      <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
+                        <div style={{width:20,height:20,borderRadius:'50%',background:'#E8548C',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>{i+1}</div>
+                        <input style={{...inp(),flex:2,marginBottom:0}} value={sib.name} onChange={e=>updateSib('name',e.target.value)} placeholder={'Sibling '+(i+1)+' full name'}/>
+                        <input style={{...inp(),flex:1,marginBottom:0}} value={sib.studentId} onChange={e=>updateSib('studentId',e.target.value)} placeholder='Student ID'/>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
