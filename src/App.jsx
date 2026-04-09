@@ -340,7 +340,20 @@ function NominationForm() {
     if (!form.parentName) { setError('Parent/guardian name required.'); return; }
     if (!form.parentPhone&&!form.parentEmail) { setError('Please provide at least one parent contact.'); return; }
     setSubmitting(true);
-    try { await api('/nominations',{method:'POST',body:JSON.stringify(form)}); setSubmitted(true); } catch(err){setError(err.message);}
+    try {
+      // Serialize siblings array to sibling_names string for backend
+      // format: "Name (grade)" — using primary child's grade since sibling grade unknown
+      // also pass full siblings array with studentIds
+      const payload = {
+        ...form,
+        siblingNames: form.siblings && form.siblings.length > 0
+          ? form.siblings.map(s => s.name || '').filter(Boolean).join(', ')
+          : '',
+        siblingsData: JSON.stringify(form.siblings || []),
+      };
+      await api('/nominations',{method:'POST',body:JSON.stringify(payload)});
+      setSubmitted(true);
+    } catch(err){setError(err.message);}
     setSubmitting(false);
   };
   if (submitted) return (
@@ -1679,6 +1692,7 @@ export default function App() {
     view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
   }
   else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
+  else if (route.startsWith('#/portal')) view = 'portal';
   else if (route === '#/' || route === '#' || route === '') view = 'home';
 
   if (view === 'parent' && token) return (
