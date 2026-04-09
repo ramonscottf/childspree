@@ -7,6 +7,7 @@ const MSAL_CONFIG = {
     clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
     authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
     redirectUri: window.location.origin + '/',
+    navigateToLoginRequestUrl: false,
   },
   cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
 };

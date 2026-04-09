@@ -73,6 +73,7 @@ const msalInstance = new PublicClientApplication({
     clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
     authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
     redirectUri: window.location.origin + '/',
+    navigateToLoginRequestUrl: false,
   },
   cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
 });
@@ -93,10 +94,20 @@ window.__msalInstance = msalInstance;
       };
       sessionStorage.setItem('cs-ms-user', JSON.stringify(user));
       sessionStorage.setItem('ms_sso_pending', JSON.stringify({ email: user.email, name: user.displayName }));
+      sessionStorage.setItem('sso_debug', JSON.stringify({ status: 'success', email: user.email, name: user.displayName, ts: Date.now() }));
       // Clean up any auth fragments from URL and go to portal
       window.history.replaceState(null, '', window.location.pathname + '#/portal');
+    } else {
+      // handleRedirectPromise returned null — no auth response in URL
+      // Check if there are auth params in the URL that MSAL didn't pick up
+      const fullUrl = window.location.href;
+      const hasAuthParams = fullUrl.includes('code=') || fullUrl.includes('id_token=') || fullUrl.includes('error=');
+      if (hasAuthParams) {
+        sessionStorage.setItem('sso_debug', JSON.stringify({ status: 'msal_returned_null_but_auth_params_present', url: fullUrl.substring(0, 200), ts: Date.now() }));
+      }
     }
   } catch(e) {
+    sessionStorage.setItem('sso_debug', JSON.stringify({ status: 'error', message: e.message, stack: (e.stack||'').substring(0, 300), ts: Date.now() }));
     // Auth failed — clean URL and let user try again
     const h = window.location.hash || '';
     if (h.includes('code=') || h.includes('error=') || h.includes('id_token=')) {
