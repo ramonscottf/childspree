@@ -59,10 +59,49 @@ mo.observe(document.body, { childList: true, subtree: true });
 setTimeout(() => document.querySelectorAll('.reveal:not(.vis)').forEach(el => revealObserver.observe(el)), 100);
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { PublicClientApplication } from '@azure/msal-browser';
 import App from './App';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// ─── MSAL POPUP INTERCEPT ───────────────────────────────────────────────────
+// When MSAL loginPopup() opens a popup, Microsoft redirects back to our origin.
+// The popup loads this same app. We must detect we're in the popup and let MSAL
+// handle the auth response — then the popup auto-closes and the parent gets the token.
+const msalInstance = new PublicClientApplication({
+  auth: {
+    clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
+    authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
+    redirectUri: window.location.origin,
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
+});
+
+(async () => {
+  await msalInstance.initialize();
+  try {
+    const resp = await msalInstance.handleRedirectPromise();
+    // If we're inside the popup, handleRedirectPromise resolves and MSAL closes the popup.
+    // If resp is non-null in the main window, it means redirect flow completed (not popup).
+  } catch (e) {
+    // Popup auth errors are handled by the parent window's loginPopup() promise
+  }
+
+  // Only render the app if we're NOT in a popup (popup windows have an opener)
+  // MSAL sets window.opener and a special hash — if handleRedirectPromise handled it, the popup closes.
+  // But as a safety net: if we detect we're a popup with auth response params, don't render.
+  const hash = window.location.hash;
+  const isAuthResponse = hash.includes('code=') || hash.includes('id_token=') || hash.includes('error=');
+  const isPopup = window.opener && window.opener !== window;
+
+  if (isPopup && isAuthResponse) {
+    // We're the popup that Microsoft redirected back to. MSAL should close us.
+    // If it didn't (edge case), just show nothing — don't render the full app.
+    document.getElementById('root').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666">Signing in...</div>';
+    return;
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+})();
