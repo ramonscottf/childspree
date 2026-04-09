@@ -13,7 +13,14 @@ const MSAL_CONFIG = {
 const MSAL_SCOPES = ['openid', 'profile', 'email', 'User.Read'];
 let _msal = null;
 async function getMsal() {
-  if (!_msal) { _msal = new PublicClientApplication(MSAL_CONFIG); await _msal.initialize(); }
+  if (!_msal) {
+    if (window.__msalInstance) {
+      _msal = window.__msalInstance;
+    } else {
+      _msal = new PublicClientApplication(MSAL_CONFIG);
+    }
+    await _msal.initialize();
+  }
   return _msal;
 }
 async function msalSignIn() {
@@ -1801,11 +1808,22 @@ export default function App() {
   const isMobile = useIsMobile();
   const [route, setRoute] = useState(window.location.hash || '#/');
 
-  // Handle Microsoft SSO redirect back to app
+  // Handle Microsoft SSO redirect back to app (fallback if popup → redirect)
   useEffect(() => {
     const hash = window.location.hash;
     // Clear any stale SSO error state on load
     sessionStorage.removeItem('ms_sso_error');
+
+    // If main.jsx already handled the redirect via handleRedirectPromise and stored the user, pick it up
+    const storedUser = sessionStorage.getItem('cs-ms-user');
+    if (storedUser && (hash.includes('id_token=') || hash.includes('code='))) {
+      // Clean up the auth params from the URL
+      window.history.replaceState(null, '', window.location.pathname + '#/portal');
+      setRoute('#/portal');
+      return;
+    }
+
+    // Legacy: if we somehow got an id_token in the hash (implicit flow fallback)
     if (hash.includes('id_token=')) {
       const msUser = parseMsalFragment(hash);
       if (msUser) {
@@ -1813,9 +1831,10 @@ export default function App() {
         sessionStorage.setItem('ms_sso_pending', JSON.stringify(msUser));
         setRoute('#/portal');
       }
-    } else if (hash.includes('error=')) {
-      // Microsoft returned an error — clear the fragment, don't show anything scary
+    } else if (hash.includes('error=') || hash.includes('code=')) {
+      // Microsoft returned an error or code in main window — clear the fragment
       window.history.replaceState(null, '', window.location.pathname + '#/portal');
+      setRoute('#/portal');
     }
   }, []);
   useEffect(() => {
