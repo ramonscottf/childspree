@@ -45,10 +45,10 @@ function getMsSession() {
 // ────────────────────────────────────────────────────────────────────────────
 
 const API = '/api';
-const SHIRT_SIZES = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10-12)","Youth XL (14-16)","Adult S","Adult M","Adult L","Adult XL","Adult 2XL"];
-const SHIRT_SIZES_JUNIORS = ["Juniors XXS","Juniors XS","Juniors S","Juniors M","Juniors L","Juniors XL"];
-const PANT_SIZES = ["Youth 4","Youth 5","Youth 6","Youth 6X/7","Youth 8","Youth 10","Youth 12","Youth 14","Youth 16","Adult 18","Adult 20","Adult 24W","Adult 26W","Adult 28W","Adult 30W","Adult 32W"];
-const PANT_SIZES_JUNIORS = ["Juniors 0","Juniors 1","Juniors 3","Juniors 5","Juniors 7","Juniors 9","Juniors 11","Juniors 13","Juniors 15","Juniors 17"];
+const SHIRT_SIZES_BOYS = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10-12)","Youth XL (14-16)","Youth XXL (18-20)"];
+const SHIRT_SIZES_GIRLS = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10-12)","Youth XL (14-16)","Juniors XXS","Juniors XS","Juniors S","Juniors M","Juniors L","Juniors XL"];
+const PANT_SIZES_BOYS = ["Youth 4","Youth 5","Youth 6","Youth 7","Youth 8","Youth 10","Youth 12","Youth 14","Youth 16","Youth 18","Youth 20","Husky 8","Husky 10","Husky 12","Husky 14","Husky 16","Husky 18"];
+const PANT_SIZES_GIRLS = ["Youth 4","Youth 5","Youth 6","Youth 6X/7","Youth 8","Youth 10","Youth 12","Youth 14","Youth 16","Juniors 0","Juniors 1","Juniors 3","Juniors 5","Juniors 7","Juniors 9","Juniors 11","Juniors 13","Juniors 15","Juniors 17"];
 const VOL_SHIRTS = ["YS","YM","YL","AS","AM","AL","AXL","A2XL"];
 const SCHOOLS = ["Adams Elementary","Adelaide Elementary","Antelope Elementary","Bluff Ridge Elementary","Boulton Elementary","Bountiful Elementary","Buffalo Point Elementary","Burton Elementary","Canyon Creek Elementary","Centerville Elementary","Clinton Elementary","Columbia Elementary","Cook Elementary","Creekside Elementary","Crestview Elementary","Davis Connect","Doxey Elementary","Eagle Bay Elementary","East Layton Elementary","Ellison Park Elementary","Endeavor Elementary","Farmington Elementary","Foxboro Elementary","Heritage Elementary","Hill Field Elementary","Holbrook Elementary","Holt Elementary","Island View Elementary","Kay's Creek Elementary","Kaysville Elementary","King Elementary","Knowlton Elementary","Lakeside Elementary","Layton Elementary","Lincoln Elementary","Meadowbrook Elementary","Morgan Elementary","Mountain View Elementary","Muir Elementary","Oak Hills Elementary","Odyssey Elementary","Orchard Elementary","Parkside Elementary","Reading Elementary","Sand Springs Elementary","Snow Horse Elementary","So. Clearfield Elementary","So. Weber Elementary","Stewart Elementary","Sunburst Elementary","Sunset Elementary","Syracuse Elementary","Taylor Elementary","Tolman Elementary","Vae View Elementary","Valley View Elementary","Wasatch Elementary","West Bountiful Elementary","West Clinton Elementary","West Point Elementary","Whitesides Elementary","Windridge Elementary","Woods Cross Elementary"];
 const GRADES = ["Pre-K","K","1st","2nd","3rd","4th","5th","6th"];
@@ -994,16 +994,20 @@ function ParentIntake({ token }) {
                 {['Girl','Boy','Non-binary / Other'].map(g=><option key={g} value={g}>{g}</option>)}
               </select>
             </Field>
-            <Field label="Preferred shopping department">
-              <select style={{...inp(),appearance:'auto'}} value={form.department} onChange={e=>{upd('department',e.target.value);upd('shirtSize','');upd('pantSize','');}}>
-                <option value="">Select...</option>
-                {["Girls' section","Boys' section","Juniors' section (older girls)","Either is fine"].map(d=><option key={d} value={d}>{d}</option>)}
-              </select>
-              {form.department.includes("Juniors")&&<p style={{fontSize:11,color:C.light,margin:'4px 0 0'}}>Juniors sizing is different from the kids' section — sized for older/taller girls.</p>}
+            <Field label="Shopping section">
+              <div style={{display:'flex',gap:10}}>
+                {["Boys","Girls"].map(d=>(
+                  <label key={d} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'12px 14px',background:form.department===d?C.navy:C.bg,border:`1.5px solid ${form.department===d?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s',justifyContent:'center'}}>
+                    <input type="radio" name="department" value={d} checked={form.department===d} onChange={()=>{upd('department',d);upd('shirtSize','');upd('pantSize','');}} style={{display:'none'}}/>
+                    <span style={{fontSize:14,fontWeight:form.department===d?700:400,color:form.department===d?'#fff':C.muted}}>{d}</span>
+                    {form.department===d&&<span style={{color:'#fff',fontSize:12}}>✓</span>}
+                  </label>
+                ))}
+              </div>
             </Field>
           </Row>
           <p style={secHead(isMobile)}>{t('clothingSizes')}</p>
-          {(() => { const isJ = form.department.includes("Juniors"); const sh = isJ ? SHIRT_SIZES_JUNIORS : SHIRT_SIZES; const pa = isJ ? PANT_SIZES_JUNIORS : PANT_SIZES; return (
+          {(() => { const isG = form.department === "Girls"; const sh = isG ? SHIRT_SIZES_GIRLS : SHIRT_SIZES_BOYS; const pa = isG ? PANT_SIZES_GIRLS : PANT_SIZES_BOYS; return (
           <Row cols={3} gap={8}><Field label="Shirt *"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Size</option>{sh.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Pants *"><select style={{...inp(),appearance:'auto'}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}><option value="">Size</option>{pa.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Shoe *"><input style={inp()} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)} placeholder="e.g., 4Y"/></Field></Row>
           ); })()}
         </div>
