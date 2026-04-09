@@ -4,7 +4,7 @@ export async function onRequestGet({ request, env }) {
   if (!email) return Response.json({ role: 'unknown' });
 
   // Check admin list first
-  const adminEmails = (env.ADMIN_EMAIL || 'sfoster@dsdmail.net,kbuchi@dsdmail.net')
+  const adminEmails = (env.ADMIN_EMAIL || 'kbuchi@dsdmail.net,kbuchi@dsdmail.net')
     .split(',').map(e => e.trim().toLowerCase());
   if (adminEmails.includes(email)) return Response.json({ role: 'admin' });
 

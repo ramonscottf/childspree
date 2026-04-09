@@ -69,7 +69,7 @@ export async function sendEmail(env, { to, replyTo, subject, html }) {
 // ─── Scenarios ───
 
 export async function notifyNewNomination(env, nom) {
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
 
   await sendEmail(env, {
     to: adminEmails,
@@ -122,7 +122,7 @@ export async function notifyNewNomination(env, nom) {
 }
 
 export async function notifyParentIntakeReady(env, nom) {
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
   const intakeUrl = `https://childspree.org/#/intake/${nom.parentToken}`;
   const lang = nom.lang || 'en';
   const isEs = lang === 'es';
@@ -152,7 +152,7 @@ export async function notifyParentIntakeReady(env, nom) {
         </div>
         <p style="font-size:13px;color:#888;text-align:center;">This link is unique to your family. All information is kept strictly confidential.</p>
         <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
-        <p style="font-size:13px;color:#555;">${isEs ? '¿Preguntas? Responda a este correo o contáctenos en' : 'Questions? Reply to this email or contact us at'} <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
+        <p style="font-size:13px;color:#555;">${isEs ? '¿Preguntas? Responda a este correo o contáctenos en' : 'Questions? Reply to this email or contact us at'} <a href="mailto:kbuchi@dsdmail.net">kbuchi@dsdmail.net</a></p>
         <p style="font-size:11px;color:#999;margin-top:16px;">Davis Education Foundation · Child Spree 2026 · daviskids.org</p>
       </div>
     </div>
@@ -171,7 +171,7 @@ export async function notifyParentIntakeReady(env, nom) {
 }
 
 export async function notifyIntakeComplete(env, nom, intake) {
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
 
   await sendEmail(env, {
     to: adminEmails,
@@ -203,7 +203,7 @@ export async function notifyIntakeComplete(env, nom, intake) {
 }
 
 export async function notifyVolunteerRegistered(env, vol) {
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
 
   await sendEmail(env, {
     to: adminEmails,
@@ -262,7 +262,7 @@ export async function notifyVolunteerRegistered(env, vol) {
 
 // ─── Family intake — one email/SMS with ALL children's links ───────────────
 export async function notifyParentFamilyIntakeReady(env, { parentName, parentPhone, parentEmail, children, lang }) {
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
   const isEs = (lang || 'en') === 'es';
   const count = children.length;
   const firstName = children[0].childFirst;
@@ -312,7 +312,7 @@ export async function notifyParentFamilyIntakeReady(env, { parentName, parentPho
         <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 16px;font-size:13px;color:#166534;margin-bottom:20px;">
           ✅ Each link is unique to that child. All information is kept strictly confidential.
         </div>
-        <p style="font-size:13px;color:#555;">${isEs ? '¿Preguntas? Responda a este correo o contáctenos en' : 'Questions? Reply to this email or contact us at'} <a href="mailto:sfoster@dsdmail.net">sfoster@dsdmail.net</a></p>
+        <p style="font-size:13px;color:#555;">${isEs ? '¿Preguntas? Responda a este correo o contáctenos en' : 'Questions? Reply to this email or contact us at'} <a href="mailto:kbuchi@dsdmail.net">kbuchi@dsdmail.net</a></p>
         <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;"/>
         <p style="font-size:11px;color:#999;">Davis Education Foundation · Child Spree 2026 · daviskids.org</p>
       </div>
@@ -352,7 +352,7 @@ export async function notifyParentFamilyIntakeReady(env, { parentName, parentPho
 
 // ─── FA Welcome — sent when admin creates FA account ─────────────────────
 export async function notifyFAWelcome(env, fa) {
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
   const portalUrl = `https://childspree.org/#/fa/${fa.portalToken}`;
 
   if (fa.phone) {
@@ -393,7 +393,7 @@ export async function notifyFAWelcome(env, fa) {
 // ─── FA Video Needed — sent when parent completes intake ─────────────────
 export async function notifyFAVideoNeeded(env, { fa, nom, intake }) {
   const videoUrl = `https://childspree.org/#/fa/${fa.portal_token}/video/${nom.id}`;
-  const adminEmails = env.ADMIN_EMAIL || 'sfoster@dsdmail.net';
+  const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
 
   const smsBody = `Hi ${fa.first_name}! Great news — ${nom.parent_name} just filled out sizes for ${nom.child_first} ${nom.child_last}. Next step: record a short video of ${nom.child_first} at school. Here's your link: ${videoUrl} Reply STOP to opt out.`;
 
