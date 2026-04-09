@@ -17,7 +17,7 @@ export async function onRequestOptions() { return cors(new Response(null, { stat
 export async function onRequestPost(context) {
   const { env, request } = context;
   const body = await request.json();
-  const { email, sso, name: bodyName } = body;
+  const { email, sso, name: bodyName, phone } = body;
   if (!email) return cors(Response.json({ error: 'Email required' }, { status: 400 }));
 
   const norm = email.toLowerCase().trim();
@@ -52,6 +52,18 @@ export async function onRequestPost(context) {
   await env.DB.prepare(
     'INSERT INTO fa_sessions (token, nominator_email, expires_at) VALUES (?, ?, ?)'
   ).bind(token, norm, expires).run();
+
+  // Store phone number if provided (update FA record or nominations)
+  if (phone && phone.trim()) {
+    const cleanPhone = phone.trim();
+    if (faRecord) {
+      await env.DB.prepare("UPDATE family_advocates SET phone = ? WHERE LOWER(email) = ?").bind(cleanPhone, norm).run();
+    }
+    // Also store in a lightweight lookup for SMS notifications
+    await env.DB.prepare(
+      "INSERT OR REPLACE INTO fa_phones (email, phone, updated_at) VALUES (?, ?, datetime('now'))"
+    ).bind(norm, cleanPhone).run();
+  }
 
   const displayName = bodyName || (faRecord ? faRecord.first_name + ' ' + faRecord.last_name : null);
   return cors(Response.json({ token, email: norm, name: displayName, school: faRecord?.school, languages: faRecord?.languages }));

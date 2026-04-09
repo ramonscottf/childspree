@@ -48,7 +48,7 @@ const API = '/api';
 const SHIRT_SIZES = ["Youth XS (4-5)","Youth S (6-7)","Youth M (8)","Youth L (10-12)","Youth XL (14-16)","Adult S","Adult M","Adult L","Adult XL","Adult 2XL"];
 const PANT_SIZES = ["Youth 4","Youth 5","Youth 6","Youth 6X/7","Youth 8","Youth 10","Youth 12","Youth 14","Youth 16","Adult 18","Adult 20","Adult 24W","Adult 26W","Adult 28W","Adult 30W","Adult 32W"];
 const VOL_SHIRTS = ["YS","YM","YL","AS","AM","AL","AXL","A2XL"];
-const SCHOOLS = ["Adams Elementary","Antelope Elementary","Bountiful Elementary","Burton Elementary","Clinton Elementary","Columbia Elementary","Cook Elementary","Doxey Elementary","Eagle Bay Elementary","East Layton Elementary","Ellison Park Elementary","Endeavour Elementary","Farmington Elementary","Foxboro Elementary","Heritage Elementary","Holt Elementary","Kay's Creek Elementary","Knowlton Elementary","Lake View Elementary","Lincoln Elementary","Meadowbrook Elementary","Morgan Elementary","Mountain View Elementary","Muir Elementary","Oak Hills Elementary","Orchard Elementary","Parkside Elementary","Reading Elementary","Rosecrest Elementary","Sand Springs Elementary","Snow Horse Elementary","South Clearfield Elementary","Stewart Elementary","Sunset Elementary","Syracuse Elementary","Taylor Elementary","Tolman Elementary","Vae View Elementary","Valley View Elementary","Wasatch Elementary","Washington Elementary","West Bountiful Elementary","West Clinton Elementary","West Point Elementary","Whitesides Elementary","Woods Cross Elementary","Centerville Junior High","Central Davis Junior High","Fairfield Junior High","Legacy Junior High","Lakeridge Junior High","Mueller Park Junior High","North Davis Junior High","North Layton Junior High","South Davis Junior High","Sunset Junior High","Syracuse Junior High","West Point Junior High","Bountiful High","Clearfield High","Davis High","Farmington High","Layton High","Northridge High","Syracuse High","Viewmont High","Woods Cross High"];
+const SCHOOLS = ["Adams Elementary","Adelaide Elementary","Antelope Elementary","Bluff Ridge Elementary","Boulton Elementary","Bountiful Elementary","Buffalo Point Elementary","Burton Elementary","Canyon Creek Elementary","Centerville Elementary","Clinton Elementary","Columbia Elementary","Cook Elementary","Creekside Elementary","Crestview Elementary","Davis Connect","Doxey Elementary","Eagle Bay Elementary","East Layton Elementary","Ellison Park Elementary","Endeavor Elementary","Farmington Elementary","Foxboro Elementary","Heritage Elementary","Hill Field Elementary","Holbrook Elementary","Holt Elementary","Island View Elementary","Kay's Creek Elementary","Kaysville Elementary","King Elementary","Knowlton Elementary","Lakeside Elementary","Layton Elementary","Lincoln Elementary","Meadowbrook Elementary","Morgan Elementary","Mountain View Elementary","Muir Elementary","Oak Hills Elementary","Odyssey Elementary","Orchard Elementary","Parkside Elementary","Reading Elementary","Sand Springs Elementary","Snow Horse Elementary","So. Clearfield Elementary","So. Weber Elementary","Stewart Elementary","Sunburst Elementary","Sunset Elementary","Syracuse Elementary","Taylor Elementary","Tolman Elementary","Vae View Elementary","Valley View Elementary","Wasatch Elementary","West Bountiful Elementary","West Clinton Elementary","West Point Elementary","Whitesides Elementary","Windridge Elementary","Woods Cross Elementary"];
 const GRADES = ["Pre-K","K","1st","2nd","3rd","4th","5th","6th"];
 const PHOTOS = [
   "https://files-backend.assets.thrillshare.com/documents/asset/uploaded_file/4672/Def/edac9afc-9cc4-4880-ad8a-6c858f765f28/child-spree-america-first-volunteers-group.jpg?disposition=inline",
@@ -1545,6 +1545,7 @@ function FAPortal() {
   const isMobile = useIsMobile();
   const { lang, setLang, t } = useLang();
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
   const [error, setError] = useState(null);
   const [session, setSession] = useState(() => {
@@ -1557,7 +1558,7 @@ function FAPortal() {
   const login = async () => {
     setError(null); setLoggingIn(true);
     try {
-      const res = await api('/portal/login', { method:'POST', body:JSON.stringify({ email }) });
+      const res = await api('/portal/login', { method:'POST', body:JSON.stringify({ email, phone: phone.trim() || undefined }) });
       const s = { token: res.token, email: res.email };
       sessionStorage.setItem('fa-session', JSON.stringify(s));
       setSession(s);
@@ -1654,12 +1655,15 @@ function FAPortal() {
             {/* Fallback: email login */}
             <label style={lbl}>School email address</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-              placeholder="you@davis.k12.ut.us" style={{...inp(), marginBottom:12, fontSize:15 }}/>
+              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:12, fontSize:15 }}/>
+            <label style={lbl}>Cell phone <span style={{fontWeight:400,color:C.light}}>(optional — for text updates)</span></label>
+            <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
+              placeholder="(801) 555-0000" style={{...inp(), marginBottom:16, fontSize:15 }}/>
             <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:12, background:loggingIn||!email.trim()?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
               {loggingIn ? 'Looking you up...' : 'Continue with email'}
             </button>
             <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:10, lineHeight:1.5 }}>
-              Use the same email address you used when submitting nominations.
+              We'll email you updates. Add your cell to also get text alerts when parents submit or videos are needed.
             </p>
           </>
         )}
