@@ -6,7 +6,7 @@ const MSAL_CONFIG = {
   auth: {
     clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
     authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
-    redirectUri: window.location.origin,
+    redirectUri: window.location.origin + '/',
   },
   cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
 };
@@ -25,20 +25,18 @@ async function getMsal() {
 }
 async function msalSignIn() {
   const msal = await getMsal();
-  const result = await msal.loginPopup({ scopes: MSAL_SCOPES, prompt: 'select_account' });
-  const claims = result.idTokenClaims || {};
-  const user = {
-    displayName: claims.name || result.account?.name || result.account?.username,
-    email: (claims.preferred_username || result.account?.username || '').toLowerCase(),
-  };
-  sessionStorage.setItem('cs-ms-user', JSON.stringify(user));
-  return user;
+  // Use redirect flow instead of popup — popup has cross-window sessionStorage issues
+  // that prevent MSAL from completing the auth code exchange.
+  // This will navigate the current page to Microsoft, then redirect back.
+  await msal.loginRedirect({ scopes: MSAL_SCOPES, prompt: 'select_account' });
+  // loginRedirect navigates away — this line is never reached
+  return null;
 }
 async function msalSignOut() {
   const msal = await getMsal();
   const accounts = msal.getAllAccounts();
-  if (accounts[0]) await msal.logoutPopup({ account: accounts[0] });
   sessionStorage.removeItem('cs-ms-user');
+  if (accounts[0]) await msal.logoutRedirect({ account: accounts[0], postLogoutRedirectUri: window.location.origin });
 }
 function getMsSession() {
   try { return JSON.parse(sessionStorage.getItem('cs-ms-user') || 'null'); } catch { return null; }
@@ -280,10 +278,9 @@ function TopNav({ view, navigate }) {
   ];
   const handleSignIn = async () => {
     try {
-      const user = await msalSignIn();
-      setMsUser(user);
-      window.dispatchEvent(new CustomEvent('cs-ms-login', { detail: user }));
-    } catch(e) { alert('Sign-in failed. Make sure pop-ups are allowed for this site.'); }
+      await msalSignIn();
+      // loginRedirect navigates away — if we're still here, something went wrong
+    } catch(e) { alert('Sign-in failed. Please try again.'); }
   };
   const handleSignOut = async () => {
     await msalSignOut();
@@ -1573,13 +1570,10 @@ function FAPortal() {
   const msLogin = async () => {
     try {
       setLoggingIn(true); setError(null);
-      const user = await msalSignIn();
-      const res = await api('/portal/login', { method:'POST', body:JSON.stringify({ email: user.email }) });
-      const s = { token: res.token, email: res.email };
-      sessionStorage.setItem('fa-session', JSON.stringify(s));
-      setSession(s);
+      await msalSignIn();
+      // loginRedirect navigates away — if we're still here, something went wrong
     } catch(e) {
-      setError(e.message === 'user_cancelled' ? null : (e.message || 'Sign-in failed'));
+      setError(e.message === 'user_cancelled' ? null : (e.message || 'Sign-in failed. Please use the email option below.'));
     } finally { setLoggingIn(false); }
   };
 

@@ -62,77 +62,51 @@ import ReactDOM from 'react-dom/client';
 import { PublicClientApplication } from '@azure/msal-browser';
 import App from './App';
 
-// ─── MSAL POPUP INTERCEPT ───────────────────────────────────────────────────
-// Detect popup SYNCHRONOUSLY before anything else.
-// MSAL loginPopup() opens a popup that redirects back to our origin with auth params.
-// We must NOT render the full React app in that popup — just let MSAL handle it.
-const hash = window.location.hash || '';
-const search = window.location.search || '';
-const isAuthCallback = hash.includes('code=') || hash.includes('id_token=') || hash.includes('error=')
-  || search.includes('code=') || search.includes('error=');
-const isPopup = window.opener && window.opener !== window;
+// ─── MSAL REDIRECT HANDLER ─────────────────────────────────────────────────
+// Microsoft SSO uses redirect flow: user clicks "Sign in with Microsoft" →
+// browser navigates to Microsoft → authenticates → redirects back here with
+// auth code in the URL. MSAL's handleRedirectPromise() exchanges the code
+// for tokens before React mounts.
 
-if (isPopup && isAuthCallback) {
-  // We ARE the popup. Show a loading state, then let MSAL process the response.
-  document.getElementById('root').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#999">Signing in...</div>';
+const msalInstance = new PublicClientApplication({
+  auth: {
+    clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
+    authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
+    redirectUri: window.location.origin + '/',
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
+});
 
-  // Initialize MSAL in the popup so it can communicate the token back to the parent window
-  const popupMsal = new PublicClientApplication({
-    auth: {
-      clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
-      authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
-      redirectUri: window.location.origin,
-    },
-    cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
-  });
+window.__msalInstance = msalInstance;
 
-  (async () => {
-    await popupMsal.initialize();
-    try {
-      await popupMsal.handleRedirectPromise();
-    } catch(e) {
-      // Parent's loginPopup() will handle the error
+(async () => {
+  await msalInstance.initialize();
+
+  try {
+    const resp = await msalInstance.handleRedirectPromise();
+    if (resp && resp.account) {
+      // SSO redirect completed — store the user and navigate to portal
+      const claims = resp.idTokenClaims || {};
+      const user = {
+        displayName: claims.name || resp.account?.name || resp.account?.username,
+        email: (claims.preferred_username || resp.account?.username || '').toLowerCase(),
+      };
+      sessionStorage.setItem('cs-ms-user', JSON.stringify(user));
+      sessionStorage.setItem('ms_sso_pending', JSON.stringify({ email: user.email, name: user.displayName }));
+      // Clean up any auth fragments from URL and go to portal
+      window.history.replaceState(null, '', window.location.pathname + '#/portal');
     }
-    // If MSAL didn't auto-close the popup, close it ourselves after a moment
-    setTimeout(() => { try { window.close(); } catch(e) {} }, 1500);
-  })();
+  } catch(e) {
+    // Auth failed — clean URL and let user try again
+    const h = window.location.hash || '';
+    if (h.includes('code=') || h.includes('error=') || h.includes('id_token=')) {
+      window.history.replaceState(null, '', window.location.pathname + '#/portal');
+    }
+  }
 
-} else {
-  // We are the MAIN WINDOW — render the app normally
-  // But first, if the main window got auth params in the hash (shouldn't happen with popup flow,
-  // but can happen if popup flow fell back to redirect), handle it
-  const mainMsal = new PublicClientApplication({
-    auth: {
-      clientId: 'ddf5d2a5-b2f2-4661-943f-c25fcc69833f',
-      authority: 'https://login.microsoftonline.com/3d9cf274-547e-4af5-8dde-01a636e0b607',
-      redirectUri: window.location.origin,
-    },
-    cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
-  });
-
-  // Export for App.jsx to reuse
-  window.__msalInstance = mainMsal;
-
-  (async () => {
-    await mainMsal.initialize();
-    try {
-      const resp = await mainMsal.handleRedirectPromise();
-      if (resp) {
-        // Redirect flow completed in main window — store the user
-        const claims = resp.idTokenClaims || {};
-        const user = {
-          displayName: claims.name || resp.account?.name || resp.account?.username,
-          email: (claims.preferred_username || resp.account?.username || '').toLowerCase(),
-        };
-        sessionStorage.setItem('cs-ms-user', JSON.stringify(user));
-        window.location.hash = '#/portal';
-      }
-    } catch(e) {}
-
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
-  })();
-}
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+})();
