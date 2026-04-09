@@ -25,7 +25,8 @@ export async function onRequest(context) {
 
   // POST /api/portal/login
   if (path === '/login' && request.method === 'POST') {
-    const { email } = await request.json();
+    const body = await request.json();
+    const { email, sso, name: bodyName } = body;
     if (!email) return cors(Response.json({ error: 'Email required' }, { status: 400 }));
 
     const norm = email.toLowerCase().trim();
@@ -39,7 +40,7 @@ export async function onRequest(context) {
       "SELECT COUNT(*) as count FROM nominations WHERE LOWER(nominator_email) = ?"
     ).bind(norm).first();
 
-    const isSSOLogin = body.sso === true;
+    const isSSOLogin = sso === true;
     const isDSDEmail = norm.endsWith('@dsdmail.net');
 
     // SSO logins from @dsdmail.net are always allowed — Microsoft already authenticated them
@@ -65,7 +66,7 @@ export async function onRequest(context) {
       'INSERT INTO fa_sessions (token, nominator_email, expires_at) VALUES (?, ?, ?)'
     ).bind(token, norm, expires).run();
 
-    const displayName = body.name || (faRecord ? faRecord.first_name + ' ' + faRecord.last_name : null);
+    const displayName = bodyName || (faRecord ? faRecord.first_name + ' ' + faRecord.last_name : null);
     return cors(Response.json({ token, email: norm, name: displayName, school: faRecord?.school, languages: faRecord?.languages }));
   }
 
