@@ -80,7 +80,7 @@ const LANG = {
     notesLabel:'Anything else?',
     consentLabel:'I give permission for my child to participate in Child Spree 2026, and agree that the information I provide will be used by volunteers to shop for my child.',
     consentRequired:'Please check the consent box to continue.',
-    submitIntake:'Next — Add a Video (optional) →',
+    submitIntake:'Submit →',
     submitIntakeSaving:'Saving...',
     // Video
     videoTitle:'Optional: Record a short video',
@@ -144,7 +144,7 @@ const LANG = {
     notesLabel:'¿Algo más?',
     consentLabel:'Doy permiso para que mi hijo/a participe en Child Spree 2026, y acepto que la información que proporcione sea utilizada por los voluntarios para hacer las compras para mi hijo/a.',
     consentRequired:'Por favor marque la casilla de consentimiento para continuar.',
-    submitIntake:'Siguiente — Agregar un Video (opcional) →',
+    submitIntake:'Enviar →',
     submitIntakeSaving:'Guardando...',
     // Video
     videoTitle:'Opcional: Grabe un video corto',
@@ -681,284 +681,198 @@ function VolunteerForm() {
 
 // ─── VIDEO CAPTURE ───
 function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
-  const { t } = useLang();
-  const isMobile = useIsMobile();
-  const [mode, setMode] = useState('choose'); // choose | camera | preview | uploading | done
-  const [stream, setStream] = useState(null);
-  const [recorder, setRecorder] = useState(null);
-  const [recording, setRecording] = useState(false);
-  const [recordedBlob, setRecordedBlob] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState(null);
-  const [countdown, setCountdown] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
-  const liveRef = useRef(null);
-  const playbackRef = useRef(null);
-  const chunksRef = useRef([]);
-  const timerRef = useRef(null);
-  const elapsedRef = useRef(null);
+  const tV = vcLang === 'es'
+    ? { title:'Video de', instructions:'Graba un video corto en la escuela. El voluntario lo verá antes de comprar.', startBtn:'Comenzar grabación', stopBtn:'Detener y revisar', upload:'✓ Subir video', redo:'↩ Repetir', skip:'Omitir', recording:'GRABANDO', uploading:'Subiendo...', done:'¡Video subido!', doneMsg:'El voluntario verá este video antes de comprar ropa para', cameraErr:'Cámara denegada. Pide al estudiante que permita el acceso.', uploadErr:'Error al subir. Intenta de nuevo.' }
+    : { title:'Video for', instructions:'Record a short video at school. The volunteer will watch this before shopping.', startBtn:'Start recording', stopBtn:'Stop & preview', upload:'✓ Upload video', redo:'↩ Record again', skip:'Skip', recording:'RECORDING', uploading:'Uploading...', done:'Video uploaded!', doneMsg:'The volunteer will watch this before shopping for', cameraErr:'Camera access denied.', uploadErr:'Upload failed. Try again.' };
 
-  const stopStream = useCallback(() => {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    setStream(null);
-  }, [stream]);
-  useEffect(() => () => { stopStream(); clearInterval(timerRef.current); clearInterval(elapsedRef.current); }, []);
+  const [step, setStep] = React.useState('ready'); // ready | recording | preview | uploading | done
+  const [stream, setStream] = React.useState(null);
+  const [recorder, setRecorder] = React.useState(null);
+  const [chunks, setChunks] = React.useState([]);
+  const [blob, setBlob] = React.useState(null);
+  const [previewUrl, setPreviewUrl] = React.useState(null);
+  const [progress, setProgress] = React.useState(0);
+  const [elapsed, setElapsed] = React.useState(0);
+  const [facingMode, setFacingMode] = React.useState('user');
+  const [error, setError] = React.useState(null);
+  const videoRef = React.useRef(null);
+  const previewRef = React.useRef(null);
+  const timerRef = React.useRef(null);
+  const chunksRef = React.useRef([]);
 
-  // Attach stream to live video element
-  useEffect(() => {
-    if (stream && liveRef.current) {
-      liveRef.current.srcObject = stream;
-      liveRef.current.play().catch(() => {});
-    }
-  }, [stream, mode]);
+  React.useEffect(() => () => { stream?.getTracks().forEach(t=>t.stop()); clearInterval(timerRef.current); }, [stream]);
+  React.useEffect(() => { if (stream && videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(()=>{}); } }, [stream, step]);
+  React.useEffect(() => { if (previewUrl && previewRef.current) { previewRef.current.src = previewUrl; previewRef.current.load(); } }, [previewUrl, step]);
 
-  // Attach previewUrl to playback element
-  useEffect(() => {
-    if (previewUrl && playbackRef.current) {
-      playbackRef.current.src = previewUrl;
-      playbackRef.current.load();
-    }
-  }, [previewUrl, mode]);
-
-  const startCamera = async () => {
+  const startCamera = async (facing = facingMode) => {
+    stream?.getTracks().forEach(t=>t.stop());
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
+        video: { facingMode: facing, width:{ideal:720}, height:{ideal:1280}, aspectRatio:{ideal:9/16} },
+        audio: true
       });
       setStream(s);
-      setMode('camera');
-    } catch {
-      setError('Camera access denied. Use the upload option instead.');
-    }
+      setStep('camera');
+    } catch(e) { setError(tV.cameraErr); }
+  };
+
+  const flipCamera = async () => {
+    const next = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(next);
+    await startCamera(next);
   };
 
   const startRecording = () => {
     if (!stream) return;
     chunksRef.current = [];
-    const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
       : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
-    const rec = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 2000000 });
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 2_000_000 });
     rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: mt });
-      const url = URL.createObjectURL(blob);
-      setRecordedBlob(blob);
-      setPreviewUrl(url);
-      stopStream();
-      setMode('preview');
+      const b = new Blob(chunksRef.current, { type: mime });
+      setBlob(b);
+      setPreviewUrl(URL.createObjectURL(b));
+      stream.getTracks().forEach(t=>t.stop());
+      setStream(null);
+      setStep('preview');
     };
-    setRecorder(rec);
     rec.start(1000);
-    setRecording(true);
-    setCountdown(60);
+    setRecorder(rec);
     setElapsed(0);
-    timerRef.current = setInterval(() => setCountdown(c => {
-      if (c <= 1) { clearInterval(timerRef.current); clearInterval(elapsedRef.current); rec.stop(); setRecording(false); return 0; }
-      return c - 1;
-    }), 1000);
-    elapsedRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+    setStep('recording');
+    timerRef.current = setInterval(() => {
+      setElapsed(e => { if (e >= 89) { rec.stop(); clearInterval(timerRef.current); return 90; } return e+1; });
+    }, 1000);
   };
 
-  const stopRecording = () => {
-    clearInterval(timerRef.current);
-    clearInterval(elapsedRef.current);
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
-    setRecording(false);
-  };
+  const stopRecording = () => { clearInterval(timerRef.current); recorder?.state !== 'inactive' && recorder.stop(); };
 
-  const handleFile = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 100 * 1024 * 1024) { setError('Video must be under 100MB'); return; }
-    const url = URL.createObjectURL(file);
-    setUploadedFile(file);
-    setPreviewUrl(url);
-    setMode('preview');
-  };
-
-  const retake = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setRecordedBlob(null); setUploadedFile(null); setPreviewUrl(null);
-    setElapsed(0); setCountdown(0);
-    setMode('choose');
-  };
+  const redo = () => { setBlob(null); setPreviewUrl(null); setElapsed(0); startCamera(); };
 
   const upload = async () => {
-    const blob = recordedBlob || uploadedFile;
     if (!blob) return;
-    setMode('uploading'); setProgress(0);
+    setStep('uploading'); setProgress(0);
     try {
-      const fd = new FormData();
-      const ext = uploadedFile?.name?.split('.').pop() || 'webm';
-      fd.append('video', blob, `video.${ext}`);
-      await new Promise((resolve, reject) => {
+      const form = new FormData();
+      form.append('video', blob, 'video.webm');
+      await new Promise((res, rej) => {
         const xhr = new XMLHttpRequest();
-        xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
-        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
-        xhr.onerror = reject;
+        xhr.upload.onprogress = e => e.lengthComputable && setProgress(Math.round(e.loaded/e.total*100));
+        xhr.onload = () => xhr.status < 300 ? res() : rej(new Error('Upload failed'));
+        xhr.onerror = rej;
         xhr.open('POST', `${API}/upload/${token}`);
-        xhr.send(fd);
+        xhr.send(form);
       });
-      setMode('done');
-    } catch {
-      setError('Upload failed. Please try again.');
-      setMode('preview');
-    }
+      setStep('done');
+    } catch(e) { setError(tV.uploadErr); setStep('preview'); }
   };
 
   // ── DONE ──
-  if (mode === 'done') return (
-    <div style={{ textAlign: 'center', padding: isMobile ? '40px 20px' : '60px 40px' }}>
-      <div style={{ fontSize: 52, marginBottom: 12 }}>🎬</div>
-      <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: C.navy, marginBottom: 8 }}>Video received!</h3>
-      <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, maxWidth: 340, margin: '0 auto 24px' }}>
-        A volunteer will watch this before they shop for {childFirst}. It makes a huge difference.
-      </p>
-      <button onClick={onDone} style={{ background: C.pink, color: '#fff', border: 'none', padding: '13px 36px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(232,84,140,0.35)' }}>
-        All done ✓
-      </button>
+  if (step === 'done') return (
+    <div style={{textAlign:'center', padding:'60px 20px', maxWidth:400, margin:'0 auto'}}>
+      <div style={{fontSize:56, marginBottom:12}}>🎬</div>
+      <h3 style={{fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:8}}>{tV.done}</h3>
+      <p style={{color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:28}}>{tV.doneMsg} {childFirst}.</p>
+      <button onClick={onDone} style={{background:C.pink, color:'#fff', border:'none', padding:'13px 36px', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer'}}>Done ✓</button>
     </div>
   );
 
   // ── UPLOADING ──
-  if (mode === 'uploading') return (
-    <div style={{ textAlign: 'center', padding: '56px 20px' }}>
-      <div style={{ fontSize: 40, marginBottom: 16 }}>📤</div>
-      <p style={{ color: C.navy, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Uploading your video...</p>
-      <div style={{ height: 10, background: C.border, borderRadius: 5, maxWidth: 300, margin: '0 auto 10px' }}>
-        <div style={{ height: 10, background: C.pink, borderRadius: 5, width: `${progress}%`, transition: 'width 0.3s' }}/>
+  if (step === 'uploading') return (
+    <div style={{textAlign:'center', padding:'60px 20px'}}>
+      <div style={{fontSize:40, marginBottom:16}}>📤</div>
+      <p style={{color:C.navy, fontWeight:700, fontSize:16, marginBottom:20}}>{tV.uploading}</p>
+      <div style={{height:10, background:C.border, borderRadius:5, maxWidth:300, margin:'0 auto 10px'}}>
+        <div style={{height:10, background:C.pink, borderRadius:5, width:`${progress}%`, transition:'width 0.3s'}}/>
       </div>
-      <div style={{ fontSize: 13, color: C.muted }}>{progress}%</div>
+      <div style={{fontSize:13, color:C.muted}}>{progress}%</div>
     </div>
   );
 
-  const maxW = isMobile ? '100%' : 500;
+  // ── PREVIEW ──
+  if (step === 'preview') return (
+    <div style={{maxWidth:400, margin:'0 auto', padding:'0 0 32px'}}>
+      <div style={{position:'relative', background:'#000', borderRadius:16, overflow:'hidden', marginBottom:14, aspectRatio:'9/16', maxHeight:'65vh'}}>
+        <video ref={previewRef} controls playsInline style={{width:'100%', height:'100%', objectFit:'contain', display:'block', background:'#000'}}/>
+        <div style={{position:'absolute', top:10, left:10, background:'rgba(5,150,105,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700}}>✓ Preview</div>
+      </div>
+      {error && <div style={{background:'#FEF2F2', borderRadius:8, padding:'10px 14px', marginBottom:12, fontSize:13, color:'#991B1B'}}>{error}</div>}
+      <div style={{display:'flex', gap:10, padding:'0 16px'}}>
+        <button onClick={redo} style={{flex:1, padding:13, background:'#F1F5F9', color:C.navy, border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer'}}>{tV.redo}</button>
+        <button onClick={upload} style={{flex:2, padding:13, background:C.green, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer'}}>{tV.upload}</button>
+      </div>
+      <div style={{textAlign:'center', marginTop:12}}>
+        <button onClick={onDone} style={{background:'none', border:'none', color:C.light, fontSize:12, cursor:'pointer'}}>{tV.skip}</button>
+      </div>
+    </div>
+  );
 
+  // ── READY (before camera opens) ──
+  if (step === 'ready') return (
+    <div style={{maxWidth:400, margin:'0 auto', padding:'32px 20px', textAlign:'center'}}>
+      <div style={{fontSize:48, marginBottom:12}}>🎬</div>
+      <h3 style={{fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:8}}>{tV.title} {childFirst}</h3>
+      <p style={{color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:28}}>{tV.instructions}</p>
+      <div style={{background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:'12px 16px', marginBottom:24, fontSize:13, color:'#166534', textAlign:'left'}}>
+        <strong>Tips:</strong> Find good light. Hold phone vertically. Ask the student to say their name, grade, favorite color, and what they love most.
+      </div>
+      {error && <div style={{background:'#FEF2F2', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B'}}>{error}</div>}
+      <button onClick={()=>startCamera()} style={{width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:12}}>Open Camera</button>
+      <button onClick={onDone} style={{background:'none', border:'none', color:C.light, fontSize:13, cursor:'pointer'}}>{tV.skip}</button>
+    </div>
+  );
+
+  // ── CAMERA / RECORDING ──
   return (
-    <div style={{ maxWidth: maxW, margin: '0 auto', padding: isMobile ? '0 16px 32px' : '0 40px 40px' }}>
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>🎬</div>
-        <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: C.navy, marginBottom: 4 }}>
-          Optional: Record a short video
-        </h3>
-        <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.5, maxWidth: 340, margin: '0 auto' }}>
-          30–60 seconds. Tell us {childFirst}'s favorite color, what they love, the shoes they've been dreaming about!
-        </p>
+    <div style={{position:'relative', background:'#000', width:'100%', maxWidth:400, margin:'0 auto', borderRadius:16, overflow:'hidden', aspectRatio:'9/16', maxHeight:'80vh'}}>
+      <video ref={videoRef} muted playsInline style={{width:'100%', height:'100%', objectFit:'cover', display:'block', transform: facingMode==='user'?'scaleX(-1)':'none'}}/>
+
+      {/* Top bar */}
+      <div style={{position:'absolute', top:0, left:0, right:0, padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)'}}>
+        <button onClick={onDone} style={{background:'rgba(0,0,0,0.4)', border:'none', color:'#fff', borderRadius:'50%', width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center'}}>✕</button>
+        {step === 'recording' && (
+          <div style={{background:'rgba(220,38,38,0.9)', color:'#fff', borderRadius:20, padding:'4px 14px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6}}>
+            <span style={{width:8, height:8, background:'#fff', borderRadius:'50%', display:'inline-block'}}/>
+            {tV.recording} {elapsed}s
+          </div>
+        )}
+        <button onClick={flipCamera} style={{background:'rgba(0,0,0,0.4)', border:'none', color:'#fff', borderRadius:'50%', width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center'}}>🔄</button>
       </div>
 
-      {error && (
-        <div style={{ background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#991B1B' }}>{error}</div>
-      )}
-
-      {/* CHOOSE */}
-      {mode === 'choose' && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <button onClick={startCamera} style={{ padding: '28px 12px', background: C.navy, color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.7 }}>
-              <div style={{ fontSize: 32, marginBottom: 4 }}>📷</div>
-              Record now
-              <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.6, marginTop: 2 }}>Uses your camera</div>
-            </button>
-            <label style={{ padding: '28px 12px', background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.7, display: 'block', color: C.navy }}>
-              <div style={{ fontSize: 32, marginBottom: 4 }}>📁</div>
-              Upload a video
-              <div style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginTop: 2 }}>From your phone</div>
-              <input type="file" accept="video/*" onChange={handleFile} style={{ display: 'none' }}/>
-            </label>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <button onClick={onDone} style={{ background: 'none', border: 'none', color: C.light, fontSize: 13, cursor: 'pointer', padding: '8px 20px' }}>Skip — no video</button>
-          </div>
+      {/* Progress bar */}
+      {step === 'recording' && (
+        <div style={{position:'absolute', top:0, left:0, right:0, height:4, background:'rgba(255,255,255,0.2)'}}>
+          <div style={{height:4, background:C.pink, width:`${(elapsed/90)*100}%`, transition:'width 1s linear'}}/>
         </div>
       )}
 
-      {/* CAMERA — mirrored live preview */}
-      {mode === 'camera' && (
-        <div>
-          <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-            {/* Mirror the live preview so it feels like a selfie */}
-            <video ref={liveRef} muted playsInline style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }}/>
-
-            {/* Recording indicator + timers */}
-            {recording && (
-              <div style={{ position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 14px', pointerEvents: 'none' }}>
-                <div style={{ background: 'rgba(220,38,38,0.9)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, background: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1s infinite' }}/>
-                  REC {elapsed}s
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>
-                  {countdown}s left
-                </div>
-              </div>
-            )}
-
-            {/* Progress bar when recording */}
-            {recording && (
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(255,255,255,0.2)' }}>
-                <div style={{ height: 4, background: C.pink, width: `${((60 - countdown) / 60) * 100}%`, transition: 'width 1s linear' }}/>
-              </div>
-            )}
-          </div>
-
-          {/* Controls */}
-          {!recording ? (
-            <button onClick={startRecording} style={{ width: '100%', padding: 16, background: C.pink, color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 2px 12px rgba(232,84,140,0.35)' }}>
-              <span style={{ width: 14, height: 14, background: '#fff', borderRadius: '50%', display: 'inline-block' }}/>
-              Start Recording
-            </button>
-          ) : (
-            <button onClick={stopRecording} style={{ width: '100%', padding: 16, background: '#DC2626', color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <span style={{ width: 14, height: 14, background: '#fff', borderRadius: 2, display: 'inline-block' }}/>
-              Stop & Review
-            </button>
-          )}
-          <div style={{ textAlign: 'center', marginTop: 10 }}>
-            <button onClick={() => { stopStream(); setMode('choose'); }} style={{ background: 'none', border: 'none', color: C.light, fontSize: 13, cursor: 'pointer' }}>← Back</button>
-          </div>
+      {/* Time remaining */}
+      {step === 'recording' && (
+        <div style={{position:'absolute', bottom:90, right:16, background:'rgba(0,0,0,0.6)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:600}}>
+          {90-elapsed}s left
         </div>
       )}
 
-      {/* PREVIEW — review before uploading */}
-      {mode === 'preview' && previewUrl && (
-        <div>
-          <div style={{ borderRadius: 16, overflow: 'hidden', background: '#000', marginBottom: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', position: 'relative' }}>
-            <video ref={playbackRef} controls playsInline style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block' }}/>
-            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(5,150,105,0.9)', color: '#fff', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
-              ✓ Preview
-            </div>
-          </div>
-
-          {/* Duration info */}
-          {recordedBlob && elapsed > 0 && (
-            <div style={{ textAlign: 'center', fontSize: 12, color: C.muted, marginBottom: 12 }}>
-              Recorded {elapsed} second{elapsed !== 1 ? 's' : ''} · {(recordedBlob.size / 1024 / 1024).toFixed(1)} MB
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-            <button onClick={retake} style={{ flex: 1, padding: 13, background: '#F1F5F9', color: C.navy, border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-              ↩ Redo
-            </button>
-            <button onClick={upload} style={{ flex: 2, padding: 13, background: C.green, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(5,150,105,0.3)' }}>
-              ✓ Looks good — Upload
-            </button>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <button onClick={onDone} style={{ background: 'none', border: 'none', color: C.light, fontSize: 12, cursor: 'pointer' }}>Skip — don't include video</button>
-          </div>
-        </div>
-      )}
+      {/* Record button */}
+      <div style={{position:'absolute', bottom:0, left:0, right:0, padding:'20px 16px', background:'linear-gradient(to top, rgba(0,0,0,0.6), transparent)', display:'flex', flexDirection:'column', alignItems:'center', gap:12}}>
+        {step === 'recording' ? (
+          <button onClick={stopRecording} style={{width:72, height:72, borderRadius:'50%', border:'3px solid #fff', background:'rgba(220,38,38,0.9)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <span style={{width:24, height:24, background:'#fff', borderRadius:4, display:'inline-block'}}/>
+          </button>
+        ) : (
+          <button onClick={startRecording} style={{width:72, height:72, borderRadius:'50%', border:'3px solid #fff', background:'rgba(232,84,140,0.9)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <span style={{width:24, height:24, background:'#fff', borderRadius:'50%', display:'inline-block'}}/>
+          </button>
+        )}
+        <span style={{color:'rgba(255,255,255,0.7)', fontSize:12}}>{step === 'recording' ? tV.stopBtn : tV.startBtn}</span>
+      </div>
     </div>
   );
 }
 
 
-// ─── PARENT INTAKE ───
 function ParentIntake({ token }) {
   const { lang, setLang, t } = useLang();
   const isMobile = useIsMobile();
@@ -987,13 +901,13 @@ function ParentIntake({ token }) {
     if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
     if (!form.parentConsent) { alert(t('consentRequired')); return; }
     setSubmitting(true);
-    try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify({...form,language:lang})}); setStep('video'); } catch(err){setError(err.message);}
+    try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify({...form,language:lang})}); setStep('done'); } catch(err){setError(err.message);}
     setSubmitting(false);
   };
   if (loading) return <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>;
   if (error) return <div style={{ textAlign:'center', padding:60 }}><div style={{ fontSize:48, marginBottom:16 }}>🔒</div><p style={{ color:'#991B1B', fontSize:14 }}>{error}</p></div>;
-  if (step === 'done') return <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}><div style={{ marginBottom:16 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:72,height:72}} /></div><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>All Done!</h2><p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto' }}>We have everything we need for {child?.childFirst}. A volunteer will shop brand new clothes just for them.</p></div>;
-  if (step === 'video') return <VideoCapture token={token} childFirst={child?.childFirst} onDone={()=>setStep('done')} lang={lang}/>;
+  if (step === 'done') return <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}><div style={{ marginBottom:16 }}><img src="https://media.daviskids.org/Child%20Spree%20Logo%20Icon.png" alt="Child Spree" style={{width:72,height:72}} /></div><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>All Done!</h2><p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto' }}>We have everything we need for {child?.childFirst}. Their family advocate will record a short video with them at school soon — then a volunteer will shop a complete new outfit just for them.</p></div>;
+  // video removed from parent flow — FA records at school
   const maxW = isMobile ? '100%' : 680;
   return (
     <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'20px 16px':'32px 40px' }}>
@@ -1800,7 +1714,7 @@ function FAPortal() {
                   <span style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</span>
                   <span style={{ fontSize:12, color:C.muted, marginLeft:8 }}>{n.grade} · {n.school}</span>
                 </div>
-                <span style={{ fontSize:12, color:'#92400E', fontWeight:600 }}>⚠️ No video</span>
+                <button onClick={()=>navigate(`#/fa/${session?.token?.split('-')[0]||''}/video/${n.id}`)} style={{ padding:'6px 14px', background:C.pink, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer' }}>🎬 Record Now</button>
               </div>
             ))}
           </div>
@@ -1839,7 +1753,13 @@ function FAPortal() {
                   <td style={{ padding:'12px 14px', fontSize:12, color:C.text }}>{n.school}<br/><span style={{ color:C.light }}>{n.grade}</span></td>
                   <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? t('portalIntakeDone') : t('portalIntakePending')}</td>
                   <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.consent ? t('portalConsentYes') : t('portalConsentNo')}</td>
-                  <td style={{ padding:'12px 14px', fontSize:13 }}>{n.intake.submitted ? (n.intake.videoRecorded ? t('portalVideoYes') : t('portalVideoNeeded')) : '—'}</td>
+                  <td style={{ padding:'12px 14px', fontSize:13 }}>
+                    {n.intake.submitted
+                      ? n.intake.videoRecorded
+                        ? <span style={{color:C.green,fontWeight:600}}>🎬 Recorded</span>
+                        : <button onClick={()=>navigate(`#/fa/${session.token}/video/${n.id}`)} style={{padding:'4px 10px',background:C.pink,color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>🎬 Record</button>
+                      : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1865,7 +1785,7 @@ function FAPortal() {
                 </div>
                 <div style={{ background:C.bg, borderRadius:6, padding:'6px 8px', fontSize:11, textAlign:'center' }}>
                   <div style={{ color:C.muted, marginBottom:2 }}>Video</div>
-                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? (n.intake.videoRecorded ? '🎬' : '⚠️') : '—'}</div>
+                  <div style={{ fontWeight:600 }}>{n.intake.submitted ? (n.intake.videoRecorded ? '🎬' : <button onClick={()=>navigate(`#/fa/${session.token}/video/${n.id}`)} style={{padding:'3px 8px',background:C.pink,color:'#fff',border:'none',borderRadius:4,fontSize:10,fontWeight:700,cursor:'pointer'}}>Record</button>) : '—'}</div>
                 </div>
               </div>
             </div>
