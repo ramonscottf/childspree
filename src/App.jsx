@@ -1596,17 +1596,22 @@ function FAPortal() {
       sessionStorage.removeItem('ms_sso_pending');
       try {
         const msUser = JSON.parse(pending);
-        setLoggingIn(true);
-        setError(null);
-        api('/portal/login', { method:'POST', body:JSON.stringify({ email: msUser.email, name: msUser.name, sso: true }) })
-          .then(res => {
-            const s = { token: res.token, email: res.email, name: res.name || msUser.name };
-            sessionStorage.setItem('fa-session', JSON.stringify(s));
-            setSession(s);
-          })
-          .catch(err => setError('Sign-in failed. Please use the email option below.'))
-          .finally(() => setLoggingIn(false));
+        if (msUser.email) {
+          setLoggingIn(true);
+          setError(null);
+          api('/portal/login', { method:'POST', body:JSON.stringify({ email: msUser.email, name: msUser.name, sso: true }) })
+            .then(res => {
+              const s = { token: res.token, email: res.email, name: res.name || msUser.name };
+              sessionStorage.setItem('fa-session', JSON.stringify(s));
+              setSession(s);
+            })
+            .catch(err => setError('Microsoft sign-in completed but portal login failed. Try the email option below.'))
+            .finally(() => setLoggingIn(false));
+        }
       } catch(e) { /* malformed pending data — ignore */ }
+    } else if (pending) {
+      // Already have a session, clear stale pending
+      sessionStorage.removeItem('ms_sso_pending');
     }
   }, []);
 
@@ -1803,33 +1808,23 @@ export default function App() {
   const isMobile = useIsMobile();
   const [route, setRoute] = useState(window.location.hash || '#/');
 
-  // Handle Microsoft SSO redirect back to app (fallback if popup → redirect)
+  // Handle Microsoft SSO redirect back to app (if main.jsx already processed it)
   useEffect(() => {
     const hash = window.location.hash;
-    // Clear any stale SSO error state on load
     sessionStorage.removeItem('ms_sso_error');
 
-    // If main.jsx already handled the redirect via handleRedirectPromise and stored the user, pick it up
-    const storedUser = sessionStorage.getItem('cs-ms-user');
-    if (storedUser && (hash.includes('id_token=') || hash.includes('code='))) {
-      // Clean up the auth params from the URL
-      window.history.replaceState(null, '', window.location.pathname + '#/portal');
-      setRoute('#/portal');
-      return;
-    }
-
-    // Legacy: if we somehow got an id_token in the hash (implicit flow fallback)
-    if (hash.includes('id_token=')) {
-      const msUser = parseMsalFragment(hash);
-      if (msUser) {
-        window.history.replaceState(null, '', window.location.pathname);
-        sessionStorage.setItem('ms_sso_pending', JSON.stringify(msUser));
+    // If the URL still has raw auth params (code=, id_token=, error=), clean them out
+    if (hash.includes('id_token=') || hash.includes('code=') || hash.includes('error=')) {
+      // Check if main.jsx already handled it and stored the user
+      const storedUser = sessionStorage.getItem('cs-ms-user');
+      if (storedUser) {
+        window.history.replaceState(null, '', window.location.pathname + '#/portal');
+        setRoute('#/portal');
+      } else {
+        // Auth params present but no user stored — clean up and go to portal
+        window.history.replaceState(null, '', window.location.pathname + '#/portal');
         setRoute('#/portal');
       }
-    } else if (hash.includes('error=') || hash.includes('code=')) {
-      // Microsoft returned an error or code in main window — clear the fragment
-      window.history.replaceState(null, '', window.location.pathname + '#/portal');
-      setRoute('#/portal');
     }
   }, []);
   useEffect(() => {
