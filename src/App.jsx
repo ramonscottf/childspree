@@ -68,6 +68,35 @@ const LANG = {
     sponsorBtn:'Sponsor a Child — $150',
     nominateBtn:'Nominate a Child →',
     volunteerBtn:'Sign Up to Volunteer →',
+    // Nomination form
+    nomFormTitle:'Nominate a Child',
+    nomFormSubtitle:'about 3 minutes.',
+    nomFormConfidential:'All information is kept strictly confidential. Families are never told who nominated their child.',
+    childInfoTitle:'Child Information',
+    firstName:'First Name *', lastName:'Last Name *',
+    studentId:'Student ID *', studentIdPlaceholder:'e.g. 123456',
+    school:'School *', selectSchool:'Select school...',
+    grade:'Grade *', gradeLabel:'Grade',
+    gradeNote:'Elementary students only (Pre-K – 6th grade)',
+    yourInfoTitle:'Your Information',
+    yourName:'Your Name *', fullName:'Full name',
+    role:'Role *', email:'Email *',
+    parentGuardianTitle:'Parent / Guardian',
+    parentName:'Name *', parentPhone:'Phone', parentEmail:'Email',
+    preferredLang:'Preferred language',
+    langNote:'Notifications and forms will be sent in this language.',
+    detailsTitle:'Details',
+    whyNominate:'Why are you nominating this child?',
+    reasonPlaceholder:'Brief explanation — stays confidential',
+    siblingsQuestion:'Additional siblings to nominate?',
+    howManySiblings:'How many siblings?', none:'None',
+    siblingLabel:'Sibling', siblingName:'First & Last Name', siblingStudentId:'Student ID',
+    siblingNote:'The parent will receive a separate size form for each child. Their notification will note that',
+    siblingNote2:'children from their family were nominated.',
+    submitNomination:'Submit Nomination', submitting:'Submitting...',
+    nomSuccess:'Nomination Submitted!',
+    nomSuccessMsg:'Thank you for nominating this child. We\'ll take it from here.',
+    nominateAnother:'Nominate Another Child',
     // Intake
     intakeTitle:'Sizes for', intakeSubtitle:'A volunteer will shop brand new clothes for your child. Takes about 2 minutes.',
     intakeConfidential:'Everything shared here is confidential and used only for shopping.',
@@ -132,6 +161,35 @@ const LANG = {
     sponsorBtn:'Patrocinar un Niño — $150',
     nominateBtn:'Nominar a un Niño →',
     volunteerBtn:'Inscribirse como Voluntario →',
+    // Nomination form
+    nomFormTitle:'Nominar a un Niño',
+    nomFormSubtitle:'aproximadamente 3 minutos.',
+    nomFormConfidential:'Toda la información se mantiene estrictamente confidencial. Las familias nunca saben quién nominó a su hijo/a.',
+    childInfoTitle:'Información del Niño/a',
+    firstName:'Nombre *', lastName:'Apellido *',
+    studentId:'ID de Estudiante *', studentIdPlaceholder:'ej. 123456',
+    school:'Escuela *', selectSchool:'Seleccionar escuela...',
+    grade:'Grado *', gradeLabel:'Grado',
+    gradeNote:'Solo estudiantes de primaria (Pre-K – 6to grado)',
+    yourInfoTitle:'Su Información',
+    yourName:'Su Nombre *', fullName:'Nombre completo',
+    role:'Cargo *', email:'Correo electrónico *',
+    parentGuardianTitle:'Padre / Tutor',
+    parentName:'Nombre *', parentPhone:'Teléfono', parentEmail:'Correo electrónico',
+    preferredLang:'Idioma preferido',
+    langNote:'Las notificaciones y formularios se enviarán en este idioma.',
+    detailsTitle:'Detalles',
+    whyNominate:'¿Por qué está nominando a este niño/a?',
+    reasonPlaceholder:'Breve explicación — se mantiene confidencial',
+    siblingsQuestion:'¿Hermanos adicionales para nominar?',
+    howManySiblings:'¿Cuántos hermanos?', none:'Ninguno',
+    siblingLabel:'Hermano/a', siblingName:'Nombre y Apellido', siblingStudentId:'ID de Estudiante',
+    siblingNote:'El padre recibirá un formulario de tallas separado para cada niño/a. Su notificación indicará que',
+    siblingNote2:'niños de su familia fueron nominados.',
+    submitNomination:'Enviar Nominación', submitting:'Enviando...',
+    nomSuccess:'¡Nominación Enviada!',
+    nomSuccessMsg:'Gracias por nominar a este niño/a. Nosotros nos encargamos del resto.',
+    nominateAnother:'Nominar Otro Niño/a',
     // Intake
     intakeTitle:'Tallas para', intakeSubtitle:'Un voluntario comprará ropa nueva para su hijo/a. Toma unos 2 minutos.',
     intakeConfidential:'Todo lo que comparte aquí es confidencial y se usará únicamente para las compras.',
@@ -200,11 +258,16 @@ function useLang() {
 
 function LangToggle({ lang, setLang, style }) {
   return (
-    <button onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
-      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)', borderRadius:20, cursor:'pointer', fontSize:12, fontWeight:700, color:'#fff', letterSpacing:0.5, ...style }}>
-      <span style={{ fontSize:14 }}>{lang === 'en' ? '🇲🇽' : '🇺🇸'}</span>
-      {lang === 'en' ? 'Español' : 'English'}
-    </button>
+    <div style={{ display:'flex', gap:4, background:'rgba(0,0,0,0.06)', borderRadius:20, padding:3, ...style }}>
+      <button onClick={() => setLang('en')}
+        style={{ display:'flex', alignItems:'center', gap:4, padding:'5px 10px', background:lang==='en'?'#fff':'transparent', border:'none', borderRadius:16, cursor:'pointer', fontSize:12, fontWeight:lang==='en'?700:400, color:lang==='en'?C.navy:C.muted, boxShadow:lang==='en'?'0 1px 3px rgba(0,0,0,0.1)':'none', transition:'all 0.15s' }}>
+        <span style={{ fontSize:13 }}>🇺🇸</span> English
+      </button>
+      <button onClick={() => setLang('es')}
+        style={{ display:'flex', alignItems:'center', gap:4, padding:'5px 10px', background:lang==='es'?'#fff':'transparent', border:'none', borderRadius:16, cursor:'pointer', fontSize:12, fontWeight:lang==='es'?700:400, color:lang==='es'?C.navy:C.muted, boxShadow:lang==='es'?'0 1px 3px rgba(0,0,0,0.1)':'none', transition:'all 0.15s' }}>
+        <span style={{ fontSize:13 }}>🇲🇽</span> Español
+      </button>
+    </div>
   );
 }
 
@@ -440,6 +503,7 @@ function LandingPage({ navigate }) {
 // ─── NOMINATE ───
 function NominationForm() {
   const isMobile = useIsMobile();
+  const { lang, setLang, t } = useLang();
   const [form, setForm] = useState({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -460,15 +524,12 @@ function NominationForm() {
   }, []);
   const submit = async() => {
     setError(null);
-    if (!form.childFirst||!form.childLast||!form.school||!form.grade) { setError('Please fill in all child information.'); return; }
-    if (!form.nominatorName||!form.nominatorEmail) { setError('Please fill in your name and email.'); return; }
-    if (!form.parentName) { setError('Parent/guardian name required.'); return; }
-    if (!form.parentPhone&&!form.parentEmail) { setError('Please provide at least one parent contact.'); return; }
+    if (!form.childFirst||!form.childLast||!form.studentId||!form.school||!form.grade) { setError(lang==='es'?'Por favor complete toda la información del niño/a, incluyendo el ID de estudiante.':'Please fill in all child information, including Student ID.'); return; }
+    if (!form.nominatorName||!form.nominatorEmail) { setError(lang==='es'?'Por favor complete su nombre y correo electrónico.':'Please fill in your name and email.'); return; }
+    if (!form.parentName) { setError(lang==='es'?'Se requiere el nombre del padre/tutor.':'Parent/guardian name required.'); return; }
+    if (!form.parentPhone&&!form.parentEmail) { setError(lang==='es'?'Proporcione al menos un contacto del padre.':'Please provide at least one parent contact.'); return; }
     setSubmitting(true);
     try {
-      // Serialize siblings array to sibling_names string for backend
-      // format: "Name (grade)" — using primary child's grade since sibling grade unknown
-      // also pass full siblings array with studentIds
       const payload = {
         ...form,
         siblingNames: form.siblings && form.siblings.length > 0
@@ -484,41 +545,42 @@ function NominationForm() {
   if (submitted) return (
     <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}>
       <div style={{ fontSize:56, marginBottom:16 }}>✓</div>
-      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>Nomination Received</h2>
-      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>Thank you. The DEF team will review and reach out to the family. You'll receive an email confirmation shortly.</p>
-      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>Nominate Another Child</button>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>{t('nomSuccess')}</h2>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>{t('nomSuccessMsg')}</p>
+      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>{t('nominateAnother')}</button>
     </div>
   );
   const maxW = isMobile?'100%':760;
   return (
     <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'20px 16px':'32px 40px' }}>
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}><LangToggle lang={lang} setLang={setLang}/></div>
       {!isMobile && (
         <div style={{ display:'flex', gap:28, alignItems:'flex-start', marginBottom:28 }}>
           <div style={{ flex:'0 0 240px', borderRadius:12, overflow:'hidden' }}><img src={PHOTOS[2]} alt="" style={{ width:'100%', height:170, objectFit:'cover', display:'block' }}/></div>
           <div style={{ flex:1, paddingTop:4 }}>
-            <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, marginBottom:8 }}>Nominate a Child</h2>
-            <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>Be the reason a child walks into school with confidence. Takes about 3 minutes.</p>
-            <div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#0C4A6E' }}>All information is kept strictly confidential. Families are never told who nominated their child.</div>
+            <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, marginBottom:8 }}>{t('nomFormTitle')}</h2>
+            <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>{t('nomFormSubtitle')}</p>
+            <div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#0C4A6E' }}>{t('nomFormConfidential')}</div>
           </div>
         </div>
       )}
-      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={PHOTOS[2]} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Nominate a Child</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Be the reason a child walks into school with confidence.</p></div><div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#0C4A6E' }}>All info is kept confidential. Families are never told who nominated.</div></>}
+      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={PHOTOS[2]} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>{t('nomFormTitle')}</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>{t('nomFormSubtitle')}</p></div><div style={{ background:'#F0F9FF', border:`1px solid #BAE6FD`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#0C4A6E' }}>{t('nomFormConfidential')}</div></>}
       {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
       <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
         <div>
-          <p style={secHead(isMobile)}>Child Information</p>
-          <Row cols={2} gap={10}><Field label="First Name *"><input style={inp()} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)} placeholder="First"/></Field><Field label="Last Name *"><input style={inp()} value={form.childLast} onChange={e=>upd('childLast',e.target.value)} placeholder="Last"/></Field></Row>
-          <Field label="Student ID (optional)"><input style={inp()} value={form.studentId} onChange={e=>upd('studentId',e.target.value)} placeholder="e.g. 123456 — helps track the child in our system"/></Field>
-          <Row cols={isMobile?2:1} gap={10}><Field label="School *"><select style={{...inp(),appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">Select school...</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Grade *"><select style={{...inp(),appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">Grade</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select><p style={{fontSize:11,color:C.light,margin:'4px 0 0'}}>Elementary students only (Pre-K – 6th grade)</p></Field></Row>
-          <p style={{...secHead(isMobile),marginTop:20}}>Your Information</p>
-          <Field label="Your Name *"><input style={inp()} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)} placeholder="Full name"/></Field>
-          <Row cols={2} gap={10}><Field label="Role *"><select style={{...inp(),appearance:'auto'}} value={form.nominatorRole} onChange={e=>upd('nominatorRole',e.target.value)}>{['Teacher','Counselor','Family Advocate','Administrator','Other'].map(r=><option key={r} value={r}>{r}</option>)}</select></Field><Field label="Email *"><input style={inp()} type="email" value={form.nominatorEmail} onChange={e=>upd('nominatorEmail',e.target.value)} placeholder="you@davis.k12.ut.us"/></Field></Row>
+          <p style={secHead(isMobile)}>{t('childInfoTitle')}</p>
+          <Row cols={2} gap={10}><Field label={t('firstName')}><input style={inp()} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)} placeholder={lang==='es'?'Nombre':'First'}/></Field><Field label={t('lastName')}><input style={inp()} value={form.childLast} onChange={e=>upd('childLast',e.target.value)} placeholder={lang==='es'?'Apellido':'Last'}/></Field></Row>
+          <Field label={t('studentId')}><input style={inp()} value={form.studentId} onChange={e=>upd('studentId',e.target.value)} placeholder={t('studentIdPlaceholder')}/></Field>
+          <Row cols={isMobile?2:1} gap={10}><Field label={t('school')}><select style={{...inp(),appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">{t('selectSchool')}</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label={t('grade')}><select style={{...inp(),appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">{t('gradeLabel')}</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select><p style={{fontSize:11,color:C.light,margin:'4px 0 0'}}>{t('gradeNote')}</p></Field></Row>
+          <p style={{...secHead(isMobile),marginTop:20}}>{t('yourInfoTitle')}</p>
+          <Field label={t('yourName')}><input style={inp()} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)} placeholder={t('fullName')}/></Field>
+          <Row cols={2} gap={10}><Field label={t('role')}><select style={{...inp(),appearance:'auto'}} value={form.nominatorRole} onChange={e=>upd('nominatorRole',e.target.value)}>{['Teacher','Counselor','Family Advocate','Administrator','Other'].map(r=><option key={r} value={r}>{r}</option>)}</select></Field><Field label={t('email')}><input style={inp()} type="email" value={form.nominatorEmail} onChange={e=>upd('nominatorEmail',e.target.value)} placeholder="you@dsdmail.net"/></Field></Row>
         </div>
         <div>
-          <p style={secHead(isMobile)}>Parent / Guardian</p>
-          <Field label="Name *"><input style={inp()} value={form.parentName} onChange={e=>upd('parentName',e.target.value)} placeholder="Full name"/></Field>
-          <Row cols={2} gap={10}><Field label="Phone"><input style={inp()} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)} placeholder="(801) 555-0000"/></Field><Field label="Email"><input style={inp()} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)} placeholder="parent@email.com"/></Field></Row>
-          <Field label="Preferred language">
+          <p style={secHead(isMobile)}>{t('parentGuardianTitle')}</p>
+          <Field label={t('parentName')}><input style={inp()} value={form.parentName} onChange={e=>upd('parentName',e.target.value)} placeholder={t('fullName')}/></Field>
+          <Row cols={2} gap={10}><Field label={t('parentPhone')}><input style={inp()} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)} placeholder="(801) 555-0000"/></Field><Field label={t('parentEmail')}><input style={inp()} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)} placeholder="parent@email.com"/></Field></Row>
+          <Field label={t('preferredLang')}>
             <div style={{display:'flex',gap:10}}>
               {[['en','🇺🇸 English'],['es','🇲🇽 Español']].map(([val,label])=>(
                 <label key={val} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'10px 14px',background:form.parentLanguage===val?C.navy:C.bg,border:`1.5px solid ${form.parentLanguage===val?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s'}}>
@@ -529,15 +591,15 @@ function NominationForm() {
                 </label>
               ))}
             </div>
-            <p style={{fontSize:11,color:C.light,margin:'6px 0 0'}}>Notifications and forms will be sent in this language.</p>
+            <p style={{fontSize:11,color:C.light,margin:'6px 0 0'}}>{t('langNote')}</p>
           </Field>
-          <p style={{...secHead(isMobile),marginTop:20}}>Details</p>
-          <Field label="Why are you nominating this child?"><textarea style={{...inp(),minHeight:isMobile?72:100,resize:'vertical'}} value={form.reason} onChange={e=>upd('reason',e.target.value)} placeholder="Brief explanation — stays confidential"/></Field>
-          <Field label="Additional siblings to nominate?">
+          <p style={{...secHead(isMobile),marginTop:20}}>{t('detailsTitle')}</p>
+          <Field label={t('whyNominate')}><textarea style={{...inp(),minHeight:isMobile?72:100,resize:'vertical'}} value={form.reason} onChange={e=>upd('reason',e.target.value)} placeholder={t('reasonPlaceholder')}/></Field>
+          <Field label={t('siblingsQuestion')}>
             <div>
-              <label style={lbl}>How many siblings?</label>
+              <label style={lbl}>{t('howManySiblings')}</label>
               <select style={{...inp({width:100}), appearance:'auto', marginBottom: form.siblingCount > 0 ? 12 : 0}} value={form.siblingCount} onChange={e=>upd('siblingCount',parseInt(e.target.value))}>
-                {[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?'None':n}</option>)}
+                {[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?t('none'):n}</option>)}
               </select>
               {form.siblingCount > 0 && (
                 <div>
@@ -553,16 +615,16 @@ function NominationForm() {
                       <div key={i} style={{marginBottom:14}}>
                         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
                           <div style={{width:20,height:20,borderRadius:'50%',background:'#E8548C',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>{i+1}</div>
-                          <span style={{fontSize:12,fontWeight:600,color:'#1b2e5a'}}>Sibling {i+1}</span>
+                          <span style={{fontSize:12,fontWeight:600,color:'#1b2e5a'}}>{t('siblingLabel')} {i+1}</span>
                         </div>
                         <div style={{display:'flex',gap:8}}>
                           <div style={{flex:2}}>
-                            <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>First &amp; Last Name</label>
-                            <input style={{...inp(),marginBottom:0}} value={sib.name} onChange={e=>updateSib('name',e.target.value)} placeholder="e.g. Maria Torres"/>
+                            <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>{t('siblingName')}</label>
+                            <input style={{...inp(),marginBottom:0}} value={sib.name} onChange={e=>updateSib('name',e.target.value)} placeholder={lang==='es'?'ej. María Torres':'e.g. Maria Torres'}/>
                           </div>
                           <div style={{flex:1}}>
-                            <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>Student ID</label>
-                            <input style={{...inp(),marginBottom:0}} value={sib.studentId} onChange={e=>updateSib('studentId',e.target.value)} placeholder="e.g. 123456"/>
+                            <label style={{fontSize:11,color:'#64748b',display:'block',marginBottom:3}}>{t('siblingStudentId')}</label>
+                            <input style={{...inp(),marginBottom:0}} value={sib.studentId} onChange={e=>updateSib('studentId',e.target.value)} placeholder={t('studentIdPlaceholder')}/>
                           </div>
                         </div>
                       </div>
@@ -573,15 +635,15 @@ function NominationForm() {
             </div>
             {form.siblingCount > 0 && (
               <div style={{background:'#FFF7ED',border:'1px solid #FED7AA',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#92400E',lineHeight:1.5}}>
-                📋 The parent will receive a separate size form for each child. Their notification will note that {form.siblingCount+1} children from their family were nominated.
+                📋 {t('siblingNote')} {form.siblingCount+1} {t('siblingNote2')}
               </div>
             )}
           </Field>
         </div>
       </div>
       <div style={{ marginTop:24 }}>
-        <button onClick={submit} disabled={submitting} style={{ width:'100%', padding:isMobile?14:16, background:submitting?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting?'default':'pointer', boxShadow:`0 2px 8px rgba(232,84,140,0.3)` }}>{submitting?'Submitting...':'Submit Nomination'}</button>
-        <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:8 }}>All information is strictly confidential.</p>
+        <button onClick={submit} disabled={submitting} style={{ width:'100%', padding:isMobile?14:16, background:submitting?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:submitting?'default':'pointer', boxShadow:`0 2px 8px rgba(232,84,140,0.3)` }}>{submitting?t('submitting'):t('submitNomination')}</button>
+        <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:8 }}>{t('nomFormConfidential')}</p>
       </div>
     </div>
   );
