@@ -1760,6 +1760,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
 // ─── FA PORTAL ─────────────────────────────────────────────────────────────
 function FAPortal() {
   const isMobile = useIsMobile();
+  const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
   const { lang, setLang, t } = useLang();
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
