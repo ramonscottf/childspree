@@ -1722,10 +1722,7 @@ function FAPortal() {
             {/* Fallback: email login */}
             <label style={lbl}>School email address</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:12, fontSize:15 }}/>
-            <label style={lbl}>Cell phone <span style={{fontWeight:400,color:C.light}}>(optional — for text updates)</span></label>
-            <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-              placeholder="(801) 555-0000" style={{...inp(), marginBottom:16, fontSize:15 }}/>
+              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:16, fontSize:15 }}/>
             <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:12, background:loggingIn||!email.trim()?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
               {loggingIn ? 'Looking you up...' : 'Continue with email'}
             </button>
@@ -1879,23 +1876,29 @@ export default function App() {
   const isMobile = useIsMobile();
   const [route, setRoute] = useState(window.location.hash || '#/');
 
-  // Handle Microsoft SSO redirect back to app (if main.jsx already processed it)
+  // Handle Microsoft SSO redirect back to app
   useEffect(() => {
     const hash = window.location.hash;
     sessionStorage.removeItem('ms_sso_error');
 
-    // If the URL still has raw auth params (code=, id_token=, error=), clean them out
-    if (hash.includes('id_token=') || hash.includes('code=') || hash.includes('error=')) {
-      // Check if main.jsx already handled it and stored the user
-      const storedUser = sessionStorage.getItem('cs-ms-user');
-      if (storedUser) {
+    // If the URL has an id_token from Microsoft implicit flow redirect
+    if (hash.includes('id_token=')) {
+      const msUser = parseMsalFragment(hash);
+      if (msUser) {
+        // Successfully parsed the token — store user and go to portal
+        sessionStorage.setItem('cs-ms-user', JSON.stringify(msUser));
+        sessionStorage.setItem('ms_sso_pending', JSON.stringify({ email: msUser.email, name: msUser.name }));
         window.history.replaceState(null, '', window.location.pathname + '#/portal');
         setRoute('#/portal');
       } else {
-        // Auth params present but no user stored — clean up and go to portal
+        // Token parse failed — clean up and go to portal
         window.history.replaceState(null, '', window.location.pathname + '#/portal');
         setRoute('#/portal');
       }
+    } else if (hash.includes('error=') || hash.includes('code=')) {
+      // Microsoft returned an error or code — clean up
+      window.history.replaceState(null, '', window.location.pathname + '#/portal');
+      setRoute('#/portal');
     }
   }, []);
   useEffect(() => {
