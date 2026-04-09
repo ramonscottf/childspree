@@ -1595,17 +1595,19 @@ function FAPortal() {
     const pending = sessionStorage.getItem('ms_sso_pending');
     if (pending && !session) {
       sessionStorage.removeItem('ms_sso_pending');
-      const msUser = JSON.parse(pending);
-      setLoggingIn(true);
-      setError(null);
-      api('/portal/login', { method:'POST', body:JSON.stringify({ email: msUser.email, name: msUser.name, sso: true }) })
-        .then(res => {
-          const s = { token: res.token, email: res.email, name: res.name || msUser.name };
-          sessionStorage.setItem('fa-session', JSON.stringify(s));
-          setSession(s);
-        })
-        .catch(err => setError(err.message))
-        .finally(() => setLoggingIn(false));
+      try {
+        const msUser = JSON.parse(pending);
+        setLoggingIn(true);
+        setError(null);
+        api('/portal/login', { method:'POST', body:JSON.stringify({ email: msUser.email, name: msUser.name, sso: true }) })
+          .then(res => {
+            const s = { token: res.token, email: res.email, name: res.name || msUser.name };
+            sessionStorage.setItem('fa-session', JSON.stringify(s));
+            setSession(s);
+          })
+          .catch(err => setError('Sign-in failed. Please use the email option below.'))
+          .finally(() => setLoggingIn(false));
+      } catch(e) { /* malformed pending data — ignore */ }
     }
   }, []);
 
@@ -1805,16 +1807,18 @@ export default function App() {
   // Handle Microsoft SSO redirect back to app
   useEffect(() => {
     const hash = window.location.hash;
+    // Clear any stale SSO error state on load
+    sessionStorage.removeItem('ms_sso_error');
     if (hash.includes('id_token=')) {
       const msUser = parseMsalFragment(hash);
       if (msUser) {
-        // Clear the OAuth fragment from URL
         window.history.replaceState(null, '', window.location.pathname);
-        // Store pending SSO login for the portal to pick up
         sessionStorage.setItem('ms_sso_pending', JSON.stringify(msUser));
-        // Navigate to portal
         setRoute('#/portal');
       }
+    } else if (hash.includes('error=')) {
+      // Microsoft returned an error — clear the fragment, don't show anything scary
+      window.history.replaceState(null, '', window.location.pathname + '#/portal');
     }
   }, []);
   useEffect(() => {
