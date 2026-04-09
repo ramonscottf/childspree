@@ -31,6 +31,7 @@ export async function onRequestGet(context) {
       pi.shirt_size, pi.pant_size, pi.shoe_size,
       pi.gender, pi.department,
       pi.parent_consent, pi.video_uploaded,
+      pi.favorite_colors, pi.avoid_colors, pi.allergies, pi.preferences,
       pi.language, pi.created_at as intake_submitted_at
     FROM nominations n
     LEFT JOIN parent_intake pi ON n.id = pi.nomination_id
@@ -59,6 +60,10 @@ export async function onRequestGet(context) {
       shoeSize: r.shoe_size,
       gender: r.gender,
       department: r.department,
+      favoriteColors: r.favorite_colors || '',
+      avoidColors: r.avoid_colors || '',
+      allergies: r.allergies || '',
+      preferences: r.preferences || '',
       consent: !!r.parent_consent,
       videoRecorded: !!r.video_uploaded,
       language: r.language || 'en',
