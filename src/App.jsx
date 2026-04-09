@@ -1465,306 +1465,6 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
   );
 }
 
-// ─── FA PORTAL ────────────────────────────────────────────────────────────────
-function FAPortal({ faToken, navigate }) {
-  const isMobile = useIsMobile();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [nudging, setNudging] = useState(null);
-  const [nudgeResult, setNudgeResult] = useState({});
-
-  useEffect(() => {
-    (async () => {
-      try { const d = await api(`/fa/${faToken}`); setData(d); }
-      catch(e) { setError('Invalid or expired link.'); }
-      setLoading(false);
-    })();
-  }, [faToken]);
-
-  const nudgeParent = async (nomId) => {
-    setNudging(nomId);
-    try {
-      const r = await api(`/fa/${faToken}`, { method:'POST', body: JSON.stringify({ action:'nudge', nominationId: nomId }) });
-      setNudgeResult(prev => ({ ...prev, [nomId]: r.smsSent || r.emailSent ? '✅ Reminder sent!' : '⚠️ No contact info' }));
-    } catch { setNudgeResult(prev => ({ ...prev, [nomId]: '❌ Failed' })); }
-    setNudging(null);
-  };
-
-  if (loading) return <div style={{ textAlign:'center', padding:80, color:C.light }}>Loading your portal...</div>;
-  if (error) return <div style={{ textAlign:'center', padding:80 }}><div style={{ fontSize:48, marginBottom:16 }}>🔒</div><p style={{ color:C.red }}>{error}</p></div>;
-
-  const { fa, nominations } = data;
-  const intakeDone = nominations.filter(n => n.parentIntake).length;
-  const videoDone = nominations.filter(n => n.parentIntake?.hasVideo).length;
-
-  return (
-    <div style={{ maxWidth: isMobile ? '100%' : 700, margin:'0 auto' }}>
-      {/* Header */}
-      <div style={{ background:C.navy, padding:'24px 20px', textAlign:'center' }}>
-        <div style={{ fontSize:36, marginBottom:8 }}>🏫</div>
-        <h2 style={{ color:'#fff', fontFamily:"'Playfair Display',serif", fontSize:22, margin:'0 0 4px' }}>
-          {fa.firstName} {fa.lastName}
-        </h2>
-        {fa.school && <p style={{ color:'rgba(255,255,255,0.6)', fontSize:13, margin:0 }}>{fa.school}</p>}
-      </div>
-
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:C.border }}>
-        {[
-          { label:'Nominated', v:nominations.length, c:C.navy },
-          { label:'Sizes in', v:intakeDone, c:C.green },
-          { label:'Videos done', v:videoDone, c:C.pink },
-        ].map(s => (
-          <div key={s.label} style={{ background:'#fff', padding:'16px 12px', textAlign:'center' }}>
-            <div style={{ fontSize:28, fontWeight:800, color:s.c }}>{s.v}</div>
-            <div style={{ fontSize:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Kids list */}
-      <div style={{ padding:isMobile?'16px':'20px' }}>
-        {nominations.length === 0 ? (
-          <div style={{ textAlign:'center', padding:48, color:C.light }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
-            <p style={{ fontSize:14 }}>No nominations yet. Nominations you submit will appear here.</p>
-          </div>
-        ) : nominations.map(n => {
-          const hasSizes = !!n.parentIntake;
-          const hasVideo = n.parentIntake?.hasVideo;
-          return (
-            <div key={n.id} style={{ background:'#fff', borderRadius:12, border:`1px solid ${C.border}`, marginBottom:12, overflow:'hidden' }}>
-              {/* Child header */}
-              <div style={{ padding:'14px 16px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
-                  <div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.grade} · {n.school}</div>
-                </div>
-                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, textTransform:'uppercase',
-                    background: hasSizes ? '#D1FAE5' : '#FEF3C7',
-                    color: hasSizes ? '#065F46' : '#92400E' }}>
-                    {hasSizes ? '✓ Sizes' : 'No sizes'}
-                  </span>
-                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:20, textTransform:'uppercase',
-                    background: hasVideo ? '#E0E7FF' : '#F1F5F9',
-                    color: hasVideo ? '#3730A3' : C.light }}>
-                    {hasVideo ? '✓ Video' : 'No video'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Sizes preview if available */}
-              {hasSizes && (
-                <div style={{ padding:'0 16px 10px', display:'flex', gap:14, flexWrap:'wrap', fontSize:12, color:C.muted }}>
-                  {n.parentIntake.shirtSize && <span>👕 {n.parentIntake.shirtSize}</span>}
-                  {n.parentIntake.pantSize && <span>👖 {n.parentIntake.pantSize}</span>}
-                  {n.parentIntake.shoeSize && <span>👟 {n.parentIntake.shoeSize}</span>}
-                  {n.parentIntake.favoriteColors && <span>❤️ {n.parentIntake.favoriteColors}</span>}
-                  {n.parentIntake.gender && <span>· {n.parentIntake.gender}</span>}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div style={{ padding:'10px 16px 14px', borderTop:`1px solid ${C.border}`, display:'flex', gap:8, flexWrap:'wrap' }}>
-                {/* Nudge parent if no sizes yet */}
-                {!hasSizes && (
-                  <button
-                    onClick={() => nudgeParent(n.id)}
-                    disabled={nudging === n.id}
-                    style={{ flex:1, minWidth:120, padding:'8px 12px', background:'#FFF7ED', color:'#92400E', border:`1px solid #FED7AA`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                    {nudging === n.id ? 'Sending...' : nudgeResult[n.id] || '📲 Remind Parent'}
-                  </button>
-                )}
-                {/* Record video button */}
-                {hasSizes && !hasVideo && (
-                  <button
-                    onClick={() => navigate(`#/fa/${faToken}/video/${n.id}`)}
-                    style={{ flex:1, padding:'8px 12px', background:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 1px 6px rgba(232,84,140,0.3)' }}>
-                    🎬 Record Video
-                  </button>
-                )}
-                {hasVideo && (
-                  <button
-                    onClick={() => navigate(`#/fa/${faToken}/video/${n.id}`)}
-                    style={{ flex:1, padding:'8px 12px', background:'#F0FDF4', color:'#166534', border:`1px solid #BBF7D0`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                    ✓ Video done — Re-record?
-                  </button>
-                )}
-                {!hasSizes && nudgeResult[n.id] && (
-                  <span style={{ fontSize:12, color:C.green, alignSelf:'center' }}>{nudgeResult[n.id]}</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-
-
-function AdvocatesTab({ isMobile }) {
-  const [fas, setFas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', school:'', notes:'' });
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(null);
-  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
-
-  const load = useCallback(async () => {
-    try { const d = await api('/fa',{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setFas(d.fas); } catch(e){console.error(e);}
-    setLoading(false);
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  const addFA = async () => {
-    if (!form.firstName||!form.lastName) return;
-    if (!form.email&&!form.phone) return;
-    setSaving(true);
-    try {
-      await api('/fa',{method:'POST',body:JSON.stringify(form),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}});
-      setForm({ firstName:'',lastName:'',email:'',phone:'',school:'',notes:'' });
-      setShowAdd(false);
-      load();
-    } catch(e) { console.error(e); }
-    setSaving(false);
-  };
-
-  const copyLink = (token, id) => {
-    navigator.clipboard.writeText(`https://childspree.org/#/fa/${token}`);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-        <div style={{ fontSize:13, color:C.muted }}>{fas.length} family advocate{fas.length!==1?'s':''}</div>
-        <button onClick={()=>setShowAdd(!showAdd)} style={{ padding:'8px 18px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
-          + Add Advocate
-        </button>
-      </div>
-
-      {showAdd && (
-        <div style={{ background:'#F8FAFC', border:`1px solid ${C.border}`, borderRadius:12, padding:20, marginBottom:20 }}>
-          <p style={{ fontSize:12, fontWeight:700, color:C.navy, textTransform:'uppercase', letterSpacing:1, marginBottom:14 }}>New Family Advocate</p>
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12 }}>
-            <Field label="First Name *"><input style={inp()} value={form.firstName} onChange={e=>upd('firstName',e.target.value)} placeholder="First"/></Field>
-            <Field label="Last Name *"><input style={inp()} value={form.lastName} onChange={e=>upd('lastName',e.target.value)} placeholder="Last"/></Field>
-            <Field label="Email"><input style={inp()} type="email" value={form.email} onChange={e=>upd('email',e.target.value)} placeholder="fa@davis.k12.ut.us"/></Field>
-            <Field label="Phone"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
-            <Field label="School"><input style={inp()} value={form.school} onChange={e=>upd('school',e.target.value)} placeholder="Adams Elementary"/></Field>
-            <Field label="Notes"><input style={inp()} value={form.notes} onChange={e=>upd('notes',e.target.value)} placeholder="Optional"/></Field>
-          </div>
-          <div style={{ display:'flex', gap:10, marginTop:14 }}>
-            <button onClick={()=>setShowAdd(false)} style={{ padding:'10px 20px', background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancel</button>
-            <button onClick={addFA} disabled={saving} style={{ padding:'10px 24px', background:saving?C.light:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:saving?'default':'pointer' }}>
-              {saving ? 'Creating...' : 'Create + Send Portal Link'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loading ? <div style={{ textAlign:'center', padding:48, color:C.light }}>Loading...</div>
-      : fas.length === 0 ? (
-        <div style={{ textAlign:'center', padding:48, color:C.light, fontSize:14 }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>🏫</div>
-          No family advocates yet. Add one above to get started.
-        </div>
-      ) : (
-        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
-            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
-              {['Name','School','Contact','Kids','Portal','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {fas.map(fa => (
-                <tr key={fa.id} style={{ borderBottom:`1px solid ${C.border}`, background:'#fff' }}>
-                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{fa.firstName} {fa.lastName}</div></td>
-                  <td style={{ padding:'12px 14px', color:C.muted, fontSize:12 }}>{fa.school||'—'}</td>
-                  <td style={{ padding:'12px 14px' }}><div style={{ fontSize:12, color:C.text }}>{fa.email||'—'}</div><div style={{ fontSize:11, color:C.light }}>{fa.phone||''}</div></td>
-                  <td style={{ padding:'12px 14px', textAlign:'center' }}>
-                    <span style={{ fontWeight:700, color:C.navy }}>{fa.nominationCount}</span>
-                    {fa.completeCount > 0 && <span style={{ fontSize:11, color:C.green, marginLeft:4 }}>({fa.completeCount} done)</span>}
-                  </td>
-                  <td style={{ padding:'12px 14px' }}>
-                    <a href={`/#/fa/${fa.portalToken}`} target="_blank" rel="noreferrer" style={{ fontSize:11, color:C.blue }}>Open portal →</a>
-                  </td>
-                  <td style={{ padding:'12px 14px' }}>
-                    <button onClick={() => copyLink(fa.portalToken, fa.id)} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>
-                      {copied===fa.id ? '✅ Copied' : '📋 Copy Link'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── APP ROUTER ───
-export default function App() {
-  const isMobile = useIsMobile();
-  const [route, setRoute] = useState(window.location.hash || '#/');
-  useEffect(() => {
-    const h = () => setRoute(window.location.hash || '#/');
-    window.addEventListener('hashchange', h);
-    return () => window.removeEventListener('hashchange', h);
-  }, []);
-  const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
-
-  let view = 'home', token = null, faToken = null, faVideoNomId = null;
-  if (route.startsWith('#/nominate')) view = 'nominate';
-  else if (route.startsWith('#/volunteer')) view = 'volunteer';
-  else if (route.startsWith('#/admin')) view = 'admin';
-  else if (route.startsWith('#/intake/')) { view = 'parent'; token = route.replace('#/intake/',''); }
-  else if (route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/)) {
-    const m = route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/);
-    view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
-  }
-  else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
-  else if (route === '#/' || route === '#' || route === '') view = 'home';
-
-  if (view === 'parent' && token) return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
-      {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
-      <ParentIntake token={token}/>
-      {isMobile && <div style={{ height:72 }}/>}
-    </div>
-  );
-
-  if (view === 'fa' && faToken) return (
-    <div style={{ minHeight:'100vh', background:C.bg }}>
-      <FAPortal faToken={faToken} navigate={navigate}/>
-    </div>
-  );
-
-  if (view === 'fa-video' && faToken && faVideoNomId) return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
-      <FAVideoPage faToken={faToken} nominationId={faVideoNomId} navigate={navigate}/>
-    </div>
-  );
-
-  return (
-    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:isMobile?72:0 }}>
-      {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
-      {view === 'home' && <LandingPage navigate={navigate}/>}
-      {view === 'nominate' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><NominationForm/></div>}
-      {view === 'volunteer' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><VolunteerForm/></div>}
-      {view === 'portal' && <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto' }}><FAPortal/></div>}
-      {view === 'admin' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><AdminDashboard/></div>}
-      {isMobile && <MobileNav view={view} navigate={navigate}/>}
-    </div>
-  );
-}
-
 // ─── FA PORTAL ─────────────────────────────────────────────────────────────
 function FAPortal() {
   const isMobile = useIsMobile();
@@ -1953,6 +1653,63 @@ function FAPortal() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ─── APP ROUTER ───
+export default function App() {
+  const isMobile = useIsMobile();
+  const [route, setRoute] = useState(window.location.hash || '#/');
+  useEffect(() => {
+    const h = () => setRoute(window.location.hash || '#/');
+    window.addEventListener('hashchange', h);
+    return () => window.removeEventListener('hashchange', h);
+  }, []);
+  const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
+
+  let view = 'home', token = null, faToken = null, faVideoNomId = null;
+  if (route.startsWith('#/nominate')) view = 'nominate';
+  else if (route.startsWith('#/volunteer')) view = 'volunteer';
+  else if (route.startsWith('#/admin')) view = 'admin';
+  else if (route.startsWith('#/intake/')) { view = 'parent'; token = route.replace('#/intake/',''); }
+  else if (route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/)) {
+    const m = route.match(/#\/fa\/([^/]+)\/video\/([^/]+)/);
+    view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
+  }
+  else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
+  else if (route === '#/' || route === '#' || route === '') view = 'home';
+
+  if (view === 'parent' && token) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
+      <ParentIntake token={token}/>
+      {isMobile && <div style={{ height:72 }}/>}
+    </div>
+  );
+
+  if (view === 'fa' && faToken) return (
+    <div style={{ minHeight:'100vh', background:C.bg }}>
+      <FAPortal faToken={faToken} navigate={navigate}/>
+    </div>
+  );
+
+  if (view === 'fa-video' && faToken && faVideoNomId) return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <FAVideoPage faToken={faToken} nominationId={faVideoNomId} navigate={navigate}/>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:isMobile?72:0 }}>
+      {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
+      {view === 'home' && <LandingPage navigate={navigate}/>}
+      {view === 'nominate' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><NominationForm/></div>}
+      {view === 'volunteer' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><VolunteerForm/></div>}
+      {view === 'portal' && <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto' }}><FAPortal/></div>}
+      {view === 'admin' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><AdminDashboard/></div>}
+      {isMobile && <MobileNav view={view} navigate={navigate}/>}
     </div>
   );
 }
