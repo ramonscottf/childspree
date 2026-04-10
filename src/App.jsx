@@ -1661,13 +1661,15 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
   );
 
   return (
-    <div style={{ maxWidth:maxW, margin:'0 auto', padding:isMobile?'0 0 32px':'20px 24px 40px' }}>
-      {/* Header */}
-      <div style={{ background:C.navy, padding:'16px 20px', textAlign:'center', marginBottom:0 }}>
-        <button onClick={() => navigate('#/portal')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', float:'left', padding:'4px 0' }}>← Back</button>
-        <div style={{ color:'#fff', fontWeight:700, fontSize:15 }}>🎬 {nom.childFirst}'s Video</div>
-        <div style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginTop:2 }}>{nom.grade} · {nom.school}</div>
-      </div>
+    <div style={{ maxWidth: (mode==='camera'||mode==='preview') ? '100%' : maxW, margin:'0 auto', padding: (mode==='camera'||mode==='preview') ? 0 : (isMobile?'0 0 32px':'20px 24px 40px') }}>
+      {/* Header — hidden during camera/preview */}
+      {mode !== 'camera' && (
+        <div style={{ background:C.navy, padding:'16px 20px', textAlign:'center', marginBottom:0 }}>
+          <button onClick={() => navigate('#/portal')} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer', float:'left', padding:'4px 0' }}>← Back</button>
+          <div style={{ color:'#fff', fontWeight:700, fontSize:15 }}>🎬 {nom.childFirst}'s Video</div>
+          <div style={{ color:'rgba(255,255,255,0.5)', fontSize:11, marginTop:2 }}>{nom.school}</div>
+        </div>
+      )}
 
       {error && <div style={{ background:'#FEF2F2', padding:'10px 16px', fontSize:13, color:C.red }}>{error}</div>}
 
@@ -1713,18 +1715,20 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
 
       {/* CAMERA */}
       {mode === 'camera' && (
-        <div style={{ padding:'0 16px 16px' }}>
-          <div style={{ position:'relative', background:'#000', borderRadius:16, overflow:'hidden', aspectRatio:'16/9' }}>
+        <div style={{ background:'#000', minHeight:'100svh', display:'flex', flexDirection:'column' }}>
+          <div style={{ flex:1, position:'relative', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <video ref={liveRef} muted playsInline
               style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
             {/* Top controls */}
-            <div style={{ position:'absolute', top:10, left:10, right:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ position:'absolute', top:Math.max(12, parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)'))||0 + 8), left:12, right:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               {recording ? (
                 <div style={{ background:'rgba(220,38,38,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ width:8, height:8, background:'#fff', borderRadius:'50%', display:'inline-block' }}/>
                   REC {elapsed}s / {countdown}s left
                 </div>
-              ) : <div style={{ background:'rgba(0,0,0,0.5)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>Hold phone sideways for best results</div>}
+              ) : (
+                <button onClick={() => navigate('#/portal')} style={{ background:'rgba(0,0,0,0.5)', border:'none', color:'#fff', borderRadius:20, padding:'6px 14px', fontSize:12, fontWeight:600, cursor:'pointer' }}>✕ Cancel</button>
+              )}
               <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.5)', border:'2px solid rgba(255,255,255,0.6)', color:'#fff', borderRadius:'50%', width:44, height:44, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>🔄</button>
             </div>
             {/* Progress bar */}
@@ -1734,7 +1738,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
               </div>
             )}
           </div>
-          <div style={{ marginTop:12 }}>
+          <div style={{ padding:'12px 16px', paddingBottom:'max(12px, env(safe-area-inset-bottom))' }}>
             {!recording ? (
               <button onClick={startRecording} style={{ width:'100%', padding:14, background:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
                 <span style={{ width:12, height:12, background:'#fff', borderRadius:'50%', display:'inline-block' }}/> Start Recording
