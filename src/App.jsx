@@ -1713,47 +1713,35 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
 
       {/* CAMERA */}
       {mode === 'camera' && (
-        <div>
-          <div style={{ position: isMobile ? 'fixed' : 'relative', top:0, left:0, right:0, bottom:0, background:'#000', overflow:'hidden', zIndex: isMobile ? 999 : 'auto' }}>
+        <div style={{ padding:'0 16px 16px' }}>
+          <div style={{ position:'relative', background:'#000', borderRadius:16, overflow:'hidden', aspectRatio:'16/9' }}>
             <video ref={liveRef} muted playsInline
-              style={{ width:'100%', height: isMobile ? '56.25vw' : 500, maxHeight: isMobile ? '70vh' : 500, objectFit:'cover', display:'block', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
-            {/* Top controls overlay */}
-            <div style={{ position:'absolute', top:12, left:12, right:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
+            {/* Top controls */}
+            <div style={{ position:'absolute', top:10, left:10, right:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               {recording ? (
-                <div style={{ background:'rgba(220,38,38,0.9)', color:'#fff', borderRadius:20, padding:'5px 14px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+                <div style={{ background:'rgba(220,38,38,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ width:8, height:8, background:'#fff', borderRadius:'50%', display:'inline-block' }}/>
-                  REC {elapsed}s
+                  REC {elapsed}s / {countdown}s left
                 </div>
-              ) : <div/>}
-              {/* Flip button */}
-              <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.6)', border:'2px solid rgba(255,255,255,0.7)', color:'#fff', borderRadius:'50%', width:52, height:52, fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                🔄
-              </button>
+              ) : <div style={{ background:'rgba(0,0,0,0.5)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:600 }}>Hold phone sideways for best results</div>}
+              <button onClick={flipCamera} style={{ background:'rgba(0,0,0,0.5)', border:'2px solid rgba(255,255,255,0.6)', color:'#fff', borderRadius:'50%', width:44, height:44, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>🔄</button>
             </div>
-            {/* Countdown + progress */}
+            {/* Progress bar */}
             {recording && (
-              <>
-                <div style={{ position:'absolute', bottom:60, right:14, background:'rgba(0,0,0,0.6)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:13, fontWeight:600 }}>
-                  {countdown}s left
-                </div>
-                <div style={{ position:'absolute', bottom:0, left:0, right:0, height:5, background:'rgba(255,255,255,0.2)' }}>
-                  <div style={{ height:5, background:C.pink, width:`${((90-countdown)/90)*100}%`, transition:'width 1s linear' }}/>
-                </div>
-              </>
-            )}
-            {/* Portrait guide */}
-            {!recording && (
-              <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', border:'2px dashed rgba(255,255,255,0.3)', borderRadius:16, width:'55%', height:'70%', pointerEvents:'none' }}/>
+              <div style={{ position:'absolute', bottom:0, left:0, right:0, height:4, background:'rgba(255,255,255,0.2)' }}>
+                <div style={{ height:4, background:C.pink, width:`${((90-countdown)/90)*100}%`, transition:'width 1s linear' }}/>
+              </div>
             )}
           </div>
-          <div style={{ position: isMobile ? 'fixed' : 'relative', bottom: isMobile ? 40 : 'auto', left:0, right:0, padding:'14px 24px', zIndex:1000, background: isMobile ? 'transparent' : 'none' }}>
+          <div style={{ marginTop:12 }}>
             {!recording ? (
-              <button onClick={startRecording} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
-                <span style={{ width:14, height:14, background:'#fff', borderRadius:'50%', display:'inline-block' }}/> Start Recording
+              <button onClick={startRecording} style={{ width:'100%', padding:14, background:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                <span style={{ width:12, height:12, background:'#fff', borderRadius:'50%', display:'inline-block' }}/> Start Recording
               </button>
             ) : (
-              <button onClick={stopRecording} style={{ width:'100%', padding:16, background:'#DC2626', color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
-                <span style={{ width:14, height:14, background:'#fff', borderRadius:2, display:'inline-block' }}/> Stop & Preview
+              <button onClick={stopRecording} style={{ width:'100%', padding:14, background:'#DC2626', color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                <span style={{ width:12, height:12, background:'#fff', borderRadius:2, display:'inline-block' }}/> Stop & Preview
               </button>
             )}
           </div>
