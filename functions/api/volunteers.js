@@ -33,7 +33,7 @@ export async function onRequestGet(context) {
     firstName: r.first_name, lastName: r.last_name,
     email: r.email, phone: r.phone,
     organization: r.organization, groupType: r.group_type,
-    shirtSize: r.shirt_size, arrivalTime: r.arrival_time, earlyArrival: !!r.early_arrival,
+    shirtSize: r.shirt_size, arrivalTime: r.arrival_time, earlyArrival: !!r.early_arrival, storeLocation: r.store_location,
     experience: r.experience, hearAbout: r.hear_about,
     smsOptIn: !!r.sms_opt_in, notes: r.notes,
     createdAt: r.created_at,

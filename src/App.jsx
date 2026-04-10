@@ -1376,50 +1376,62 @@ function VolunteersTab({ isMobile }) {
 
       {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
       : volunteers.length===0 ? <div style={{ textAlign:'center', padding:60, color:C.light, fontSize:14 }}>No volunteers registered yet.</div>
-      : !isMobile ? (
-        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
-            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
-              {['Name','Contact','Org / Group','Shirt','Early','Status','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {volunteers.map(v => (<>
-                <tr key={v.id} onClick={()=>setExpandedId(expandedId===v.id?null:v.id)} style={{ borderBottom:`1px solid ${C.border}`, cursor:'pointer', background:expandedId===v.id?'#F0FDF4':'#fff' }}>
-                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{v.firstName} {v.lastName}</div><div style={{ fontSize:11, color:C.light, marginTop:2 }}>Signed up {v.createdAt?.slice(0,10)}</div></td>
-                  <td style={{ padding:'12px 14px' }}><div style={{ fontSize:12, color:C.text }}>{v.email||'—'}</div><div style={{ fontSize:11, color:C.muted }}>{v.phone||'—'}</div></td>
-                  <td style={{ padding:'12px 14px', fontSize:12, color:C.text }}>{v.organization||'—'}<br/><span style={{ fontSize:11, color:C.light }}>{v.groupType||'Individual'}</span></td>
-                  <td style={{ padding:'12px 14px', fontSize:13, fontWeight:600, color:C.navy }}>{v.shirtSize||'—'}</td>
-                  <td style={{ padding:'12px 14px', fontSize:20 }}>{v.earlyArrival?'✅':'—'}</td>
-                  <td style={{ padding:'12px 14px' }}><StatusBadge status={v.status} vol/></td>
-                  <td style={{ padding:'12px 14px' }}>
-                    <select value={v.status} onChange={e=>{e.stopPropagation();updateStatus(v.id,e.target.value);}} style={{ padding:'5px 8px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:12, cursor:'pointer', background:'#fff' }} onClick={e=>e.stopPropagation()}>
-                      {['registered','confirmed','assigned','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-                    </select>
-                  </td>
-                </tr>
-                {expandedId===v.id&&v.experience&&(
-                  <tr key={v.id+'-exp'}><td colSpan={7} style={{ background:'#F0FDF4', padding:'0 14px 12px', borderBottom:`1px solid ${C.border}` }}>
-                    <div style={{ padding:'8px 12px', background:'#fff', borderRadius:6, fontSize:12, color:C.muted, border:`1px solid ${C.border}`, marginTop:8 }}><strong>Experience:</strong> {v.experience}</div>
-                  </td></tr>
-                )}
-              </>))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
+      : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {volunteers.map(v=>(
-            <div key={v.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:'hidden' }}>
-              <div onClick={()=>setExpandedId(expandedId===v.id?null:v.id)} style={{ padding:'12px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div><div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{v.firstName} {v.lastName}</div><div style={{ fontSize:12, color:C.light, marginTop:2 }}>{v.organization||v.groupType||'Individual'}</div></div>
-                <StatusBadge status={v.status} vol/>
-              </div>
-              {expandedId===v.id&&(
-                <div style={{ padding:'0 14px 14px', borderTop:`1px solid ${C.border}` }}>
-                  <div style={{ fontSize:12, color:C.muted, marginTop:8 }}>{v.email&&<div>✉️ {v.email}</div>}{v.phone&&<div>📱 {v.phone}</div>}{v.shirtSize&&<div>👕 {v.shirtSize}</div>}<div>{v.earlyArrival?'✅ Early arrival':'Regular arrival'}</div></div>
-                  <select value={v.status} onChange={e=>updateStatus(v.id,e.target.value)} style={{ width:'100%', padding:'8px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, marginTop:10 }}>
+            <div key={v.id} style={{ background:C.card, borderRadius:12, border:`1px solid ${expandedId===v.id?C.navy+'33':C.border}`, overflow:'hidden', transition:'border 0.2s' }}>
+              {/* Header — always visible */}
+              <div onClick={()=>setExpandedId(expandedId===v.id?null:v.id)} style={{ padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                    <span style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{v.firstName} {v.lastName}</span>
+                    <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:(statColors[v.status]||C.muted)+'22', color:statColors[v.status]||C.muted }}>{v.status?.charAt(0).toUpperCase()+v.status?.slice(1)}</span>
+                    {v.groupType && v.groupType !== 'Individual' && <span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👥 {v.groupType}</span>}
+                  </div>
+                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+                    {v.organization||'Individual'}{v.shirtSize?` · 👕 ${v.shirtSize}`:''}{v.arrivalTime?` · ${v.arrivalTime}`:''}{v.earlyArrival?' · ☀️ Early bird':''}
+                  </div>
+                </div>
+                <div style={{ display:'flex', gap:6, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
+                  <select value={v.status} onChange={e=>updateStatus(v.id,e.target.value)} style={{ padding:'5px 8px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:11, cursor:'pointer', background:'#fff' }}>
                     {['registered','confirmed','assigned','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
                   </select>
+                </div>
+                <span style={{ fontSize:16, color:C.light, transition:'transform 0.2s', transform:expandedId===v.id?'rotate(180deg)':'rotate(0)' }}>▼</span>
+              </div>
+
+              {/* Expanded details */}
+              {expandedId===v.id&&(
+                <div style={{ borderTop:`1px solid ${C.border}`, padding:'14px 16px' }}>
+                  <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:12, marginBottom:12 }}>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Contact</div>
+                      {v.email&&<div style={{ fontSize:13, color:C.text }}>✉️ {v.email}</div>}
+                      {v.phone&&<div style={{ fontSize:13, color:C.text, marginTop:2 }}>📱 {v.phone}</div>}
+                      <div style={{ fontSize:11, color:C.light, marginTop:4 }}>SMS: {v.smsOptIn?'✅ Opted in':'❌ No'}</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Group / Organization</div>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{v.organization||'None'}</div>
+                      <div style={{ fontSize:12, color:C.text, marginTop:2 }}>Type: {v.groupType||'Individual'}</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Shopping day</div>
+                      <div style={{ fontSize:13, color:C.text }}>👕 Shirt: <strong>{v.shirtSize||'—'}</strong></div>
+                      <div style={{ fontSize:13, color:C.text, marginTop:2 }}>🕐 Arrival: <strong>{v.arrivalTime||'—'}</strong></div>
+                      {v.storeLocation&&<div style={{ fontSize:13, color:C.text, marginTop:2 }}>📍 Store: <strong>{v.storeLocation}</strong></div>}
+                      {v.earlyArrival&&<div style={{ fontSize:12, color:C.green, fontWeight:600, marginTop:4 }}>☀️ Early bird volunteer</div>}
+                    </div>
+                  </div>
+                  {v.experience&&(
+                    <div style={{ background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#78350F', marginBottom:12 }}>
+                      <strong>Experience / notes:</strong> {v.experience}
+                    </div>
+                  )}
+                  {v.hearAbout&&(
+                    <div style={{ fontSize:12, color:C.muted, marginBottom:8 }}>📣 Heard about us: {v.hearAbout}</div>
+                  )}
+                  <div style={{ fontSize:11, color:C.light }}>Signed up: {v.createdAt?.split('T')[0]||v.createdAt?.split(' ')[0]}</div>
                 </div>
               )}
             </div>
