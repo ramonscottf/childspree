@@ -1537,9 +1537,20 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     }
   }, [stream, mode]);
 
+  const [previewRotate, setPreviewRotate] = useState(false);
+
   useEffect(() => {
     if (previewUrl && playbackRef.current) {
       playbackRef.current.src = previewUrl;
+      playbackRef.current.onloadedmetadata = () => {
+        const v = playbackRef.current;
+        if (v && v.videoWidth > v.videoHeight) {
+          // Video is landscape but was recorded in portrait — rotate it
+          setPreviewRotate(true);
+        } else {
+          setPreviewRotate(false);
+        }
+      };
       playbackRef.current.load();
     }
   }, [previewUrl, mode]);
@@ -1773,8 +1784,16 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
       {/* PREVIEW */}
       {mode === 'preview' && previewUrl && (
         <div style={{ padding:'0 16px 16px' }}>
-          <div style={{ borderRadius:16, overflow:'hidden', background:'#000', marginBottom:14, position:'relative' }}>
-            <video ref={playbackRef} controls playsInline style={{ width:'100%', maxHeight:isMobile?'65vh':480, objectFit:'contain', display:'block', background:'#000' }}/>
+          <div style={{ borderRadius:16, overflow:'hidden', background:'#000', marginBottom:14, position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight: previewRotate ? (isMobile?'50vh':360) : 'auto' }}>
+            <video ref={playbackRef} controls playsInline style={{ 
+              width: previewRotate ? 'auto' : '100%',
+              height: previewRotate ? '100%' : 'auto',
+              maxHeight: isMobile ? '65vh' : 480,
+              maxWidth: '100%',
+              objectFit:'contain', display:'block', background:'#000',
+              transform: previewRotate ? 'rotate(-90deg)' : 'none',
+              transformOrigin: 'center center',
+            }}/>
             <div style={{ position:'absolute', top:10, left:10, background:'rgba(5,150,105,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>✓ Preview</div>
           </div>
           <div style={{ fontSize:12, color:C.muted, textAlign:'center', marginBottom:12 }}>
