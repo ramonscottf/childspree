@@ -1238,9 +1238,11 @@ function NominationsTab({ isMobile }) {
                       </div>
                     </div>
                   ) : n.status!=='pending' && n.status!=='declined' && (
-                    <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:8, padding:'10px 14px', fontSize:12, color:'#92400E', marginBottom:12 }}>
-                      ⏳ Waiting for parent to submit sizes.
+                    <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:8, padding:'10px 14px', fontSize:12, color:'#92400E', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+                      <span>⏳ Waiting for parent to submit sizes.
                       {n.parentToken && <span> <button onClick={()=>copyLink(n.parentToken)} style={{ fontSize:11, color:'#92400E', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', fontWeight:600 }}>Copy intake link</button></span>}
+                      </span>
+                      <button onClick={async(e)=>{const btn=e.target;btn.disabled=true;btn.textContent='Sending...';try{await api(`/nominations/${n.id}/remind`,{method:'POST'});btn.textContent='✓ Reminder sent!';btn.style.background='#D1FAE5';btn.style.color='#065F46';setTimeout(()=>{btn.textContent='Send Reminder';btn.disabled=false;btn.style.background=C.amber;btn.style.color='#fff';},3000);}catch(err){btn.textContent='Failed';btn.disabled=false;}}} style={{ padding:'6px 14px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>📩 Send Reminder</button>
                     </div>
                   )}
 
