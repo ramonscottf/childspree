@@ -326,7 +326,7 @@ function useIsMobile() { const [m,setM]=useState(window.innerWidth<768); useEffe
 async function api(path, opts={}) { const r=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json',...opts.headers},...opts}); if(!r.ok){const e=await r.json().catch(()=>({error:'Failed'})); throw new Error(e.error||`HTTP ${r.status}`);} return r.json(); }
 
 function StatusBadge({ status, vol }) {
-  const nMap = { pending:{bg:'#FEF3C7',t:'#92400E',l:'Pending'}, approved:{bg:'#D1FAE5',t:'#065F46',l:'Approved'}, sent:{bg:'#DBEAFE',t:'#1E40AF',l:'Sent'}, complete:{bg:'#E0E7FF',t:'#3730A3',l:'Complete'}, declined:{bg:'#FEE2E2',t:'#991B1B',l:'Declined'} };
+  const nMap = { pending:{bg:'#FEF3C7',t:'#92400E',l:'Pending'}, approved:{bg:'#D1FAE5',t:'#065F46',l:'Approved'}, sent:{bg:'#DBEAFE',t:'#1E40AF',l:'Sent'}, complete:{bg:'#E0E7FF',t:'#3730A3',l:'Complete'}, incomplete:{bg:'#FEE2E2',t:'#DC2626',l:'Incomplete'}, declined:{bg:'#FEE2E2',t:'#991B1B',l:'Declined'} };
   const vMap = { registered:{bg:'#E0E7FF',t:'#3730A3',l:'Registered'}, confirmed:{bg:'#D1FAE5',t:'#065F46',l:'Confirmed'}, assigned:{bg:'#DBEAFE',t:'#1E40AF',l:'Assigned'}, attended:{bg:'#FEF3C7',t:'#92400E',l:'Attended'} };
   const map = vol ? vMap : nMap;
   const c = map[status] || map[vol?'registered':'pending'];
@@ -1091,10 +1091,12 @@ function NominationsTab({ isMobile }) {
   const copyLink = (token) => { navigator.clipboard.writeText(`${window.location.origin}/#/intake/${token}`); };
   const counts = { all:nominations.length, pending:0, approved:0, sent:0, complete:0, declined:0 };
   nominations.forEach(n => { counts[n.status] = (counts[n.status]||0)+1; });
+  const trueComplete = nominations.filter(n => n.status==='complete' && n.parentIntake?.hasVideo).length;
+  const incomplete = nominations.filter(n => n.status==='complete' && (!n.parentIntake||!n.parentIntake.hasVideo)).length;
   return (
     <div>
       <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(6,1fr)', gap:isMobile?8:12, marginBottom:20 }}>
-        {[{label:'Total',v:counts.all,c:C.navy},{label:'Pending',v:counts.pending,c:C.amber},{label:'Approved',v:counts.approved,c:C.green},{label:'Sent',v:counts.sent,c:C.blue},{label:'Complete',v:counts.complete,c:'#7C3AED'},{label:'Declined',v:counts.declined,c:C.red}].slice(0,isMobile?3:6).map(s=>(
+        {[{label:'Total',v:counts.all,c:C.navy},{label:'Pending',v:counts.pending,c:C.amber},{label:'Approved',v:counts.approved,c:C.green},{label:'Sent',v:counts.sent,c:C.blue},{label:'Complete',v:trueComplete,c:'#7C3AED'},{label:'Incomplete',v:incomplete,c:C.red}].slice(0,isMobile?3:6).map(s=>(
           <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px 12px', textAlign:'center', border:`1px solid ${C.border}` }}>
             <div style={{ fontSize:isMobile?20:28, fontWeight:800, color:s.c }}>{s.v}</div>
             <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
@@ -1122,7 +1124,7 @@ function NominationsTab({ isMobile }) {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                     <span style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{n.childFirst} {n.childLast}</span>
-                    <StatusBadge status={n.status}/>
+                    <StatusBadge status={n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)?'incomplete':n.status}/>
                     {n.familyGroup&&<span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👨‍👩‍👧 Family</span>}
                   </div>
                   <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{n.school}{n.studentId?` · ID: ${n.studentId}`:''} · FA: {n.nominatorName} · Parent: {n.parentName}</div>
