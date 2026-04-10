@@ -506,7 +506,7 @@ function LandingPage({ navigate }) {
 function NominationForm() {
   const isMobile = useIsMobile();
   const { lang, setLang, t } = useLang();
-  const [form, setForm] = useState({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});
+  const [form, setForm] = useState({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',nominatorPhone:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -549,7 +549,7 @@ function NominationForm() {
       <div style={{ fontSize:56, marginBottom:16 }}>✓</div>
       <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>{t('nomSuccess')}</h2>
       <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:400, margin:'0 auto 28px' }}>{t('nomSuccessMsg')}</p>
-      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>{t('nominateAnother')}</button>
+      <button onClick={()=>{setSubmitted(false);setForm({childFirst:'',childLast:'',studentId:'',school:'',grade:'',nominatorName:'',nominatorRole:'Teacher',nominatorEmail:'',nominatorPhone:'',parentName:'',parentPhone:'',parentEmail:'',reason:'',siblingCount:0,siblings:[],additionalNotes:'',parentLanguage:'en'});}} style={{ background:C.pink, color:'#fff', border:'none', padding:'12px 32px', borderRadius:8, fontSize:14, fontWeight:600, cursor:'pointer' }}>{t('nominateAnother')}</button>
     </div>
   );
   const maxW = isMobile?'100%':760;
@@ -577,6 +577,7 @@ function NominationForm() {
           <p style={{...secHead(isMobile),marginTop:20}}>{t('yourInfoTitle')}</p>
           <Field label={t('yourName')}><input style={inp()} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)} placeholder={t('fullName')}/></Field>
           <Row cols={2} gap={10}><Field label={t('role')}><select style={{...inp(),appearance:'auto'}} value={form.nominatorRole} onChange={e=>upd('nominatorRole',e.target.value)}>{['Teacher','Counselor','Family Advocate','Administrator','Other'].map(r=><option key={r} value={r}>{r}</option>)}</select></Field><Field label={t('email')}><input style={inp()} type="email" value={form.nominatorEmail} onChange={e=>upd('nominatorEmail',e.target.value)} placeholder="you@dsdmail.net"/></Field></Row>
+          <Field label="Your cell phone"><input style={inp()} type="tel" value={form.nominatorPhone||''} onChange={e=>upd('nominatorPhone',e.target.value)} placeholder="(801) 555-0000"/><p style={{fontSize:11,color:C.light,margin:'4px 0 0'}}>Optional — we'll text you updates when parents submit sizes or it's time to record a video.</p></Field>
         </div>
         <div>
           <p style={secHead(isMobile)}>{t('parentGuardianTitle')}</p>
@@ -1620,6 +1621,56 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
   );
 }
 
+// ─── PHONE BANNER (FA portal — add cell for text updates) ───────────────────
+function PhoneBanner({ session, isMobile }) {
+  const [phone, setPhone] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [hasPhone, setHasPhone] = useState(false);
+
+  useEffect(() => {
+    if (!session?.token) return;
+    api('/portal/phone', { headers: { 'X-FA-Token': session.token } })
+      .then(d => { if (d.phone) { setPhone(d.phone); setHasPhone(true); } setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, [session]);
+
+  const savePhone = async () => {
+    setSaving(true);
+    try {
+      await api('/portal/phone', { method:'POST', headers:{'X-FA-Token':session.token,'Content-Type':'application/json'}, body:JSON.stringify({ phone }) });
+      setSaved(true); setHasPhone(true);
+      setTimeout(()=>setSaved(false), 3000);
+    } catch(e) { alert('Failed to save: ' + e.message); }
+    setSaving(false);
+  };
+
+  if (!loaded) return null;
+
+  if (hasPhone && !saved) return (
+    <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:'10px 16px', marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+      <span style={{ fontSize:13, color:'#166534' }}>📱 Text updates going to <strong>{phone}</strong></span>
+      <button onClick={()=>setHasPhone(false)} style={{ fontSize:11, color:'#166534', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>Change</button>
+    </div>
+  );
+
+  return (
+    <div style={{ background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:10, padding:'12px 16px', marginBottom:20 }}>
+      {saved ? (
+        <span style={{ fontSize:13, color:'#166534', fontWeight:600 }}>✅ Phone saved! We'll text you updates.</span>
+      ) : (
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+          <span style={{ fontSize:13, color:'#92400E', flex:'0 0 auto' }}>📱 Add your cell to get text updates:</span>
+          <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="(801) 555-0000"
+            style={{ ...inp({width:isMobile?'100%':180}), marginBottom:0, padding:'6px 10px', fontSize:13 }}/>
+          <button onClick={savePhone} disabled={saving||!phone.trim()} style={{ padding:'6px 14px', background:phone.trim()?C.navy:'#ccc', color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>{saving?'Saving...':'Save'}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PORTAL NOMINATION CARD (expandable + editable) ─────────────────────────
 function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobile, onUpdate }) {
   const [open, setOpen] = useState(false);
@@ -1881,15 +1932,12 @@ function FAPortal() {
             {/* Fallback: email login */}
             <label style={lbl}>School email address</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:10, fontSize:15 }}/>
-            <label style={lbl}>Cell phone <span style={{fontWeight:400,color:C.light}}>(optional — for text updates)</span></label>
-            <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-              placeholder="(801) 555-0000" style={{...inp(), marginBottom:16, fontSize:15 }}/>
+              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:16, fontSize:15 }}/>
             <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:12, background:loggingIn||!email.trim()?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
               {loggingIn ? 'Looking you up...' : 'Continue with email'}
             </button>
             <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:10, lineHeight:1.5 }}>
-              We'll email you updates. Add your cell to get text alerts when parents submit sizes or it's time to record a video.
+              Use your @dsdmail.net email, or sign in with Microsoft above.
             </p>
           </>
         )}
@@ -1911,7 +1959,7 @@ function FAPortal() {
   return (
     <div style={{ maxWidth:isMobile?'100%':960, margin:'0 auto', padding:pad }}>
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12, flexWrap:'wrap', gap:12 }}>
         <div>
           <p style={{ color:C.muted, fontSize:13, margin:'0 0 2px' }}>{t('portalWelcome')}</p>
           <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?20:26, color:C.navy, margin:0 }}>{nominatorName || session.email}</h2>
@@ -1921,6 +1969,9 @@ function FAPortal() {
           <button onClick={logout} style={{ padding:'8px 16px', background:'#F1F5F9', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', color:C.muted }}>{t('portalLogout')}</button>
         </div>
       </div>
+
+      {/* Phone number for text updates */}
+      <PhoneBanner session={session} isMobile={isMobile}/>
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(6,1fr)', gap:isMobile?8:12, marginBottom:28 }}>

@@ -100,6 +100,15 @@ export async function onRequestPost(context) {
     familyGroup
   ).run();
 
+  // Store FA phone if provided
+  if (body.nominatorPhone && body.nominatorPhone.trim()) {
+    const normEmail = (body.nominatorEmail || '').toLowerCase().trim();
+    const cleanPhone = body.nominatorPhone.trim();
+    await env.DB.prepare(
+      "INSERT OR REPLACE INTO fa_phones (email, phone, updated_at) VALUES (?, ?, datetime('now'))"
+    ).bind(normEmail, cleanPhone).run();
+  }
+
   // Create separate nomination rows for each sibling immediately
   const siblingIds = [];
   for (const sibDef of siblingDefs) {
