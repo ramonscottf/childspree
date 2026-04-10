@@ -777,7 +777,7 @@ function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width:{ideal:720}, height:{ideal:1280}, aspectRatio:{ideal:9/16} },
+        video: { facingMode: facing, width:{ideal:480}, height:{ideal:854}, aspectRatio:{ideal:9/16} },
         audio: true
       });
       setStream(s);
@@ -1549,9 +1549,19 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 1280 } },
+        video: { facingMode: facing, width: { ideal: 480 }, height: { ideal: 854 }, resizeMode: 'none' },
         audio: true,
       });
+      // Reset zoom to 1x (widest) if the camera supports it
+      const track = s.getVideoTracks()[0];
+      if (track) {
+        try {
+          const caps = track.getCapabilities?.();
+          if (caps?.zoom) {
+            await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] });
+          }
+        } catch(e) { /* zoom not supported — fine */ }
+      }
       setStream(s);
       setMode('camera');
     } catch { setError('Camera access denied.'); }
