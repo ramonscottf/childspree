@@ -1002,17 +1002,16 @@ function ParentIntake({ token }) {
             </Field>
           </Row>
           <Field label="Shopping section">
-              <div style={{display:'flex',gap:10}}>
-                {["Boys","Girls"].map(d=>(
-                  <label key={d} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'12px 14px',background:form.department===d?C.navy:C.bg,border:`1.5px solid ${form.department===d?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s',justifyContent:'center'}}>
-                    <input type="radio" name="department" value={d} checked={form.department===d} onChange={()=>{upd('department',d);upd('shirtSize','');upd('pantSize','');}} style={{display:'none'}}/>
-                    <span style={{fontSize:14,fontWeight:form.department===d?700:400,color:form.department===d?'#fff':C.muted}}>{d}</span>
-                    {form.department===d&&<span style={{color:'#fff',fontSize:12}}>✓</span>}
-                  </label>
-                ))}
-              </div>
-            </Field>
-          </Row>
+            <div style={{display:'flex',gap:10}}>
+              {["Boys","Girls"].map(d=>(
+                <label key={d} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'12px 14px',background:form.department===d?C.navy:C.bg,border:`1.5px solid ${form.department===d?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s',justifyContent:'center'}}>
+                  <input type="radio" name="department" value={d} checked={form.department===d} onChange={()=>{upd('department',d);upd('shirtSize','');upd('pantSize','');}} style={{display:'none'}}/>
+                  <span style={{fontSize:14,fontWeight:form.department===d?700:400,color:form.department===d?'#fff':C.muted}}>{d}</span>
+                  {form.department===d&&<span style={{color:'#fff',fontSize:12}}>✓</span>}
+                </label>
+              ))}
+            </div>
+          </Field>
           <p style={secHead(isMobile)}>{t('clothingSizes')}</p>
           {(() => { const isG = form.department === "Girls"; const sh = isG ? SHIRT_SIZES_GIRLS : SHIRT_SIZES_BOYS; const pa = isG ? PANT_SIZES_GIRLS : PANT_SIZES_BOYS; return (
           <Row cols={3} gap={8}><Field label="Shirt *"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Size</option>{sh.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Pants *"><select style={{...inp(),appearance:'auto'}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}><option value="">Size</option>{pa.map(s=><option key={s} value={s}>{s}</option>)}</select></Field><Field label="Shoe *"><input style={inp()} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)} placeholder="e.g., 4Y"/></Field></Row>
