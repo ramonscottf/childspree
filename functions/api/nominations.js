@@ -29,7 +29,7 @@ export async function onRequestGet(context) {
   const status = url.searchParams.get('status');
   const search = url.searchParams.get('search');
 
-  let q = 'SELECT n.*, pi.shirt_size, pi.pant_size, pi.shoe_size, pi.favorite_colors, pi.avoid_colors, pi.allergies, pi.preferences as intake_preferences, pi.video_uploaded FROM nominations n LEFT JOIN parent_intake pi ON n.id = pi.nomination_id WHERE 1=1';
+  let q = 'SELECT n.*, pi.shirt_size, pi.pant_size, pi.shoe_size, pi.favorite_colors, pi.avoid_colors, pi.allergies, pi.preferences as intake_preferences, pi.video_uploaded, pi.child_age FROM nominations n LEFT JOIN parent_intake pi ON n.id = pi.nomination_id WHERE 1=1';
   const p = [];
   if (status && status !== 'all') { q += ' AND n.status = ?'; p.push(status); }
   if (search) { q += ' AND (n.child_first LIKE ? OR n.child_last LIKE ? OR n.school LIKE ? OR n.nominator_name LIKE ?)'; const s = `%${search}%`; p.push(s,s,s,s); }
@@ -49,7 +49,7 @@ export async function onRequestGet(context) {
       shirtSize: r.shirt_size, pantSize: r.pant_size, shoeSize: r.shoe_size,
       favoriteColors: r.favorite_colors, avoidColors: r.avoid_colors,
       allergies: r.allergies, preferences: r.intake_preferences,
-      hasVideo: !!r.video_uploaded,
+      hasVideo: !!r.video_uploaded, childAge: r.child_age || null,
     } : null,
   }));
 

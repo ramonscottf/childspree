@@ -1125,7 +1125,7 @@ function NominationsTab({ isMobile }) {
                     <StatusBadge status={n.status}/>
                     {n.familyGroup&&<span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👨‍👩‍👧 Family</span>}
                   </div>
-                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{n.school} · {n.grade}{n.studentId?` · ID: ${n.studentId}`:''} · FA: {n.nominatorName} · Parent: {n.parentName}</div>
+                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{n.school}{n.studentId?` · ID: ${n.studentId}`:''} · FA: {n.nominatorName} · Parent: {n.parentName}</div>
                   {/* Pipeline pills when collapsed */}
                   {expandedId!==n.id && n.status!=='declined' && n.status!=='pending' && (
                     <div style={{ display:'flex', gap:4, marginTop:6, flexWrap:'wrap' }}>
@@ -1177,8 +1177,9 @@ function NominationsTab({ isMobile }) {
                     <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
                       <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Child</div>
                       <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
-                      <div style={{ fontSize:12, color:C.text, marginTop:2 }}>{n.school} · {n.grade}</div>
+                      <div style={{ fontSize:12, color:C.text, marginTop:2 }}>{n.school}</div>
                       {n.studentId&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Student ID: {n.studentId}</div>}
+                      {n.parentIntake?.childAge&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Age: {n.parentIntake.childAge}</div>}
                     </div>
                     <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
                       <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Parent / Guardian</div>
