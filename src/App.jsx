@@ -1577,16 +1577,27 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     if (!stream) return;
     chunksRef.current = [];
     const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
-      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
+      : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+    if (!mt) { setError('Your browser does not support video recording. Please use Chrome or Safari.'); return; }
     const rec = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 2000000 });
-    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    rec.ondataavailable = e => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: mt });
-      const url = URL.createObjectURL(blob);
-      setRecordedBlob(blob); setPreviewUrl(url);
-      stopStream(); setMode('preview');
+      // Small delay to ensure all data chunks are flushed (iOS needs this)
+      setTimeout(() => {
+        if (chunksRef.current.length === 0) { setError('Recording failed — no data captured. Please try again.'); setMode('intro'); return; }
+        const blob = new Blob(chunksRef.current, { type: mt });
+        if (blob.size < 1000) { setError('Recording too short. Please try again.'); setMode('intro'); return; }
+        const url = URL.createObjectURL(blob);
+        setRecordedBlob(blob);
+        setPreviewUrl(url);
+        setMode('preview');
+        // Stop stream AFTER setting preview mode
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        setStream(null);
+      }, 300);
     };
-    setRecorder(rec); rec.start(1000);
+    setRecorder(rec); rec.start(500); // 500ms timeslice for more frequent data chunks
     setRecording(true); setCountdown(90); setElapsed(0);
     timerRef.current = setInterval(() => setCountdown(c => {
       if (c <= 1) { clearInterval(timerRef.current); clearInterval(elapsedRef.current); rec.stop(); setRecording(false); return 0; }
@@ -1597,14 +1608,16 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
 
   const stopRecording = () => {
     clearInterval(timerRef.current); clearInterval(elapsedRef.current);
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
     setRecording(false);
   };
 
   const retake = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setRecordedBlob(null); setPreviewUrl(null); setElapsed(0); setCountdown(0);
-    setMode('intro');
+    startCamera(facingMode);
   };
 
   const upload = async () => {
