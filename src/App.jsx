@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
+import * as XLSX from 'xlsx';
 
 // ─── MICROSOFT SSO ──────────────────────────────────────────────────────────
 const MSAL_CONFIG = {
@@ -1111,6 +1112,29 @@ function NominationsTab({ isMobile }) {
             </button>
           ))}
         </div>
+        <button onClick={()=>{
+          const rows = nominations.map(n => ({
+            'Child First': n.childFirst, 'Child Last': n.childLast,
+            'School': n.school, 'Student ID': n.studentId||'',
+            'Age': n.parentIntake?.childAge||'',
+            'Status': n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)?'incomplete':n.status,
+            'Parent Name': n.parentName, 'Parent Phone': n.parentPhone||'', 'Parent Email': n.parentEmail||'',
+            'FA Name': n.nominatorName, 'FA Role': n.nominatorRole, 'FA Email': n.nominatorEmail,
+            'Reason': n.reason||'',
+            'Shirt Size': n.parentIntake?.shirtSize||'', 'Pant Size': n.parentIntake?.pantSize||'', 'Shoe Size': n.parentIntake?.shoeSize||'',
+            'Favorite Colors': n.parentIntake?.favoriteColors||'', 'Colors to Avoid': n.parentIntake?.avoidColors||'',
+            'Allergies': n.parentIntake?.allergies||'', 'Preferences': n.parentIntake?.preferences||'',
+            'Video Recorded': n.parentIntake?.hasVideo?'Yes':'No',
+            'Family Group': n.familyGroup||'',
+            'Nominated Date': n.createdAt?.split('T')[0]||n.createdAt?.split(' ')[0]||'',
+          }));
+          const ws = XLSX.utils.json_to_sheet(rows);
+          const colWidths = Object.keys(rows[0]||{}).map(k => ({ wch: Math.max(k.length, ...rows.map(r => String(r[k]||'').length)) }));
+          ws['!cols'] = colWidths;
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Nominations');
+          XLSX.writeFile(wb, `ChildSpree_Nominations_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }} style={{ padding:'6px 14px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>📥 Export Excel</button>
         <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), width:isMobile?'100%':200, fontSize:13}}/>
       </div>
       {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
@@ -1325,6 +1349,24 @@ function VolunteersTab({ isMobile }) {
           ))}
         </div>
         <button onClick={()=>setMsgModal(true)} style={{ padding:isMobile?'6px 12px':'8px 16px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>📣 Send Message</button>
+        <button onClick={()=>{
+          const rows = volunteers.map(v => ({
+            'First Name': v.firstName, 'Last Name': v.lastName,
+            'Email': v.email||'', 'Phone': v.phone||'',
+            'Organization': v.organization||'', 'Group Type': v.groupType||'Individual',
+            'Shirt Size': v.shirtSize||'', 'Arrival Time': v.arrivalTime||'',
+            'Store Location': v.storeLocation||'', 'Early Bird': v.earlyArrival?'Yes':'No',
+            'SMS Opted In': v.smsOptIn?'Yes':'No',
+            'Experience': v.experience||'', 'Heard About Us': v.hearAbout||'',
+            'Status': v.status, 'Signed Up': v.createdAt?.split('T')[0]||v.createdAt?.split(' ')[0]||'',
+          }));
+          const ws = XLSX.utils.json_to_sheet(rows);
+          const colWidths = Object.keys(rows[0]||{}).map(k => ({ wch: Math.max(k.length, ...rows.map(r => String(r[k]||'').length)) }));
+          ws['!cols'] = colWidths;
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Volunteers');
+          XLSX.writeFile(wb, `ChildSpree_Volunteers_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }} style={{ padding:isMobile?'6px 12px':'8px 16px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>📥 Export Excel</button>
         <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), width:isMobile?'100%':180, fontSize:13}}/>
       </div>
 
