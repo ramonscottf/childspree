@@ -1201,7 +1201,7 @@ function NominationsTab({ isMobile }) {
                         {n.status==='sent'&&n.parentIntake&&!n.parentIntake.hasVideo&&<span style={{color:'#92400E'}}>⚠️ Sizes received! {n.nominatorName} needs to record a video with {n.childFirst} at school. This must happen before shopping day.</span>}
                         {n.status==='sent'&&n.parentIntake?.hasVideo&&'Sizes + video done. Mark complete when ready.'}
                         {n.status==='complete'&&n.parentIntake?.hasVideo&&'This child is ready for volunteer shopping day! 🎉'}
-                        {n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)&&<span style={{color:'#DC2626'}}>⚠️ Marked complete but VIDEO IS MISSING. {n.nominatorName} must record a video with {n.childFirst} at school before shopping day.</span>}
+                        {n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)&&<span style={{color:'#DC2626'}}>⚠️ Incomplete — {n.nominatorName} must record a video with {n.childFirst} at school before shopping day.</span>}
                         {n.status==='declined'&&'This nomination was declined. Click "Undo Decline" to reopen.'}
                       </div>
                     </div>
