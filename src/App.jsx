@@ -777,7 +777,7 @@ function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width:{ideal:480}, height:{ideal:854}, aspectRatio:{ideal:9/16} },
+        video: { facingMode: facing, width:{ideal:1280}, height:{ideal:720} },
         audio: true
       });
       setStream(s);
@@ -884,7 +884,7 @@ function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
       <h3 style={{fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:8}}>{tV.title} {childFirst}</h3>
       <p style={{color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:28}}>{tV.instructions}</p>
       <div style={{background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:'12px 16px', marginBottom:24, fontSize:13, color:'#166534', textAlign:'left'}}>
-        <strong>Tips:</strong> Find good light. Hold phone vertically. Ask the student to say their name, grade, favorite color, and what they love most.
+        <strong>Tips:</strong> Find good light. Hold phone sideways (landscape). Ask the student to say their name, grade, favorite color, and what they love most.
       </div>
       {error && <div style={{background:'#FEF2F2', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B'}}>{error}</div>}
       <button onClick={()=>startCamera()} style={{width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:12}}>Open Camera</button>
@@ -1537,20 +1537,9 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     }
   }, [stream, mode]);
 
-  const [previewRotate, setPreviewRotate] = useState(false);
-
   useEffect(() => {
     if (previewUrl && playbackRef.current) {
       playbackRef.current.src = previewUrl;
-      playbackRef.current.onloadedmetadata = () => {
-        const v = playbackRef.current;
-        if (v && v.videoWidth > v.videoHeight) {
-          // Video is landscape but was recorded in portrait — rotate it
-          setPreviewRotate(true);
-        } else {
-          setPreviewRotate(false);
-        }
-      };
       playbackRef.current.load();
     }
   }, [previewUrl, mode]);
@@ -1560,19 +1549,9 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 480 }, height: { ideal: 854 }, resizeMode: 'none' },
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       });
-      // Reset zoom to 1x (widest) if the camera supports it
-      const track = s.getVideoTracks()[0];
-      if (track) {
-        try {
-          const caps = track.getCapabilities?.();
-          if (caps?.zoom) {
-            await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] });
-          }
-        } catch(e) { /* zoom not supported — fine */ }
-      }
       setStream(s);
       setMode('camera');
     } catch { setError('Camera access denied.'); }
@@ -1701,7 +1680,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
               <li>Find a quiet spot at school with good light</li>
               <li>Ask {nom.childFirst} to face the camera and smile</li>
               <li>Aim for <strong>30–60 seconds</strong> (90 sec max)</li>
-              <li>Hold phone <strong>vertically</strong> — portrait mode</li>
+              <li>Hold phone <strong>sideways</strong> — landscape mode</li>
               <li>Use the 🔄 button to flip between front and back camera</li>
             </ul>
           </div>
@@ -1737,7 +1716,7 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
         <div>
           <div style={{ position: isMobile ? 'fixed' : 'relative', top:0, left:0, right:0, bottom:0, background:'#000', overflow:'hidden', zIndex: isMobile ? 999 : 'auto' }}>
             <video ref={liveRef} muted playsInline
-              style={{ width:'100%', height: isMobile ? '100svh' : 500, maxHeight: isMobile ? '100svh' : 500, objectFit:'cover', display:'block', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
+              style={{ width:'100%', height: isMobile ? '56.25vw' : 500, maxHeight: isMobile ? '70vh' : 500, objectFit:'cover', display:'block', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}/>
             {/* Top controls overlay */}
             <div style={{ position:'absolute', top:12, left:12, right:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               {recording ? (
@@ -1784,16 +1763,8 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
       {/* PREVIEW */}
       {mode === 'preview' && previewUrl && (
         <div style={{ padding:'0 16px 16px' }}>
-          <div style={{ borderRadius:16, overflow:'hidden', background:'#000', marginBottom:14, position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight: previewRotate ? (isMobile?'50vh':360) : 'auto' }}>
-            <video ref={playbackRef} controls playsInline style={{ 
-              width: previewRotate ? 'auto' : '100%',
-              height: previewRotate ? '100%' : 'auto',
-              maxHeight: isMobile ? '65vh' : 480,
-              maxWidth: '100%',
-              objectFit:'contain', display:'block', background:'#000',
-              transform: previewRotate ? 'rotate(-90deg)' : 'none',
-              transformOrigin: 'center center',
-            }}/>
+          <div style={{ borderRadius:16, overflow:'hidden', background:'#000', marginBottom:14, position:'relative' }}>
+            <video ref={playbackRef} controls playsInline style={{ width:'100%', maxHeight:isMobile?'60vh':480, objectFit:'contain', display:'block', background:'#000' }}/>
             <div style={{ position:'absolute', top:10, left:10, background:'rgba(5,150,105,0.9)', color:'#fff', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>✓ Preview</div>
           </div>
           <div style={{ fontSize:12, color:C.muted, textAlign:'center', marginBottom:12 }}>
