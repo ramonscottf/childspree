@@ -1113,61 +1113,144 @@ function NominationsTab({ isMobile }) {
       </div>
       {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
       : nominations.length===0 ? <div style={{ textAlign:'center', padding:60, color:C.light, fontSize:14 }}>No nominations yet.</div>
-      : !isMobile ? (
-        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, overflow:'hidden' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
-            <thead><tr style={{ background:'#F8FAFC', borderBottom:`1px solid ${C.border}` }}>
-              {['Child','School / Grade','Nominator','Parent','Status','Actions'].map(h=><th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5 }}>{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {nominations.map(n => (<>
-                <tr key={n.id} onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ borderBottom:`1px solid ${C.border}`, cursor:'pointer', background:expandedId===n.id?'#FFFBF5':'#fff' }}>
-                  <td style={{ padding:'12px 14px' }}><div style={{ fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div><div style={{ fontSize:11, color:C.light, marginTop:2 }}>{n.grade}{n.studentId ? ` · ID: ${n.studentId}` : ''}</div>{n.familyGroup&&<div style={{ marginTop:3 }}><span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👨‍👩‍👧 Family</span></div>}</td>
-                  <td style={{ padding:'12px 14px', color:C.text }}>{n.school}</td>
-                  <td style={{ padding:'12px 14px' }}><div>{n.nominatorName}</div><div style={{ fontSize:11, color:C.light }}>{n.nominatorRole}</div></td>
-                  <td style={{ padding:'12px 14px' }}><div>{n.parentName}</div><div style={{ fontSize:11, color:C.light }}>{n.parentPhone||n.parentEmail||''}</div></td>
-                  <td style={{ padding:'12px 14px' }}><StatusBadge status={n.status}/></td>
-                  <td style={{ padding:'12px 14px' }}>
-                    <div style={{ display:'flex', gap:6 }}>
-                      {n.status==='pending'&&<><button onClick={e=>{e.stopPropagation();updateStatus(n.id,'approved');}} style={{ padding:'5px 10px', background:C.green, color:'#fff', border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>Approve</button><button onClick={e=>{e.stopPropagation();updateStatus(n.id,'declined');}} style={{ padding:'5px 10px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>Decline</button></>}
-                      {n.status==='approved'&&<button onClick={e=>{e.stopPropagation();updateStatus(n.id,'sent');}} style={{ padding:'5px 10px', background:C.blue, color:'#fff', border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>Send to Parent ✉️</button>}
-                      {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={e=>{e.stopPropagation();copyLink(n.parentToken);}} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:5, fontSize:11, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
-                    </div>
-                  </td>
-                </tr>
-                {expandedId===n.id&&(
-                  <tr key={n.id+'-exp'}><td colSpan={6} style={{ background:'#FFFBF5', padding:'0 14px 14px', borderBottom:`1px solid ${C.border}` }}>
-                    {n.reason&&<div style={{ padding:'8px 12px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5, marginTop:8, marginBottom:8 }}><strong>Reason:</strong> {n.reason}</div>}
-                    {n.parentIntake ? (
-                      <div style={{ display:'flex', gap:20, padding:'10px 12px', background:'#F0FDF4', borderRadius:8, border:`1px solid #BBF7D0`, fontSize:13 }}>
-                        <span>👕 <strong>{n.parentIntake.shirtSize}</strong></span><span>👖 <strong>{n.parentIntake.pantSize}</strong></span><span>👟 <strong>{n.parentIntake.shoeSize}</strong></span>
-                        <span>🎬 <strong>{n.parentIntake.hasVideo?'Video ✓':'No video'}</strong></span>
-                        {n.parentIntake.favoriteColors&&<span>❤️ {n.parentIntake.favoriteColors}</span>}
-                        {n.parentIntake.avoidColors&&<span>✗ {n.parentIntake.avoidColors}</span>}
-                      </div>
-                    ):<div style={{ fontSize:12, color:C.light, fontStyle:'italic', marginTop:8 }}>No parent intake yet.</div>}
-                  </td></tr>
-                )}
-              </>))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
+      : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {nominations.map(n=>(
-            <div key={n.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:'hidden' }}>
-              <div onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ padding:'12px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div><div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}{n.familyGroup&&<span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4, marginLeft:8, verticalAlign:'middle' }}>👨‍👩‍👧 Family</span>}</div><div style={{ fontSize:12, color:C.light, marginTop:2 }}>{n.school} · {n.grade}</div></div>
-                <StatusBadge status={n.status}/>
+            <div key={n.id} style={{ background:C.card, borderRadius:12, border:`1px solid ${expandedId===n.id?C.navy+'33':C.border}`, overflow:'hidden', transition:'border 0.2s' }}>
+              {/* Row header — always visible */}
+              <div onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                    <span style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{n.childFirst} {n.childLast}</span>
+                    <StatusBadge status={n.status}/>
+                    {n.familyGroup&&<span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👨‍👩‍👧 Family</span>}
+                  </div>
+                  <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{n.school} · {n.grade}{n.studentId?` · ID: ${n.studentId}`:''} · FA: {n.nominatorName} · Parent: {n.parentName}</div>
+                  {/* Pipeline pills when collapsed */}
+                  {expandedId!==n.id && n.status!=='declined' && n.status!=='pending' && (
+                    <div style={{ display:'flex', gap:4, marginTop:6, flexWrap:'wrap' }}>
+                      {[
+                        { label:'Approved', done: ['approved','sent','complete'].includes(n.status) },
+                        { label:'Sent to parent', done: ['sent','complete'].includes(n.status) },
+                        { label:'Sizes received', done: !!n.parentIntake },
+                        { label:'Video', done: n.parentIntake?.hasVideo },
+                      ].map(p=>(
+                        <span key={p.label} style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:p.done?'#D1FAE5':'#F1F5F9', color:p.done?'#065F46':'#94A3B8' }}>{p.done?'✓':''} {p.label}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Quick action buttons (no expand needed) */}
+                <div style={{ display:'flex', gap:6, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
+                  {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ padding:'5px 12px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'5px 10px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Decline</button></>}
+                  {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'5px 12px', background:C.blue, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
+                  {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'5px 12px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>↩ Undo Decline</button>}
+                  {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
+                </div>
+                <span style={{ fontSize:16, color:C.light, transition:'transform 0.2s', transform:expandedId===n.id?'rotate(180deg)':'rotate(0)' }}>▼</span>
               </div>
+
+              {/* Expanded details */}
               {expandedId===n.id&&(
-                <div style={{ padding:'0 14px 14px', borderTop:`1px solid ${C.border}` }}>
-                  {n.reason&&<div style={{ marginTop:8, padding:'8px 10px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5 }}><strong>Reason:</strong> {n.reason}</div>}
-                  {n.parentIntake&&<div style={{ marginTop:8, padding:10, background:'#F0FDF4', borderRadius:6, border:`1px solid #BBF7D0`, fontSize:12, display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}><div>👕 <strong>{n.parentIntake.shirtSize}</strong></div><div>👖 <strong>{n.parentIntake.pantSize}</strong></div><div>👟 <strong>{n.parentIntake.shoeSize}</strong></div><div>🎬 <strong>{n.parentIntake.hasVideo?'Video ✓':'No video'}</strong></div></div>}
-                  <div style={{ display:'flex', gap:8, marginTop:10 }}>
-                    {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ flex:1, padding:8, background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'8px 12px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Decline</button></>}
-                    {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ flex:1, padding:8, background:C.blue, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Send to Parent ✉️</button>}
-                    {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ flex:1, padding:8, background:'#F1F5F9', color:C.navy, border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
+                <div style={{ borderTop:`1px solid ${C.border}`, padding:'14px 16px' }}>
+                  {/* Pipeline tracker */}
+                  {n.status!=='declined'&&(
+                    <div style={{ display:'flex', gap:0, marginBottom:16, background:'#F8FAFC', borderRadius:8, overflow:'hidden', border:`1px solid ${C.border}` }}>
+                      {[
+                        { label:'Nominated', done:true, detail:n.createdAt?.split('T')[0]||n.createdAt?.split(' ')[0] },
+                        { label:'Approved', done:['approved','sent','complete'].includes(n.status) },
+                        { label:'Sent to parent', done:['sent','complete'].includes(n.status) },
+                        { label:'Parent submitted sizes', done:!!n.parentIntake },
+                        { label:'Video recorded', done:n.parentIntake?.hasVideo },
+                      ].map((step,i)=>(
+                        <div key={step.label} style={{ flex:1, padding:'10px 8px', textAlign:'center', background:step.done?'#D1FAE5':'transparent', borderRight:i<4?`1px solid ${C.border}`:'none' }}>
+                          <div style={{ fontSize:14, marginBottom:2 }}>{step.done?'✅':'⬜'}</div>
+                          <div style={{ fontSize:10, fontWeight:600, color:step.done?'#065F46':C.light, lineHeight:1.3 }}>{step.label}</div>
+                          {step.detail&&<div style={{ fontSize:9, color:'#065F46', marginTop:2 }}>{step.detail}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Info grid */}
+                  <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12, marginBottom:12 }}>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Child</div>
+                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
+                      <div style={{ fontSize:12, color:C.text, marginTop:2 }}>{n.school} · {n.grade}</div>
+                      {n.studentId&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Student ID: {n.studentId}</div>}
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Parent / Guardian</div>
+                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.parentName}</div>
+                      {n.parentPhone&&<div style={{ fontSize:12, color:C.text, marginTop:2 }}>📱 {n.parentPhone}</div>}
+                      {n.parentEmail&&<div style={{ fontSize:12, color:C.text, marginTop:1 }}>✉️ {n.parentEmail}</div>}
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Nominated by</div>
+                      <div style={{ fontSize:13, color:C.navy }}>{n.nominatorName} · {n.nominatorRole}</div>
+                      <div style={{ fontSize:12, color:C.muted, marginTop:1 }}>{n.nominatorEmail}</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>What to do next</div>
+                      <div style={{ fontSize:13, color:C.navy, fontWeight:600 }}>
+                        {n.status==='pending'&&'Review and approve or decline this nomination.'}
+                        {n.status==='approved'&&'Click "Send to Parent" to email/text the sizing form.'}
+                        {n.status==='sent'&&!n.parentIntake&&'Waiting for parent to fill out sizes. You can copy the link and send it manually.'}
+                        {n.status==='sent'&&n.parentIntake&&!n.parentIntake.hasVideo&&'Sizes received! FA needs to record a video with the child at school.'}
+                        {n.status==='sent'&&n.parentIntake?.hasVideo&&'Sizes + video done. Mark complete when ready.'}
+                        {n.status==='complete'&&'This child is ready for volunteer shopping day! 🎉'}
+                        {n.status==='declined'&&'This nomination was declined. Click "Undo Decline" to reopen.'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reason */}
+                  {n.reason&&<div style={{ padding:'8px 12px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5, marginBottom:12 }}><strong>Reason for nomination:</strong> {n.reason}</div>}
+
+                  {/* Parent intake details */}
+                  {n.parentIntake ? (
+                    <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:8, padding:'12px 16px', marginBottom:12 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:'#065F46', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Parent submitted sizes</div>
+                      <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr 1fr':'repeat(5,1fr)', gap:8 }}>
+                        {[
+                          {icon:'👕',label:'Shirt',val:n.parentIntake.shirtSize},
+                          {icon:'👖',label:'Pants',val:n.parentIntake.pantSize},
+                          {icon:'👟',label:'Shoes',val:n.parentIntake.shoeSize},
+                          {icon:'❤️',label:'Loves',val:n.parentIntake.favoriteColors},
+                          {icon:'✗',label:'Avoid',val:n.parentIntake.avoidColors},
+                        ].filter(s=>s.val).map(s=>(
+                          <div key={s.label} style={{ textAlign:'center', background:'#fff', borderRadius:6, padding:'6px 8px' }}>
+                            <div style={{ fontSize:16 }}>{s.icon}</div>
+                            <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.val}</div>
+                            <div style={{ fontSize:10, color:C.light }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {(n.parentIntake.allergies||n.parentIntake.preferences)&&(
+                        <div style={{ marginTop:8, fontSize:12, color:'#166534', lineHeight:1.5 }}>
+                          {n.parentIntake.allergies&&<div><strong>Allergies:</strong> {n.parentIntake.allergies}</div>}
+                          {n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}
+                        </div>
+                      )}
+                      <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#92400E' }}>
+                        🎬 Video: {n.parentIntake.hasVideo?'Recorded ✓':'Not yet recorded'}
+                      </div>
+                    </div>
+                  ) : n.status!=='pending' && n.status!=='declined' && (
+                    <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:8, padding:'10px 14px', fontSize:12, color:'#92400E', marginBottom:12 }}>
+                      ⏳ Waiting for parent to submit sizes.
+                      {n.parentToken && <span> <button onClick={()=>copyLink(n.parentToken)} style={{ fontSize:11, color:'#92400E', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', fontWeight:600 }}>Copy intake link</button></span>}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                    {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ padding:'8px 20px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'8px 16px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>✗ Decline</button></>}
+                    {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'8px 20px', background:C.blue, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
+                    {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'8px 20px', background:C.amber, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>↩ Undo Decline — Move to Pending</button>}
+                    {n.status==='sent'&&n.parentIntake&&n.parentIntake.hasVideo&&<button onClick={()=>updateStatus(n.id,'complete')} style={{ padding:'8px 20px', background:'#7C3AED', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Mark Complete</button>}
+                    {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'8px 16px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>📋 Copy Parent Link</button>}
                   </div>
                 </div>
               )}
