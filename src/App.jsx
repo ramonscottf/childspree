@@ -1133,9 +1133,9 @@ function NominationsTab({ isMobile }) {
                         { label:'Approved', done: ['approved','sent','complete'].includes(n.status) },
                         { label:'Sent to parent', done: ['sent','complete'].includes(n.status) },
                         { label:'Sizes received', done: !!n.parentIntake },
-                        { label:'Video', done: n.parentIntake?.hasVideo },
+                        { label:'Video', done: n.parentIntake?.hasVideo, urgent: !!n.parentIntake && !n.parentIntake?.hasVideo },
                       ].map(p=>(
-                        <span key={p.label} style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:p.done?'#D1FAE5':'#F1F5F9', color:p.done?'#065F46':'#94A3B8' }}>{p.done?'✓':''} {p.label}</span>
+                        <span key={p.label} style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:p.done?'#D1FAE5':p.urgent?'#FEE2E2':'#F1F5F9', color:p.done?'#065F46':p.urgent?'#DC2626':'#94A3B8' }}>{p.done?'✓':p.urgent?'⚠️':''} {p.label}</span>
                       ))}
                     </div>
                   )}
@@ -1198,9 +1198,10 @@ function NominationsTab({ isMobile }) {
                         {n.status==='pending'&&'Review and approve or decline this nomination.'}
                         {n.status==='approved'&&'Click "Send to Parent" to email/text the sizing form.'}
                         {n.status==='sent'&&!n.parentIntake&&'Waiting for parent to fill out sizes. You can copy the link and send it manually.'}
-                        {n.status==='sent'&&n.parentIntake&&!n.parentIntake.hasVideo&&'Sizes received! FA needs to record a video with the child at school.'}
+                        {n.status==='sent'&&n.parentIntake&&!n.parentIntake.hasVideo&&<span style={{color:'#92400E'}}>⚠️ Sizes received! {n.nominatorName} needs to record a video with {n.childFirst} at school. This must happen before shopping day.</span>}
                         {n.status==='sent'&&n.parentIntake?.hasVideo&&'Sizes + video done. Mark complete when ready.'}
-                        {n.status==='complete'&&'This child is ready for volunteer shopping day! 🎉'}
+                        {n.status==='complete'&&n.parentIntake?.hasVideo&&'This child is ready for volunteer shopping day! 🎉'}
+                        {n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)&&<span style={{color:'#DC2626'}}>⚠️ Marked complete but VIDEO IS MISSING. {n.nominatorName} must record a video with {n.childFirst} at school before shopping day.</span>}
                         {n.status==='declined'&&'This nomination was declined. Click "Undo Decline" to reopen.'}
                       </div>
                     </div>
@@ -1234,8 +1235,11 @@ function NominationsTab({ isMobile }) {
                           {n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}
                         </div>
                       )}
-                      <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#92400E' }}>
-                        🎬 Video: {n.parentIntake.hasVideo?'Recorded ✓':'Not yet recorded'}
+                      <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#DC2626' }}>
+                        {n.parentIntake.hasVideo
+                          ? '🎬 Video: Recorded ✓'
+                          : <span>🎬 VIDEO NEEDED — {n.nominatorName} must record a video with {n.childFirst} at school before shopping day</span>
+                        }
                       </div>
                     </div>
                   ) : n.status!=='pending' && n.status!=='declined' && (
