@@ -98,5 +98,12 @@ export async function onRequestPatch(context) {
     }
   }
 
+  // Update grade on the nomination itself (not intake)
+  if (body.grade !== undefined && body.grade !== '') {
+    await env.DB.prepare(
+      'UPDATE nominations SET grade = ?, updated_at = datetime("now") WHERE id = ?'
+    ).bind(body.grade, params.id).run();
+  }
+
   return cors(Response.json({ updated: true }));
 }

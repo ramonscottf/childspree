@@ -79,7 +79,7 @@ const LANG = {
     studentId:'Student ID *', studentIdPlaceholder:'e.g. 123456',
     school:'School *', selectSchool:'Select school...',
     grade:'Grade *', gradeLabel:'Grade',
-    gradeNote:'Elementary students only (Pre-K – 6th grade)',
+    gradeNote:'Elementary students only (K – 6th grade)',
     yourInfoTitle:'Your Information',
     yourName:'Your Name *', fullName:'Full name',
     role:'Role *', email:'Email *',
@@ -172,7 +172,7 @@ const LANG = {
     studentId:'ID de Estudiante *', studentIdPlaceholder:'ej. 123456',
     school:'Escuela *', selectSchool:'Seleccionar escuela...',
     grade:'Grado *', gradeLabel:'Grado',
-    gradeNote:'Solo estudiantes de primaria (Pre-K – 6to grado)',
+    gradeNote:'Solo estudiantes de primaria (K – 6to grado)',
     yourInfoTitle:'Su Información',
     yourName:'Su Nombre *', fullName:'Nombre completo',
     role:'Cargo *', email:'Correo electrónico *',
@@ -945,7 +945,7 @@ function ParentIntake({ token }) {
   const [child, setChild] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState({ gender:'', department:'', shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'', parentConsent:false });
+  const [form, setForm] = useState({ gender:'', childAge:'', department:'', shirtSize:'', pantSize:'', shoeSize:'', favoriteColors:'', avoidColors:'', allergies:'', preferences:'', parentConsent:false });
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form');
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
@@ -994,7 +994,14 @@ function ParentIntake({ token }) {
                 {['Girl','Boy','Non-binary / Other'].map(g=><option key={g} value={g}>{g}</option>)}
               </select>
             </Field>
-            <Field label="Shopping section">
+            <Field label="Child's age">
+              <select style={{...inp(),appearance:'auto'}} value={form.childAge||''} onChange={e=>upd('childAge',e.target.value)}>
+                <option value="">Select age...</option>
+                {[4,5,6,7,8,9,10,11,12,13].map(a=><option key={a} value={a}>{a} years old</option>)}
+              </select>
+            </Field>
+          </Row>
+          <Field label="Shopping section">
               <div style={{display:'flex',gap:10}}>
                 {["Boys","Girls"].map(d=>(
                   <label key={d} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',flex:1,padding:'12px 14px',background:form.department===d?C.navy:C.bg,border:`1.5px solid ${form.department===d?C.navy:C.border}`,borderRadius:8,transition:'all 0.15s',justifyContent:'center'}}>
@@ -1625,6 +1632,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
     shirtSize: intake.shirtSize||'', pantSize: intake.pantSize||'', shoeSize: intake.shoeSize||'',
     favoriteColors: intake.favoriteColors||'', avoidColors: intake.avoidColors||'',
     allergies: intake.allergies||'', preferences: intake.preferences||'',
+    grade: n.grade||'',
   });
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
 
@@ -1698,7 +1706,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                   ) : (
                     <div style={{ display:'flex', gap:6 }}>
                       <button onClick={save} disabled={saving} style={{ padding:'4px 12px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>{saving?'Saving...':'Save'}</button>
-                      <button onClick={()=>{setEditing(false);setForm({shirtSize:intake.shirtSize||'',pantSize:intake.pantSize||'',shoeSize:intake.shoeSize||'',favoriteColors:intake.favoriteColors||'',avoidColors:intake.avoidColors||'',allergies:intake.allergies||'',preferences:intake.preferences||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
+                      <button onClick={()=>{setEditing(false);setForm({shirtSize:intake.shirtSize||'',pantSize:intake.pantSize||'',shoeSize:intake.shoeSize||'',favoriteColors:intake.favoriteColors||'',avoidColors:intake.avoidColors||'',allergies:intake.allergies||'',preferences:intake.preferences||'',grade:n.grade||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
                     </div>
                   )}
                 </div>
@@ -1706,6 +1714,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
 
                 {editing ? (
                   <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr', gap:10 }}>
+                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Grade</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">—</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></div>
                     <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shirt size</label><input style={{...inp(),marginBottom:0}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}/></div>
                     <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Pant size</label><input style={{...inp(),marginBottom:0}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}/></div>
                     <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoe size</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
@@ -1873,12 +1882,15 @@ function FAPortal() {
             {/* Fallback: email login */}
             <label style={lbl}>School email address</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
-              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:16, fontSize:15 }}/>
+              placeholder="you@dsdmail.net" style={{...inp(), marginBottom:10, fontSize:15 }}/>
+            <label style={lbl}>Cell phone <span style={{fontWeight:400,color:C.light}}>(optional — for text updates)</span></label>
+            <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
+              placeholder="(801) 555-0000" style={{...inp(), marginBottom:16, fontSize:15 }}/>
             <button onClick={login} disabled={loggingIn||!email.trim()} style={{ width:'100%', padding:12, background:loggingIn||!email.trim()?C.light:C.pink, color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
               {loggingIn ? 'Looking you up...' : 'Continue with email'}
             </button>
             <p style={{ textAlign:'center', fontSize:11, color:C.light, marginTop:10, lineHeight:1.5 }}>
-              We'll email you updates. Add your cell to also get text alerts when parents submit or videos are needed.
+              We'll email you updates. Add your cell to get text alerts when parents submit sizes or it's time to record a video.
             </p>
           </>
         )}
