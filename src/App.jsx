@@ -660,6 +660,9 @@ function VolunteerForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
+  const [storeCounts, setStoreCounts] = useState(null);
+  const [waitlisted, setWaitlisted] = useState(false);
+  const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":200, "Kohl's Centerville (510 N 400 W)":175, "Kohl's Clinton (1526 N 2000 W)":200 };
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
   useEffect(() => {
     const ms = getMsSession();
@@ -674,20 +677,27 @@ function VolunteerForm() {
     window.addEventListener('cs-ms-login', handler);
     return () => window.removeEventListener('cs-ms-login', handler);
   }, []);
+  useEffect(() => { (async()=>{ try { const d=await api('/volunteers/store-counts'); setStoreCounts(d); } catch(e){} })(); }, []);
+  const storeIsFull = (loc) => storeCounts && STORE_CAPS[loc] && (storeCounts[loc]||0) >= STORE_CAPS[loc];
+  const allStoresFull = storeCounts && Object.keys(STORE_CAPS).every(k => (storeCounts[k]||0) >= STORE_CAPS[k]);
   const submit = async() => {
     setError(null);
     if (!form.firstName||!form.lastName) { setError('Please enter your name.'); return; }
     if (!form.email&&!form.phone) { setError('Please provide email or phone so we can reach you.'); return; }
     setSubmitting(true);
-    try { await api('/volunteers',{method:'POST',body:JSON.stringify(form)}); setSubmitted(true); } catch(err){setError(err.message);}
+    try {
+      const res = await api('/volunteers',{method:'POST',body:JSON.stringify(form)});
+      if (res.waitlisted) { setWaitlisted(true); }
+      setSubmitted(true);
+    } catch(err){setError(err.message);}
     setSubmitting(false);
   };
   if (submitted) return (
     <div style={{ textAlign:'center', padding:isMobile?'60px 20px':'80px 40px' }}>
-      <div style={{ fontSize:56, marginBottom:16 }}>🛒</div>
-      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>You're Registered!</h2>
-      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:420, margin:'0 auto 12px' }}>Thank you for signing up to volunteer at Child Spree 2026. Check your email for a confirmation. We'll be in touch as the event approaches!</p>
-      <p style={{ color:C.muted, fontSize:13, marginBottom:28 }}>📅 First Friday of August · Three Kohl's locations · Davis County · Before sunrise</p>
+      <div style={{ fontSize:56, marginBottom:16 }}>{waitlisted?'📋':'🛒'}</div>
+      <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?24:28, color:C.navy, marginBottom:8 }}>{waitlisted?'You\'re on the Backup List!':'You\'re Registered!'}</h2>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, maxWidth:420, margin:'0 auto 12px' }}>{waitlisted?'All store locations are currently full, but we\'ve added you to our backup shopper list. We\'ll contact you if a spot opens up — thank you for your willingness to help!':'Thank you for signing up to volunteer at Child Spree 2026. Check your email for a confirmation. We\'ll be in touch as the event approaches!'}</p>
+      {!waitlisted && <p style={{ color:C.muted, fontSize:13, marginBottom:28 }}>📅 First Friday of August · Three Kohl's locations · Davis County</p>}
       <a href="https://daviskids.org/events-child-spree" target="_blank" rel="noreferrer" style={{ display:'inline-block', padding:'12px 28px', background:C.navy, color:'#fff', borderRadius:8, fontSize:14, fontWeight:700, textDecoration:'none' }}>Learn More About the Event →</a>
     </div>
   );
@@ -722,16 +732,25 @@ function VolunteerForm() {
           <Field label="Arrival time slot *">
             <select style={{...inp(),appearance:'auto'}} value={form.arrivalTime} onChange={e=>upd('arrivalTime',e.target.value)}>
               <option value="">Select a time...</option>
-              <option value="6:30 AM">6:30 AM — Early Shift (Setup)</option>
-              <option value="7:00 AM">7:00 AM — Main Shift</option>
+              <option value="6:00 AM — Setup">6:00 AM — Setup & Organizing</option>
+              <option value="6:30 AM — Early Shopping">6:30 AM — Early Shopping</option>
+              <option value="7:00 AM — Main Shopping">7:00 AM — Main Shopping</option>
+              <option value="7:30 AM — Late Shopping">7:30 AM — Late Shopping</option>
             </select>
           </Field>
           <Field label="Any experience with shopping for or working with kids?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — helps us match you"/></Field>
           <Field label="Preferred Kohl's location *">
             <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
               <option value="">Select a store...</option>
-              {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
+              {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=>{
+                const cnt = storeCounts?.[s]||0;
+                const cap = STORE_CAPS[s];
+                const full = cnt >= cap;
+                return <option key={s} value={s} disabled={full}>{s}{storeCounts?` — ${cnt}/${cap}${full?' FULL':''}`:''}</option>;
+              })}
             </select>
+            {form.storeLocation && storeIsFull(form.storeLocation) && <div style={{ fontSize:12, color:'#DC2626', marginTop:4 }}>This store is full. Please select a different location.</div>}
+            {allStoresFull && <div style={{ background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:8, padding:'8px 12px', marginTop:6, fontSize:12, color:'#92400E' }}>All stores are at capacity. You can still sign up — we'll add you to our backup list and contact you if a spot opens.</div>}
           </Field>
           <Field label="How did you hear about Child Spree?"><select style={{...inp(),appearance:'auto'}} value={form.hearAbout} onChange={e=>upd('hearAbout',e.target.value)}><option value="">Select...</option>{['School or teacher','DEF newsletter','Social media','Friend or coworker','My employer','Church','Other'].map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
           <label style={{ display:'flex', alignItems:'flex-start', gap:8, cursor:'pointer', marginTop:8 }}>
@@ -1060,7 +1079,7 @@ function AdminDashboard() {
       </div>
     </div>
   );
-  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'advocates', icon:'🏫', label:'Advocates' }];
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
       <div style={{ display:'flex', gap:8, marginBottom:20 }}>
@@ -1072,7 +1091,6 @@ function AdminDashboard() {
       </div>
       {activeTab === 'nominations' && <NominationsTab isMobile={isMobile}/>}
       {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
-      {activeTab === 'advocates' && <AdvocatesTab isMobile={isMobile}/>}
     </div>
   );
 }
@@ -1309,6 +1327,8 @@ function VolunteersTab({ isMobile }) {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState(null);
 
+  const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:200,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:175,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:200,label:'Clinton',color:'#10B981'} };
+
   const load = useCallback(async () => {
     try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`,{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setVolunteers(data.volunteers); } catch(e){console.error(e);}
     setLoading(false);
@@ -1329,23 +1349,75 @@ function VolunteersTab({ isMobile }) {
     setSending(false);
   };
 
-  const counts = { all:volunteers.length, registered:0, confirmed:0, assigned:0, attended:0 };
+  const counts = { all:volunteers.length, registered:0, confirmed:0, assigned:0, waitlisted:0, attended:0 };
   volunteers.forEach(v => { counts[v.status] = (counts[v.status]||0)+1; });
-  const statColors = { registered:'#7C3AED', confirmed:C.green, assigned:C.blue, attended:C.amber };
+  const statColors = { registered:'#7C3AED', confirmed:C.green, assigned:C.blue, waitlisted:'#F59E0B', attended:C.amber };
+
+  // Store counts from volunteer data
+  const storeCnts = {};
+  const storeByTime = {};
+  volunteers.filter(v=>v.status!=='waitlisted').forEach(v => {
+    if (v.storeLocation) { storeCnts[v.storeLocation] = (storeCnts[v.storeLocation]||0)+1; }
+    if (v.arrivalTime) { storeByTime[v.arrivalTime] = (storeByTime[v.arrivalTime]||0)+1; }
+  });
+
+  const StoreBar = ({ storeKey }) => {
+    const info = STORE_CAPS[storeKey];
+    const cnt = storeCnts[storeKey]||0;
+    const pct = Math.min(100, Math.round(cnt/info.cap*100));
+    const full = cnt >= info.cap;
+    return (
+      <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:isMobile?'12px 14px':'16px 20px', flex:1, minWidth:isMobile?'100%':0 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
+          <div style={{ fontWeight:700, color:C.navy, fontSize:14 }}>📍 {info.label}</div>
+          <div style={{ fontSize:20, fontWeight:800, color:full?'#DC2626':info.color }}>{cnt}<span style={{ fontSize:13, fontWeight:400, color:C.muted }}>/{info.cap}</span></div>
+        </div>
+        <div style={{ background:'#F1F5F9', borderRadius:20, height:14, overflow:'hidden', marginBottom:6 }}>
+          <div style={{ width:`${pct}%`, height:'100%', borderRadius:20, background:full?'#DC2626':pct>80?'#F59E0B':info.color, transition:'width 0.5s ease' }}/>
+        </div>
+        <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:C.muted }}>
+          <span>{pct}% full</span>
+          <span>{full?'🔴 FULL':`${info.cap-cnt} spots left`}</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(4,1fr)', gap:isMobile?8:12, marginBottom:20 }}>
-        {[{label:'Total',v:counts.all,c:C.navy},{label:'Registered',v:counts.registered,c:'#7C3AED'},{label:'Confirmed',v:counts.confirmed,c:C.green},{label:'Assigned',v:counts.assigned,c:C.blue}].map(s=>(
+      {/* ── Store Capacity Dashboard ── */}
+      <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:20, flexDirection:isMobile?'column':'row' }}>
+        {Object.keys(STORE_CAPS).map(k => <StoreBar key={k} storeKey={k}/>)}
+      </div>
+
+      {/* ── Summary KPIs ── */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(5,1fr)', gap:isMobile?8:12, marginBottom:20 }}>
+        {[{label:'Total',v:counts.all,c:C.navy},{label:'Registered',v:counts.registered,c:'#7C3AED'},{label:'Confirmed',v:counts.confirmed,c:C.green},{label:'Assigned',v:counts.assigned,c:C.blue},{label:'Waitlisted',v:counts.waitlisted,c:'#F59E0B'}].map(s=>(
           <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px 12px', textAlign:'center', border:`1px solid ${C.border}` }}>
             <div style={{ fontSize:isMobile?20:28, fontWeight:800, color:s.c }}>{s.v}</div>
             <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
           </div>
         ))}
       </div>
+
+      {/* ── Arrival Time Breakdown ── */}
+      {Object.keys(storeByTime).length > 0 && (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:'14px 20px', marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:10 }}>By Arrival Time</div>
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
+              const cnt = storeByTime[t]||0;
+              if(!cnt) return null;
+              return <div key={t} style={{ background:'#F1F5F9', borderRadius:8, padding:'6px 12px', fontSize:12 }}><span style={{ fontWeight:700, color:C.navy }}>{cnt}</span> <span style={{ color:C.muted }}>{t}</span></div>;
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Filters + Actions ── */}
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, alignItems:'center' }}>
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', flex:1 }}>
-          {['all','registered','confirmed','assigned'].map(k=>(
+          {['all','registered','confirmed','assigned','waitlisted'].map(k=>(
             <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'6px 10px':'6px 14px', borderRadius:20, border:'none', fontSize:isMobile?11:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
               {k.charAt(0).toUpperCase()+k.slice(1)} {k!=='all'?`(${counts[k]})`:'' }
             </button>
@@ -1357,8 +1429,9 @@ function VolunteersTab({ isMobile }) {
             'First Name': v.firstName, 'Last Name': v.lastName,
             'Email': v.email||'', 'Phone': v.phone||'',
             'Organization': v.organization||'', 'Group Type': v.groupType||'Individual',
+            'Group Size': v.groupSize||'',
             'Shirt Size': v.shirtSize||'', 'Arrival Time': v.arrivalTime||'',
-            'Store Location': v.storeLocation||'', 'Early Bird': v.earlyArrival?'Yes':'No',
+            'Store Location': v.storeLocation||'',
             'SMS Opted In': v.smsOptIn?'Yes':'No',
             'Experience': v.experience||'', 'Heard About Us': v.hearAbout||'',
             'Status': v.status, 'Signed Up': v.createdAt?.split('T')[0]||v.createdAt?.split(' ')[0]||'',
@@ -1433,7 +1506,7 @@ function VolunteersTab({ isMobile }) {
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                     <span style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{v.firstName} {v.lastName}</span>
                     <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:(statColors[v.status]||C.muted)+'22', color:statColors[v.status]||C.muted }}>{v.status?.charAt(0).toUpperCase()+v.status?.slice(1)}</span>
-                    {v.groupType && v.groupType !== 'Individual' && <span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👥 {v.groupType}</span>}
+                    {v.groupType && v.groupType !== 'Individual' && <span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👥 {v.groupType}{v.groupSize?` (${v.groupSize})`:''}</span>}
                   </div>
                   <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
                     {v.organization||'Individual'}{v.shirtSize?` · 👕 ${v.shirtSize}`:''}{v.arrivalTime?` · ${v.arrivalTime}`:''}{v.earlyArrival?' · ☀️ Early bird':''}
@@ -1441,7 +1514,7 @@ function VolunteersTab({ isMobile }) {
                 </div>
                 <div style={{ display:'flex', gap:6, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
                   <select value={v.status} onChange={e=>updateStatus(v.id,e.target.value)} style={{ padding:'5px 8px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:11, cursor:'pointer', background:'#fff' }}>
-                    {['registered','confirmed','assigned','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                    {['registered','confirmed','assigned','waitlisted','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
                   </select>
                 </div>
                 <span style={{ fontSize:16, color:C.light, transition:'transform 0.2s', transform:expandedId===v.id?'rotate(180deg)':'rotate(0)' }}>▼</span>

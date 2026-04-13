@@ -15,9 +15,26 @@ function cors(r) {
 }
 export async function onRequestOptions() { return cors(new Response(null, { status: 204 })); }
 
+const STORE_CAPS = {
+  "Kohl's Layton (881 W Antelope Dr)": 200,
+  "Kohl's Centerville (510 N 400 W)": 175,
+  "Kohl's Clinton (1526 N 2000 W)": 200,
+};
+
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
+
+  // Public endpoint: store counts for capacity display
+  if (url.pathname.endsWith('/store-counts')) {
+    const { results } = await env.DB.prepare(
+      "SELECT store_location, COUNT(*) as n FROM volunteers WHERE status != 'waitlisted' GROUP BY store_location"
+    ).all();
+    const counts = {};
+    results.forEach(r => { if (r.store_location) counts[r.store_location] = r.n; });
+    return cors(Response.json(counts));
+  }
+
   const status = url.searchParams.get('status');
   const search = url.searchParams.get('search');
 
@@ -32,7 +49,7 @@ export async function onRequestGet(context) {
     id: r.id, status: r.status,
     firstName: r.first_name, lastName: r.last_name,
     email: r.email, phone: r.phone,
-    organization: r.organization, groupType: r.group_type,
+    organization: r.organization, groupType: r.group_type, groupSize: r.group_size,
     shirtSize: r.shirt_size, arrivalTime: r.arrival_time, earlyArrival: !!r.early_arrival, storeLocation: r.store_location,
     experience: r.experience, hearAbout: r.hear_about,
     smsOptIn: !!r.sms_opt_in, notes: r.notes,
@@ -47,22 +64,46 @@ export async function onRequestPost(context) {
   if (!body.firstName || !body.lastName) return cors(Response.json({ error: 'Name required' }, { status: 400 }));
   if (!body.email && !body.phone) return cors(Response.json({ error: 'Email or phone required' }, { status: 400 }));
 
+  // Check store capacity
+  let waitlisted = false;
+  const store = body.storeLocation || null;
+  if (store && STORE_CAPS[store]) {
+    const row = await env.DB.prepare(
+      "SELECT COUNT(*) as n FROM volunteers WHERE store_location = ? AND status != 'waitlisted'"
+    ).bind(store).first();
+    const cnt = row?.n || 0;
+    if (cnt >= STORE_CAPS[store]) { waitlisted = true; }
+  }
+
+  // If no store selected but all are full, also waitlist
+  if (!store) {
+    const { results } = await env.DB.prepare(
+      "SELECT store_location, COUNT(*) as n FROM volunteers WHERE status != 'waitlisted' GROUP BY store_location"
+    ).all();
+    const cnts = {};
+    results.forEach(r => { if (r.store_location) cnts[r.store_location] = r.n; });
+    const allFull = Object.keys(STORE_CAPS).every(k => (cnts[k]||0) >= STORE_CAPS[k]);
+    if (allFull) { waitlisted = true; }
+  }
+
   const id = generateId();
+  const status = waitlisted ? 'waitlisted' : 'registered';
+
   await env.DB.prepare(`
-    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, group_size, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(id, body.firstName, body.lastName, body.email||null, body.phone||null,
-    body.organization||null, body.groupType||'Individual', body.shirtSize||null, body.storeLocation||null, body.arrivalTime||null,
-    body.arrivalTime === '6:30 AM' ? 1 : 0, body.experience||null, body.hearAbout||null,
-    body.smsOptIn!==false?1:0
+    body.organization||null, body.groupType||'Individual', body.groupSize||null, body.shirtSize||null, store, body.arrivalTime||null,
+    (body.arrivalTime||'').includes('Setup') ? 1 : 0, body.experience||null, body.hearAbout||null,
+    body.smsOptIn!==false?1:0, status
   ).run();
 
   context.waitUntil(notifyVolunteerRegistered(env, {
     firstName: body.firstName, lastName: body.lastName,
     email: body.email, phone: body.phone,
     organization: body.organization, groupType: body.groupType,
-    shirtSize: body.shirtSize, earlyArrival: body.earlyArrival,
+    shirtSize: body.shirtSize, waitlisted,
   }));
 
-  return cors(Response.json({ id, status: 'registered' }, { status: 201 }));
+  return cors(Response.json({ id, status, waitlisted }, { status: 201 }));
 }
