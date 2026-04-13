@@ -44,6 +44,9 @@ export async function onRequestPost(context) {
   if (!body.shirtSize || !body.pantSize || !body.shoeSize) {
     return cors(Response.json({ error: 'Shirt, pant, and shoe sizes required' }, { status: 400 }));
   }
+  if (!body.parentConsent) {
+    return cors(Response.json({ error: 'Parent consent is required' }, { status: 400 }));
+  }
 
   const intakeId = generateId();
   await env.DB.prepare(`
