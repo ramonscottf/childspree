@@ -116,7 +116,7 @@ const LANG = {
     sensoryLabel:'Allergies or sensory needs?',
     sensoryPlaceholder:'e.g., No wool, needs soft fabrics',
     notesLabel:'Anything else?',
-    consentLabel:'I give permission for my child to participate in Child Spree 2026, and agree that the information I provide will be used by volunteers to shop for my child.',
+    consentLabel:'I give permission for my child to participate in Child Spree 2026, including being recorded on video at school by their family advocate. I agree that the information I provide will be used by volunteers to shop for my child.',
     consentRequired:'Please check the consent box to continue.',
     submitIntake:'Submit →',
     submitIntakeSaving:'Saving...',
@@ -209,7 +209,7 @@ const LANG = {
     sensoryLabel:'¿Alergias o necesidades sensoriales?',
     sensoryPlaceholder:'Ej: Sin lana, necesita telas suaves',
     notesLabel:'¿Algo más?',
-    consentLabel:'Doy permiso para que mi hijo/a participe en Child Spree 2026, y acepto que la información que proporcione sea utilizada por los voluntarios para hacer las compras para mi hijo/a.',
+    consentLabel:'Doy permiso para que mi hijo/a participe en Child Spree 2026, incluyendo ser grabado/a en video en la escuela por su consejero/a. Acepto que la información que proporcione sea utilizada por los voluntarios para hacer las compras para mi hijo/a.',
     consentRequired:'Por favor marque la casilla de consentimiento para continuar.',
     submitIntake:'Enviar →',
     submitIntakeSaving:'Guardando...',
@@ -1125,6 +1125,7 @@ function NominationsTab({ isMobile }) {
             'Favorite Colors': n.parentIntake?.favoriteColors||'', 'Colors to Avoid': n.parentIntake?.avoidColors||'',
             'Allergies': n.parentIntake?.allergies||'', 'Preferences': n.parentIntake?.preferences||'',
             'Video Recorded': n.parentIntake?.hasVideo?'Yes':'No',
+            'Parent Consent': n.parentIntake?.consent?'Yes':'No',
             'Family Group': n.familyGroup||'',
             'Nominated Date': n.createdAt?.split('T')[0]||n.createdAt?.split(' ')[0]||'',
           }));
@@ -1159,6 +1160,7 @@ function NominationsTab({ isMobile }) {
                         { label:'Approved', done: ['approved','sent','complete'].includes(n.status) },
                         { label:'Sent to parent', done: ['sent','complete'].includes(n.status) },
                         { label:'Sizes received', done: !!n.parentIntake },
+                        { label:'Parent consent', done: !!n.parentIntake?.consent },
                         { label:'Video', done: n.parentIntake?.hasVideo, urgent: !!n.parentIntake && !n.parentIntake?.hasVideo },
                       ].map(p=>(
                         <span key={p.label} style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:p.done?'#D1FAE5':p.urgent?'#FEE2E2':'#F1F5F9', color:p.done?'#065F46':p.urgent?'#DC2626':'#94A3B8' }}>{p.done?'✓':p.urgent?'⚠️':''} {p.label}</span>
@@ -1187,9 +1189,10 @@ function NominationsTab({ isMobile }) {
                         { label:'Approved', done:['approved','sent','complete'].includes(n.status) },
                         { label:'Sent to parent', done:['sent','complete'].includes(n.status) },
                         { label:'Parent submitted sizes', done:!!n.parentIntake },
+                        { label:'Parent consent', done:!!n.parentIntake?.consent },
                         { label:'Video recorded', done:n.parentIntake?.hasVideo },
-                      ].map((step,i)=>(
-                        <div key={step.label} style={{ flex:1, padding:'10px 8px', textAlign:'center', background:step.done?'#D1FAE5':'transparent', borderRight:i<4?`1px solid ${C.border}`:'none' }}>
+                      ].map((step,i,arr)=>(
+                        <div key={step.label} style={{ flex:1, padding:'10px 8px', textAlign:'center', background:step.done?'#D1FAE5':'transparent', borderRight:i<arr.length-1?`1px solid ${C.border}`:'none' }}>
                           <div style={{ fontSize:14, marginBottom:2 }}>{step.done?'✅':'⬜'}</div>
                           <div style={{ fontSize:10, fontWeight:600, color:step.done?'#065F46':C.light, lineHeight:1.3 }}>{step.label}</div>
                           {step.detail&&<div style={{ fontSize:9, color:'#065F46', marginTop:2 }}>{step.detail}</div>}
