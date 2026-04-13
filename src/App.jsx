@@ -656,7 +656,7 @@ function NominationForm() {
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -713,7 +713,8 @@ function VolunteerForm() {
           <Field label="Email *"><input style={inp()} type="email" value={form.email} onChange={e=>upd('email',e.target.value)} placeholder="you@example.com"/></Field>
           <Field label="Phone (for text updates)"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
           <Field label="Organization / School / Company"><input style={inp()} value={form.organization} onChange={e=>upd('organization',e.target.value)} placeholder="Optional"/></Field>
-          <Field label="Group type"><select style={{...inp(),appearance:'auto'}} value={form.groupType} onChange={e=>upd('groupType',e.target.value)}>{['Individual','Corporate Group','Church Group','School Group','Family','Other'].map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
+          <Field label="Group type"><select style={{...inp(),appearance:'auto'}} value={form.groupType} onChange={e=>{upd('groupType',e.target.value);if(e.target.value==='Individual')upd('groupSize','');}}>{['Individual','Corporate Group','Church Group','School Group','Family','Other'].map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
+          {form.groupType!=='Individual'&&<Field label="Group size *"><select style={{...inp(),appearance:'auto'}} value={form.groupSize} onChange={e=>upd('groupSize',e.target.value)}><option value="">How many people?</option>{['2','3','4','5','6','7','8','9','10','11-15','16-20','20+'].map(n=><option key={n} value={n}>{n}</option>)}</select></Field>}
         </div>
         <div>
           <p style={secHead(isMobile)}>Event Details</p>
@@ -721,16 +722,15 @@ function VolunteerForm() {
           <Field label="Arrival time slot *">
             <select style={{...inp(),appearance:'auto'}} value={form.arrivalTime} onChange={e=>upd('arrivalTime',e.target.value)}>
               <option value="">Select a time...</option>
-              <option value="6:30 AM">6:30 AM — Early setup crew</option>
-              <option value="7:00 AM">7:00 AM — Main shopping shift</option>
-              <option value="7:30 AM">7:30 AM — Second wave</option>
+              <option value="6:30 AM">6:30 AM — Early Shift (Setup)</option>
+              <option value="7:00 AM">7:00 AM — Main Shift</option>
             </select>
           </Field>
           <Field label="Any experience with shopping for or working with kids?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — helps us match you"/></Field>
           <Field label="Preferred Kohl's location *">
             <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
               <option value="">Select a store...</option>
-              {["Kohl's · Layton, Centerville, Clinton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
+              {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
           <Field label="How did you hear about Child Spree?"><select style={{...inp(),appearance:'auto'}} value={form.hearAbout} onChange={e=>upd('hearAbout',e.target.value)}><option value="">Select...</option>{['School or teacher','DEF newsletter','Social media','Friend or coworker','My employer','Church','Other'].map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
