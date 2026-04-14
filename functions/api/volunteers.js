@@ -23,9 +23,9 @@ const STORE_CAPS = {
 };
 
 const OPS_CAPS = {
-  "Kohl's Layton (881 W Antelope Dr)": 9,
+  "Kohl's Layton (881 W Antelope Dr)": 8,
   "Kohl's Centerville (510 N 400 W)": 8,
-  "Kohl's Clinton (1526 N 2000 W)": 8,
+  "Kohl's Clinton (1526 N 2000 W)": 10,
 };
 
 export async function onRequestGet(context) {

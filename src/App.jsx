@@ -664,7 +664,7 @@ function VolunteerForm() {
   const [storeCounts, setStoreCounts] = useState(null);
   const [waitlisted, setWaitlisted] = useState(false);
   const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":200, "Kohl's Centerville (510 N 400 W)":175, "Kohl's Clinton (1526 N 2000 W)":200 };
-  const OPS_CAPS = { "Kohl's Layton (881 W Antelope Dr)":9, "Kohl's Centerville (510 N 400 W)":8, "Kohl's Clinton (1526 N 2000 W)":8 };
+  const OPS_CAPS = { "Kohl's Layton (881 W Antelope Dr)":8, "Kohl's Centerville (510 N 400 W)":8, "Kohl's Clinton (1526 N 2000 W)":10 };
   const activeCaps = form.volunteerType === 'ops_crew' ? OPS_CAPS : STORE_CAPS;
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
   useEffect(() => {
@@ -1473,7 +1473,7 @@ function VolunteersTab({ isMobile }) {
   const [sendResult, setSendResult] = useState(null);
 
   const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:200,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:175,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:200,label:'Clinton',color:'#10B981'} };
-  const OPS_STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:9,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:8,label:'Clinton',color:'#10B981'} };
+  const OPS_STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:8,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:10,label:'Clinton',color:'#10B981'} };
 
   const load = useCallback(async () => {
     try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`); setVolunteers(data.volunteers); } catch(e){console.error(e);}
