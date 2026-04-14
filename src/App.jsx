@@ -657,7 +657,7 @@ function NominationForm() {
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true, volunteerType:'shopper' });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true, volunteerType:'shopper', shoppingPreference:'' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -692,9 +692,17 @@ function VolunteerForm() {
     setError(null);
     if (!form.firstName||!form.lastName) { setError('Please enter your name.'); return; }
     if (!form.email&&!form.phone) { setError('Please provide email or phone so we can reach you.'); return; }
+    if (form.volunteerType === 'shopper' && !form.arrivalTime) { setError('Please select an arrival time.'); return; }
     setSubmitting(true);
     try {
-      const res = await api('/volunteers',{method:'POST',body:JSON.stringify({...form, volunteerType: form.volunteerType})});
+      const payload = { ...form, volunteerType: form.volunteerType };
+      // Ops crew always gets the full event time
+      if (form.volunteerType === 'ops_crew') { payload.arrivalTime = '6:00 AM — 9:00 AM (Full Event)'; }
+      // Store shopping preference in experience/notes field for now
+      if (form.volunteerType === 'shopper' && form.shoppingPreference) {
+        payload.experience = (form.experience ? form.experience + ' | ' : '') + 'Shopping pref: ' + form.shoppingPreference;
+      }
+      const res = await api('/volunteers',{method:'POST',body:JSON.stringify(payload)});
       if (res.waitlisted) { setWaitlisted(true); }
       setSubmitted(true);
     } catch(err){setError(err.message);}
@@ -762,16 +770,37 @@ function VolunteerForm() {
         <div>
           <p style={secHead(isMobile)}>Event Details</p>
           <Field label="T-shirt size"><select style={{...inp(),appearance:'auto'}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}><option value="">Select size...</option>{VOL_SHIRTS.map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
-          <Field label="Arrival time slot *">
-            <select style={{...inp(),appearance:'auto'}} value={form.arrivalTime} onChange={e=>upd('arrivalTime',e.target.value)}>
-              <option value="">Select a time...</option>
-              <option value="6:00 AM — Setup">6:00 AM — Setup & Organizing</option>
-              <option value="6:30 AM — Early Shopping">6:30 AM — Early Shopping</option>
-              <option value="7:00 AM — Main Shopping">7:00 AM — Main Shopping</option>
-              <option value="7:30 AM — Late Shopping">7:30 AM — Late Shopping</option>
-            </select>
-          </Field>
-          <Field label="Any experience with shopping for or working with kids?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — helps us match you"/></Field>
+          {form.volunteerType === 'ops_crew' ? (
+            <>
+              <Field label="Shift *">
+                <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:8, padding:'12px 14px', fontSize:13, color:'#5B21B6' }}>
+                  <strong>6:00 AM — 9:00 AM</strong> · Full event commitment
+                  <p style={{ fontSize:12, color:'#7C3AED', margin:'6px 0 0', lineHeight:1.4 }}>Arrive at 6:00 AM for setup. You'll stay through the entire event — checking families in, managing gift cards, scanning QR codes, loading vans, and breaking down. Typically wraps by 9:00 AM.</p>
+                </div>
+                <input type="hidden" value="6:00 AM — 9:00 AM (Full Event)" />
+              </Field>
+              <Field label="Any relevant experience?"><textarea style={{...inp(),minHeight:72,resize:'vertical'}} value={form.experience} onChange={e=>upd('experience',e.target.value)} placeholder="Optional — event management, retail, logistics, etc."/></Field>
+            </>
+          ) : (
+            <>
+              <Field label="Arrival time slot *">
+                <select style={{...inp(),appearance:'auto'}} value={form.arrivalTime} onChange={e=>upd('arrivalTime',e.target.value)}>
+                  <option value="">Select a time...</option>
+                  <option value="6:30 AM — Early Shopping">6:30 AM — Early Shopping</option>
+                  <option value="7:00 AM — Main Shopping">7:00 AM — Main Shopping</option>
+                  <option value="7:30 AM — Late Shopping">7:30 AM — Late Shopping</option>
+                </select>
+              </Field>
+              <Field label="Shopping preference">
+                <select style={{...inp(),appearance:'auto'}} value={form.shoppingPreference||''} onChange={e=>upd('shoppingPreference',e.target.value)}>
+                  <option value="">No preference — happy to shop for anyone</option>
+                  <option value="boys">Boys department</option>
+                  <option value="girls">Girls department</option>
+                </select>
+                <p style={{ fontSize:11, color:C.muted, marginTop:4, lineHeight:1.4 }}>We'll do our best to match you based on your preference, but we can't guarantee it. Every child needs a shopper!</p>
+              </Field>
+            </>
+          )}
           <Field label="Preferred Kohl's location *">
             <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
               <option value="">Select a store...</option>
