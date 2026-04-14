@@ -30,7 +30,7 @@ export async function onRequestGet(context) {
       pi.id as intake_id,
       pi.shirt_size, pi.pant_size, pi.shoe_size,
       pi.gender, pi.department,
-      pi.parent_consent, pi.video_uploaded,
+      pi.parent_consent, pi.video_uploaded, pi.video_key,
       pi.favorite_colors, pi.avoid_colors, pi.allergies, pi.preferences,
       pi.language, pi.created_at as intake_submitted_at
     FROM nominations n
@@ -69,6 +69,7 @@ export async function onRequestGet(context) {
       preferences: r.preferences || '',
       consent: !!r.parent_consent,
       videoRecorded: !!r.video_uploaded,
+      videoKey: r.video_key || null,
       language: r.language || 'en',
     } : { submitted: false, consent: false, videoRecorded: false },
   }));

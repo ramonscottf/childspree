@@ -2799,6 +2799,79 @@ function PhoneBanner({ session, isMobile }) {
 }
 
 // ─── PORTAL NOMINATION CARD (expandable + editable) ─────────────────────────
+// ─── PORTAL VIDEO SECTION (watch, delete, re-record) ───
+function PortalVideoSection({ nominationId, childFirst, session, navigate, onDelete, videoKey, isMobile }) {
+  const [showPlayer, setShowPlayer] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const videoUrl = `/api/portal/video/${nominationId}`;
+  const headers = { 'X-FA-Token': session.token };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await fetch(videoUrl, { method: 'DELETE', headers });
+      setConfirmDelete(false);
+      setShowPlayer(false);
+      if (onDelete) onDelete();
+    } catch (e) {
+      alert('Failed to delete video: ' + e.message);
+    }
+    setDeleting(false);
+  };
+
+  return (
+    <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:'14px 16px' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: showPlayer ? 12 : 0 }}>
+        <div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#065F46' }}>🎬 Video recorded for {childFirst}</div>
+          {!showPlayer && <div style={{ fontSize:12, color:'#166534', marginTop:2 }}>Ready for volunteers on shopping day</div>}
+        </div>
+        <div style={{ display:'flex', gap:6 }}>
+          <button onClick={()=>setShowPlayer(!showPlayer)} style={{ padding:'5px 12px', background:showPlayer?'#F1F5F9':'#fff', border:'1px solid #BBF7D0', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:showPlayer?C.muted:'#065F46' }}>
+            {showPlayer ? '▲ Hide' : '▶ Watch'}
+          </button>
+          <button onClick={()=>navigate(`#/fa/_/video/${nominationId}`)} style={{ padding:'5px 12px', background:'#fff', border:'1px solid #FDE68A', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:'#92400E' }}>
+            🔄 Re-record
+          </button>
+          <button onClick={()=>setConfirmDelete(true)} style={{ padding:'5px 12px', background:'#fff', border:'1px solid #FECACA', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:'#DC2626' }}>
+            🗑️ Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Video player */}
+      {showPlayer && (
+        <div style={{ borderRadius:8, overflow:'hidden', background:'#000', marginBottom:8 }}>
+          <video
+            controls
+            playsInline
+            preload="metadata"
+            style={{ width:'100%', maxHeight: isMobile ? 240 : 360, display:'block' }}
+            src={`${videoUrl}?t=${session.token}`}
+            onError={(e) => { e.target.style.display='none'; e.target.parentElement.innerHTML = '<div style="padding:20px;color:#fff;text-align:center;font-size:13px">Video could not be loaded. It may have been recorded on a device and not uploaded to the system.</div>'; }}
+          >
+            Your browser does not support video playback.
+          </video>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'12px 16px', marginTop:8 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#991B1B', marginBottom:8 }}>Delete this video?</div>
+          <div style={{ fontSize:12, color:'#991B1B', marginBottom:12 }}>This will permanently remove {childFirst}'s video. You can re-record a new one afterward.</div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={handleDelete} disabled={deleting} style={{ padding:'6px 16px', background:'#DC2626', color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer' }}>{deleting ? 'Deleting...' : 'Yes, Delete Video'}</button>
+            <button onClick={()=>setConfirmDelete(false)} style={{ padding:'6px 16px', background:'#F1F5F9', color:C.muted, border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobile, onUpdate }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -2951,9 +3024,15 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
               </div>
 
               {/* Video section */}
-              {intake.videoRecorded && (
-                <div style={{ background:'#F0FDF4', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#166534' }}>
-                  🎬 Video recorded and ready for volunteers
+              {intake.videoRecorded ? (
+                <PortalVideoSection nominationId={n.id} childFirst={n.childFirst} session={session} navigate={navigate} onDelete={onUpdate} videoKey={intake.videoKey} isMobile={isMobile}/>
+              ) : intake.submitted && (
+                <div style={{ background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:8, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>🎬 Video needed</div>
+                    <div style={{ fontSize:12, color:'#92400E', marginTop:2 }}>Record a short video with {n.childFirst} at school so the volunteer can put a face to the name.</div>
+                  </div>
+                  <button onClick={()=>navigate(`#/fa/_/video/${n.id}`)} style={{ padding:'8px 16px', background:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>🎬 Record Video</button>
                 </div>
               )}
             </>
