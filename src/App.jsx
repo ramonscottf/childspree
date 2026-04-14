@@ -1061,24 +1061,65 @@ function ParentIntake({ token }) {
 }
 
 // ─── ADMIN ───
+const ADMIN_EMAILS = ['sfoster@dsdmail.net','kbuchi@dsdmail.net','ktoone@dsdmail.net'];
 function AdminDashboard() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('nominations');
-  const [authed, setAuthed] = useState(!!sessionStorage.getItem('cs-admin'));
-  const [pw, setPw] = useState('');
-  const [pwErr, setPwErr] = useState(false);
-  const login = () => { if(pw==='childspree2026'){sessionStorage.setItem('cs-admin',pw);setAuthed(true);}else{setPwErr(true);setTimeout(()=>setPwErr(false),2000);}};
-  if (!authed) return (
+  const [msUser, setMsUser] = useState(getMsSession);
+  const [signingIn, setSigningIn] = useState(false);
+
+  // Handle MSAL redirect on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const msal = await getMsal();
+        const resp = await msal.handleRedirectPromise();
+        if (resp?.account) {
+          const u = { displayName: resp.account.name, email: resp.account.username?.toLowerCase() };
+          sessionStorage.setItem('cs-ms-user', JSON.stringify(u));
+          setMsUser(u);
+        } else {
+          const accounts = msal.getAllAccounts();
+          if (accounts[0]) {
+            const u = { displayName: accounts[0].name, email: accounts[0].username?.toLowerCase() };
+            sessionStorage.setItem('cs-ms-user', JSON.stringify(u));
+            setMsUser(u);
+          }
+        }
+      } catch(e) { console.error('MSAL redirect:', e); }
+    })();
+  }, []);
+
+  const isAdmin = msUser && ADMIN_EMAILS.includes(msUser.email?.toLowerCase());
+
+  if (!msUser) return (
     <div style={{ maxWidth:360, margin:isMobile?'60px auto 0':'80px auto 0', padding:'0 16px' }}>
       <div style={{ background:C.card, borderRadius:16, padding:32, boxShadow:'0 2px 20px rgba(0,0,0,0.08)', textAlign:'center' }}>
         <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
         <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:20 }}>Admin Access</h2>
-        <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()} placeholder="Password" style={{...inp(), marginBottom:12, textAlign:'center', border:`1.5px solid ${pwErr?'#EF4444':C.border}`}}/>
-        <button onClick={login} style={{ width:'100%', padding:12, background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Enter</button>
-        {pwErr && <div style={{ color:'#EF4444', fontSize:13, marginTop:8 }}>Incorrect password</div>}
+        <p style={{ color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:20 }}>Sign in with your DSD account to access the admin dashboard.</p>
+        <button onClick={async()=>{setSigningIn(true);try{await msalSignIn();}catch(e){console.error(e);setSigningIn(false);}}} disabled={signingIn} style={{ width:'100%', padding:14, background:signingIn?C.light:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:signingIn?'default':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          {signingIn?'Signing in...':'Sign In (DSD)'}
+        </button>
       </div>
     </div>
   );
+
+  if (!isAdmin) return (
+    <div style={{ maxWidth:400, margin:isMobile?'60px auto 0':'80px auto 0', padding:'0 16px' }}>
+      <div style={{ background:C.card, borderRadius:16, padding:32, boxShadow:'0 2px 20px rgba(0,0,0,0.08)', textAlign:'center' }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🚫</div>
+        <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:12 }}>Access Denied</h2>
+        <p style={{ color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:8 }}>Signed in as <strong>{msUser.displayName}</strong></p>
+        <p style={{ color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:20 }}>{msUser.email} does not have admin access. Contact Scott if you need access.</p>
+        <button onClick={async()=>{await msalSignOut();setMsUser(null);}} style={{ width:'100%', padding:12, background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Sign Out</button>
+      </div>
+    </div>
+  );
+
+  // Set legacy admin token so API calls still work
+  if (!sessionStorage.getItem('cs-admin')) sessionStorage.setItem('cs-admin', 'childspree2026');
+
   const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
