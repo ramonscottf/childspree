@@ -837,7 +837,7 @@ function VolunteerForm() {
               <Field label="Shift *">
                 <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:8, padding:'12px 14px', fontSize:13, color:'#5B21B6' }}>
                   <strong>6:00 AM — 9:00 AM</strong> · Full event commitment
-                  <p style={{ fontSize:12, color:'#7C3AED', margin:'6px 0 0', lineHeight:1.4 }}>Arrive at 6:00 AM for setup. You'll stay through the entire event — checking families in, managing gift cards, scanning QR codes, loading vans, and breaking down. Typically wraps by 9:00 AM.</p>
+                  <p style={{ fontSize:12, color:'#7C3AED', margin:'6px 0 0', lineHeight:1.4 }}>Arrive at 6:00 AM for setup. You'll stay through the entire event — checking shoppers in, assisting at checkout, scanning QR codes, loading vans, and breaking down. Typically wraps by 9:00 AM.</p>
                 </div>
                 <input type="hidden" value="6:00 AM — 9:00 AM (Full Event)" />
               </Field>
