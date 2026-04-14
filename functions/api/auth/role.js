@@ -1,11 +1,12 @@
+import { getAdminEmails } from '../_admin_auth.js';
+
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const email = url.searchParams.get('email')?.toLowerCase();
   if (!email) return Response.json({ role: 'unknown' });
 
   // Check admin list first
-  const adminEmails = (env.ADMIN_EMAIL || 'kbuchi@dsdmail.net,kbuchi@dsdmail.net')
-    .split(',').map(e => e.trim().toLowerCase());
+  const adminEmails = getAdminEmails(env);
   if (adminEmails.includes(email)) return Response.json({ role: 'admin' });
 
   // Check family advocates table
