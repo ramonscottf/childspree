@@ -86,7 +86,7 @@ const LANG = {
     yourName:'Your Name *', fullName:'Full name',
     role:'Role *', email:'Email *',
     parentGuardianTitle:'Parent / Guardian',
-    parentName:'Name *', parentPhone:'Phone', parentEmail:'Email',
+    parentName:'Name *', parentPhone:'Phone *', parentEmail:'Email *',
     preferredLang:'Preferred language',
     langNote:'Notifications and forms will be sent in this language.',
     detailsTitle:'Details',
@@ -179,7 +179,7 @@ const LANG = {
     yourName:'Su Nombre *', fullName:'Nombre completo',
     role:'Cargo *', email:'Correo electrónico *',
     parentGuardianTitle:'Padre / Tutor',
-    parentName:'Nombre *', parentPhone:'Teléfono', parentEmail:'Correo electrónico',
+    parentName:'Nombre *', parentPhone:'Teléfono *', parentEmail:'Correo electrónico *',
     preferredLang:'Idioma preferido',
     langNote:'Las notificaciones y formularios se enviarán en este idioma.',
     detailsTitle:'Detalles',
@@ -532,7 +532,8 @@ function NominationForm() {
     if (!form.childFirst||!form.childLast||!form.studentId||!form.school||!form.grade) { setError(lang==='es'?'Por favor complete toda la información del niño/a, incluyendo el ID de estudiante.':'Please fill in all child information, including Student ID.'); return; }
     if (!form.nominatorName||!form.nominatorEmail) { setError(lang==='es'?'Por favor complete su nombre y correo electrónico.':'Please fill in your name and email.'); return; }
     if (!form.parentName) { setError(lang==='es'?'Se requiere el nombre del padre/tutor.':'Parent/guardian name required.'); return; }
-    if (!form.parentPhone&&!form.parentEmail) { setError(lang==='es'?'Proporcione al menos un contacto del padre.':'Please provide at least one parent contact.'); return; }
+    if (!form.parentPhone) { setError(lang==='es'?'Se requiere el teléfono del padre/tutor.':'Parent phone number is required. We need it to send them the sizing form.'); return; }
+    if (!form.parentEmail) { setError(lang==='es'?'Se requiere el correo electrónico del padre/tutor.':'Parent email is required. We need it to send them the sizing form.'); return; }
     setSubmitting(true);
     try {
       const payload = {

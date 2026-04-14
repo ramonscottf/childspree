@@ -71,8 +71,11 @@ export async function onRequestPost(context) {
   for (const f of required) {
     if (!body[f]) return cors(Response.json({ error: `Missing: ${f}` }, { status: 400 }));
   }
-  if (!body.parentPhone && !body.parentEmail) {
-    return cors(Response.json({ error: 'Parent needs phone or email' }, { status: 400 }));
+  if (!body.parentPhone) {
+    return cors(Response.json({ error: 'Parent phone number is required' }, { status: 400 }));
+  }
+  if (!body.parentEmail) {
+    return cors(Response.json({ error: 'Parent email is required' }, { status: 400 }));
   }
 
   const id = generateId();
