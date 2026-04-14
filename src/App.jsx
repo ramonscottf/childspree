@@ -656,13 +656,15 @@ function NominationForm() {
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true, volunteerType:'shopper' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [storeCounts, setStoreCounts] = useState(null);
   const [waitlisted, setWaitlisted] = useState(false);
   const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":200, "Kohl's Centerville (510 N 400 W)":175, "Kohl's Clinton (1526 N 2000 W)":200 };
+  const OPS_CAPS = { "Kohl's Layton (881 W Antelope Dr)":9, "Kohl's Centerville (510 N 400 W)":8, "Kohl's Clinton (1526 N 2000 W)":8 };
+  const activeCaps = form.volunteerType === 'ops_crew' ? OPS_CAPS : STORE_CAPS;
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
   useEffect(() => {
     const ms = getMsSession();
@@ -678,15 +680,20 @@ function VolunteerForm() {
     return () => window.removeEventListener('cs-ms-login', handler);
   }, []);
   useEffect(() => { (async()=>{ try { const d=await api('/volunteers/store-counts'); setStoreCounts(d); } catch(e){} })(); }, []);
-  const storeIsFull = (loc) => storeCounts && STORE_CAPS[loc] && (storeCounts[loc]||0) >= STORE_CAPS[loc];
-  const allStoresFull = storeCounts && Object.keys(STORE_CAPS).every(k => (storeCounts[k]||0) >= STORE_CAPS[k]);
+  const getCountForStore = (loc) => {
+    if (!storeCounts) return 0;
+    if (form.volunteerType === 'ops_crew') return storeCounts.ops?.[loc] || 0;
+    return storeCounts.shoppers?.[loc] || 0;
+  };
+  const storeIsFull = (loc) => storeCounts && activeCaps[loc] && getCountForStore(loc) >= activeCaps[loc];
+  const allStoresFull = storeCounts && Object.keys(activeCaps).every(k => getCountForStore(k) >= activeCaps[k]);
   const submit = async() => {
     setError(null);
     if (!form.firstName||!form.lastName) { setError('Please enter your name.'); return; }
     if (!form.email&&!form.phone) { setError('Please provide email or phone so we can reach you.'); return; }
     setSubmitting(true);
     try {
-      const res = await api('/volunteers',{method:'POST',body:JSON.stringify(form)});
+      const res = await api('/volunteers',{method:'POST',body:JSON.stringify({...form, volunteerType: form.volunteerType})});
       if (res.waitlisted) { setWaitlisted(true); }
       setSubmitted(true);
     } catch(err){setError(err.message);}
@@ -716,6 +723,31 @@ function VolunteerForm() {
       )}
       {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={photo} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Volunteer to Shop</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Join 400+ volunteers. Be matched to one child. Shop for them like they're family.</p></div><div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div></>}
       {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
+
+      {/* ── Volunteer Type Selector ── */}
+      <div style={{ marginBottom:24 }}>
+        <p style={{ ...secHead(isMobile), marginBottom:12 }}>How would you like to help?</p>
+        <div style={{ display:'flex', gap:12, flexDirection:isMobile?'column':'row' }}>
+          <div onClick={()=>upd('volunteerType','shopper')} style={{ flex:1, cursor:'pointer', borderRadius:12, border:`2px solid ${form.volunteerType==='shopper'?C.navy:'#E2E8F0'}`, padding:isMobile?'14px 16px':'18px 20px', background:form.volunteerType==='shopper'?'#F0F4FF':'#fff', transition:'all 0.2s' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <span style={{ fontSize:24 }}>🛒</span>
+              <span style={{ fontWeight:700, fontSize:15, color:C.navy }}>Shopper</span>
+              {form.volunteerType==='shopper' && <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, background:C.navy, color:'#fff', padding:'2px 8px', borderRadius:10 }}>Selected</span>}
+            </div>
+            <p style={{ fontSize:13, color:C.muted, lineHeight:1.5, margin:0 }}>Get matched with one child and shop for them head to toe. You'll watch their video, know their favorite colors, and pick out a complete outfit. The fun part!</p>
+          </div>
+          <div onClick={()=>upd('volunteerType','ops_crew')} style={{ flex:1, cursor:'pointer', borderRadius:12, border:`2px solid ${form.volunteerType==='ops_crew'?'#7C3AED':'#E2E8F0'}`, padding:isMobile?'14px 16px':'18px 20px', background:form.volunteerType==='ops_crew'?'#F5F3FF':'#fff', transition:'all 0.2s' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <span style={{ fontSize:24 }}>🎯</span>
+              <span style={{ fontWeight:700, fontSize:15, color:'#7C3AED' }}>Operations Crew</span>
+              {form.volunteerType==='ops_crew' && <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, background:'#7C3AED', color:'#fff', padding:'2px 8px', borderRadius:10 }}>Selected</span>}
+            </div>
+            <p style={{ fontSize:13, color:C.muted, lineHeight:1.5, margin:0 }}>Run the show from start to finish — check families in, manage gift cards, scan QR codes, help load vans, set up tables. You'll stay the full event and keep everything running smoothly.</p>
+            <p style={{ fontSize:11, color:'#7C3AED', marginTop:6, fontWeight:600, opacity:0.8 }}>Limited spots · Full commitment · High impact</p>
+          </div>
+        </div>
+      </div>
+
       <div style={{ display:isMobile?'block':'grid', gridTemplateColumns:'1fr 1fr', gap:28 }}>
         <div>
           <p style={secHead(isMobile)}>Your Information</p>
@@ -743,8 +775,8 @@ function VolunteerForm() {
             <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
               <option value="">Select a store...</option>
               {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=>{
-                const cnt = storeCounts?.[s]||0;
-                const cap = STORE_CAPS[s];
+                const cnt = getCountForStore(s);
+                const cap = activeCaps[s];
                 const full = cnt >= cap;
                 return <option key={s} value={s} disabled={full}>{s}{storeCounts?` — ${cnt}/${cap}${full?' FULL':''}`:''}</option>;
               })}
@@ -1369,6 +1401,7 @@ function VolunteersTab({ isMobile }) {
   const [sendResult, setSendResult] = useState(null);
 
   const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:200,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:175,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:200,label:'Clinton',color:'#10B981'} };
+  const OPS_STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:9,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:8,label:'Clinton',color:'#10B981'} };
 
   const load = useCallback(async () => {
     try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`,{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setVolunteers(data.volunteers); } catch(e){console.error(e);}
@@ -1392,25 +1425,30 @@ function VolunteersTab({ isMobile }) {
 
   const counts = { all:volunteers.length, registered:0, confirmed:0, assigned:0, waitlisted:0, attended:0 };
   volunteers.forEach(v => { counts[v.status] = (counts[v.status]||0)+1; });
+  const typeCounts = { shoppers: volunteers.filter(v => v.volunteerType !== 'ops_crew').length, ops: volunteers.filter(v => v.volunteerType === 'ops_crew').length };
   const statColors = { registered:'#7C3AED', confirmed:C.green, assigned:C.blue, waitlisted:'#F59E0B', attended:C.amber };
 
-  // Store counts from volunteer data
-  const storeCnts = {};
+  // Store counts from volunteer data — split by type
+  const shopperCnts = {};
+  const opsCnts = {};
   const storeByTime = {};
   volunteers.filter(v=>v.status!=='waitlisted').forEach(v => {
-    if (v.storeLocation) { storeCnts[v.storeLocation] = (storeCnts[v.storeLocation]||0)+1; }
+    if (v.storeLocation) {
+      if (v.volunteerType === 'ops_crew') { opsCnts[v.storeLocation] = (opsCnts[v.storeLocation]||0)+1; }
+      else { shopperCnts[v.storeLocation] = (shopperCnts[v.storeLocation]||0)+1; }
+    }
     if (v.arrivalTime) { storeByTime[v.arrivalTime] = (storeByTime[v.arrivalTime]||0)+1; }
   });
 
-  const StoreBar = ({ storeKey }) => {
-    const info = STORE_CAPS[storeKey];
-    const cnt = storeCnts[storeKey]||0;
+  const StoreBar = ({ storeKey, capsMap, cntsMap, icon }) => {
+    const info = capsMap[storeKey];
+    const cnt = cntsMap[storeKey]||0;
     const pct = Math.min(100, Math.round(cnt/info.cap*100));
     const full = cnt >= info.cap;
     return (
       <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:isMobile?'12px 14px':'16px 20px', flex:1, minWidth:isMobile?'100%':0 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
-          <div style={{ fontWeight:700, color:C.navy, fontSize:14 }}>📍 {info.label}</div>
+          <div style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{icon} {info.label}</div>
           <div style={{ fontSize:20, fontWeight:800, color:full?'#DC2626':info.color }}>{cnt}<span style={{ fontSize:13, fontWeight:400, color:C.muted }}>/{info.cap}</span></div>
         </div>
         <div style={{ background:'#F1F5F9', borderRadius:20, height:14, overflow:'hidden', marginBottom:6 }}>
@@ -1426,9 +1464,20 @@ function VolunteersTab({ isMobile }) {
 
   return (
     <div>
-      {/* ── Store Capacity Dashboard ── */}
+      {/* ── Shopper Capacity Dashboard ── */}
+      <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
+        <span>🛒</span> Shoppers <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.shoppers} total)</span>
+      </div>
+      <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:16, flexDirection:isMobile?'column':'row' }}>
+        {Object.keys(STORE_CAPS).map(k => <StoreBar key={'s-'+k} storeKey={k} capsMap={STORE_CAPS} cntsMap={shopperCnts} icon="📍"/>)}
+      </div>
+
+      {/* ── Ops Crew Capacity Dashboard ── */}
+      <div style={{ fontSize:12, fontWeight:700, color:'#7C3AED', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
+        <span>🎯</span> Operations Crew <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.ops} total)</span>
+      </div>
       <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:20, flexDirection:isMobile?'column':'row' }}>
-        {Object.keys(STORE_CAPS).map(k => <StoreBar key={k} storeKey={k}/>)}
+        {Object.keys(OPS_STORE_CAPS).map(k => <StoreBar key={'o-'+k} storeKey={k} capsMap={OPS_STORE_CAPS} cntsMap={opsCnts} icon="🎯"/>)}
       </div>
 
       {/* ── Summary KPIs ── */}
@@ -1468,6 +1517,7 @@ function VolunteersTab({ isMobile }) {
         <button onClick={()=>{
           const rows = volunteers.map(v => ({
             'First Name': v.firstName, 'Last Name': v.lastName,
+            'Type': v.volunteerType === 'ops_crew' ? 'Operations Crew' : 'Shopper',
             'Email': v.email||'', 'Phone': v.phone||'',
             'Organization': v.organization||'', 'Group Type': v.groupType||'Individual',
             'Group Size': v.groupSize||'',
@@ -1547,6 +1597,7 @@ function VolunteersTab({ isMobile }) {
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                     <span style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{v.firstName} {v.lastName}</span>
                     <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:(statColors[v.status]||C.muted)+'22', color:statColors[v.status]||C.muted }}>{v.status?.charAt(0).toUpperCase()+v.status?.slice(1)}</span>
+                    <span style={{ fontSize:10, fontWeight:600, background:v.volunteerType==='ops_crew'?'#F5F3FF':'#EFF6FF', color:v.volunteerType==='ops_crew'?'#7C3AED':'#1D4ED8', padding:'2px 6px', borderRadius:4 }}>{v.volunteerType==='ops_crew'?'🎯 Ops Crew':'🛒 Shopper'}</span>
                     {v.groupType && v.groupType !== 'Individual' && <span style={{ fontSize:10, fontWeight:600, background:'#EDE9FE', color:'#6D28D9', padding:'2px 6px', borderRadius:4 }}>👥 {v.groupType}{v.groupSize?` (${v.groupSize})`:''}</span>}
                   </div>
                   <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>

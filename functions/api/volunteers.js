@@ -21,18 +21,29 @@ const STORE_CAPS = {
   "Kohl's Clinton (1526 N 2000 W)": 200,
 };
 
+const OPS_CAPS = {
+  "Kohl's Layton (881 W Antelope Dr)": 9,
+  "Kohl's Centerville (510 N 400 W)": 8,
+  "Kohl's Clinton (1526 N 2000 W)": 8,
+};
+
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
 
-  // Public endpoint: store counts for capacity display
+  // Public endpoint: store counts for capacity display (split by type)
   if (url.pathname.endsWith('/store-counts')) {
     const { results } = await env.DB.prepare(
-      "SELECT store_location, COUNT(*) as n FROM volunteers WHERE status != 'waitlisted' GROUP BY store_location"
+      "SELECT store_location, volunteer_type, COUNT(*) as n FROM volunteers WHERE status != 'waitlisted' GROUP BY store_location, volunteer_type"
     ).all();
-    const counts = {};
-    results.forEach(r => { if (r.store_location) counts[r.store_location] = r.n; });
-    return cors(Response.json(counts));
+    const shoppers = {};
+    const ops = {};
+    results.forEach(r => {
+      if (!r.store_location) return;
+      if (r.volunteer_type === 'ops_crew') { ops[r.store_location] = r.n; }
+      else { shoppers[r.store_location] = r.n; }
+    });
+    return cors(Response.json({ shoppers, ops, caps: STORE_CAPS, opsCaps: OPS_CAPS }));
   }
 
   const status = url.searchParams.get('status');
@@ -46,7 +57,7 @@ export async function onRequestGet(context) {
 
   const { results } = await env.DB.prepare(q).bind(...p).all();
   const volunteers = results.map(r => ({
-    id: r.id, status: r.status,
+    id: r.id, status: r.status, volunteerType: r.volunteer_type || 'shopper',
     firstName: r.first_name, lastName: r.last_name,
     email: r.email, phone: r.phone,
     organization: r.organization, groupType: r.group_type, groupSize: r.group_size,
@@ -64,25 +75,28 @@ export async function onRequestPost(context) {
   if (!body.firstName || !body.lastName) return cors(Response.json({ error: 'Name required' }, { status: 400 }));
   if (!body.email && !body.phone) return cors(Response.json({ error: 'Email or phone required' }, { status: 400 }));
 
-  // Check store capacity
+  const volunteerType = body.volunteerType === 'ops_crew' ? 'ops_crew' : 'shopper';
+  const capsToUse = volunteerType === 'ops_crew' ? OPS_CAPS : STORE_CAPS;
+
+  // Check store capacity (type-specific)
   let waitlisted = false;
   const store = body.storeLocation || null;
-  if (store && STORE_CAPS[store]) {
+  if (store && capsToUse[store]) {
     const row = await env.DB.prepare(
-      "SELECT COUNT(*) as n FROM volunteers WHERE store_location = ? AND status != 'waitlisted'"
-    ).bind(store).first();
+      "SELECT COUNT(*) as n FROM volunteers WHERE store_location = ? AND volunteer_type = ? AND status != 'waitlisted'"
+    ).bind(store, volunteerType).first();
     const cnt = row?.n || 0;
-    if (cnt >= STORE_CAPS[store]) { waitlisted = true; }
+    if (cnt >= capsToUse[store]) { waitlisted = true; }
   }
 
-  // If no store selected but all are full, also waitlist
+  // If no store selected but all are full for this type, also waitlist
   if (!store) {
     const { results } = await env.DB.prepare(
-      "SELECT store_location, COUNT(*) as n FROM volunteers WHERE status != 'waitlisted' GROUP BY store_location"
-    ).all();
+      "SELECT store_location, COUNT(*) as n FROM volunteers WHERE volunteer_type = ? AND status != 'waitlisted' GROUP BY store_location"
+    ).bind(volunteerType).all();
     const cnts = {};
     results.forEach(r => { if (r.store_location) cnts[r.store_location] = r.n; });
-    const allFull = Object.keys(STORE_CAPS).every(k => (cnts[k]||0) >= STORE_CAPS[k]);
+    const allFull = Object.keys(capsToUse).every(k => (cnts[k]||0) >= capsToUse[k]);
     if (allFull) { waitlisted = true; }
   }
 
@@ -90,19 +104,19 @@ export async function onRequestPost(context) {
   const status = waitlisted ? 'waitlisted' : 'registered';
 
   await env.DB.prepare(`
-    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, group_size, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, group_size, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in, status, volunteer_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(id, body.firstName, body.lastName, body.email||null, body.phone||null,
     body.organization||null, body.groupType||'Individual', body.groupSize||null, body.shirtSize||null, store, body.arrivalTime||null,
     (body.arrivalTime||'').includes('Setup') ? 1 : 0, body.experience||null, body.hearAbout||null,
-    body.smsOptIn!==false?1:0, status
+    body.smsOptIn!==false?1:0, status, volunteerType
   ).run();
 
   context.waitUntil(notifyVolunteerRegistered(env, {
     firstName: body.firstName, lastName: body.lastName,
     email: body.email, phone: body.phone,
     organization: body.organization, groupType: body.groupType,
-    shirtSize: body.shirtSize, waitlisted,
+    shirtSize: body.shirtSize, waitlisted, volunteerType,
   }));
 
   return cors(Response.json({ id, status, waitlisted }, { status: 201 }));
