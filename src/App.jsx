@@ -1111,6 +1111,9 @@ function ParentIntake({ token }) {
   useEffect(() => { (async()=>{ try{ const data=await api(`/intake/${token}`); setChild(data); if(data.parentLanguage && data.parentLanguage !== 'en') setLang(data.parentLanguage); if(data.alreadySubmitted)setStep('done'); }catch(err){setError(err.message);} setLoading(false); })(); }, [token]);
   const submit = async () => {
     if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
+    if (!form.favoriteColors.trim()) { alert(lang==='es'?'Por favor ingrese los colores o estilos favoritos de su hijo/a.':'Please fill in your child\'s favorite colors, styles, or characters. This helps the volunteer shop for them!'); return; }
+    if (!form.avoidColors.trim()) { alert(lang==='es'?'Por favor ingrese los colores o estilos que se deben evitar.':'Please fill in colors or styles to avoid. If none, type "None".'); return; }
+    if (!form.allergies.trim()) { alert(lang==='es'?'Por favor ingrese alergias o necesidades sensoriales. Si no hay, escriba "Ninguna".':'Please fill in allergies or sensory needs. If none, type "None".'); return; }
     if (!form.parentConsent) { alert(t('consentRequired')); return; }
     setSubmitting(true);
     try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify({...form,language:lang})}); setStep('done'); } catch(err){setError(err.message);}
@@ -1164,10 +1167,10 @@ function ParentIntake({ token }) {
           ); })()}
         </div>
         <div>
-          <p style={secHead(isMobile)}>Preferences <span style={{ fontWeight:400, textTransform:'none', letterSpacing:0, fontSize:10, color:C.light }}>optional</span></p>
-          <Field label="Favorite colors, styles, characters?"><input style={inp()} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)} placeholder="e.g., Blue, dinosaurs, soccer"/></Field>
-          <Field label="Colors or styles to avoid?"><input style={inp()} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)} placeholder="e.g., No pink, no ruffles"/></Field>
-          <Field label="Allergies or sensory needs?"><input style={inp()} value={form.allergies} onChange={e=>upd('allergies',e.target.value)} placeholder="e.g., No wool, needs soft fabrics"/></Field>
+          <p style={secHead(isMobile)}>Preferences</p>
+          <Field label="Favorite colors, styles, characters? *"><input style={inp()} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)} placeholder="e.g., Blue, dinosaurs, soccer"/></Field>
+          <Field label="Colors or styles to avoid? *"><input style={inp()} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)} placeholder='e.g., No pink, no ruffles — or "None"'/></Field>
+          <Field label="Allergies or sensory needs? *"><input style={inp()} value={form.allergies} onChange={e=>upd('allergies',e.target.value)} placeholder='e.g., No wool, needs soft fabrics — or "None"'/></Field>
         </div>
       </div>
       {/* Consent checkbox */}
