@@ -1,6 +1,7 @@
-// POST /api/nominations/:id/remind — admin sends parent a reminder
+// POST /api/nominations/:id/remind — admin sends parent a reminder (authenticated)
 
 import { sendSMS, sendEmail } from '../../_notify.js';
+import { requireAdmin } from '../../_admin_auth.js';
 
 function cors(r) {
   r.headers.set('Access-Control-Allow-Origin', '*');
@@ -11,7 +12,9 @@ function cors(r) {
 export async function onRequestOptions() { return cors(new Response(null, { status: 204 })); }
 
 export async function onRequestPost(context) {
-  const { env, params } = context;
+  const { env, params, request } = context;
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
 
   const nom = await env.DB.prepare('SELECT * FROM nominations WHERE id = ?').bind(params.id).first();
   if (!nom) return cors(Response.json({ error: 'Not found' }, { status: 404 }));

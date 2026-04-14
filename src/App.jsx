@@ -324,7 +324,7 @@ const secHead = (m) => ({ fontSize:m?10:11, fontWeight:700, color:C.navy, textTr
 function Field({ label, children, style }) { return <div style={{ marginBottom:14, ...style }}>{label && <label style={lbl}>{label}</label>}{children}</div>; }
 function Row({ cols=2, gap=12, children, style }) { return <div style={{ display:'grid', gridTemplateColumns:Array(cols).fill('1fr').join(' '), gap, ...style }}>{children}</div>; }
 function useIsMobile() { const [m,setM]=useState(window.innerWidth<768); useEffect(()=>{ const h=()=>setM(window.innerWidth<768); window.addEventListener('resize',h); return()=>window.removeEventListener('resize',h); },[]); return m; }
-async function api(path, opts={}) { const r=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json',...opts.headers},...opts}); if(!r.ok){const e=await r.json().catch(()=>({error:'Failed'})); throw new Error(e.error||`HTTP ${r.status}`);} return r.json(); }
+async function api(path, opts={}) { const r=await fetch(`${API}${path}`,{credentials:'include',headers:{'Content-Type':'application/json',...opts.headers},...opts}); if(!r.ok){const e=await r.json().catch(()=>({error:'Failed'})); throw new Error(e.error||`HTTP ${r.status}`);} return r.json(); }
 
 function StatusBadge({ status, vol }) {
   const nMap = { pending:{bg:'#FEF3C7',t:'#92400E',l:'Pending'}, approved:{bg:'#D1FAE5',t:'#065F46',l:'Approved'}, sent:{bg:'#DBEAFE',t:'#1E40AF',l:'Sent'}, complete:{bg:'#E0E7FF',t:'#3730A3',l:'Complete'}, incomplete:{bg:'#FEE2E2',t:'#DC2626',l:'Incomplete'}, declined:{bg:'#FEE2E2',t:'#991B1B',l:'Declined'} };
@@ -350,6 +350,7 @@ function TopNav({ view, navigate }) {
     } catch(e) { alert('Sign-in failed. Please try again.'); }
   };
   const handleSignOut = async () => {
+    try { await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' }); } catch(e) {}
     await msalSignOut();
     setMsUser(null);
     window.dispatchEvent(new CustomEvent('cs-ms-logout'));
@@ -1099,6 +1100,39 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('nominations');
   const [msUser, setMsUser] = useState(getMsSession);
   const [signingIn, setSigningIn] = useState(false);
+  const [serverSession, setServerSession] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(false);
+
+  // Create server-side session from MSAL ID token
+  const createServerSession = useCallback(async (account) => {
+    try {
+      setSessionLoading(true);
+      const msal = await getMsal();
+      // Silently acquire a fresh ID token
+      const tokenResp = await msal.acquireTokenSilent({
+        scopes: MSAL_SCOPES,
+        account,
+      });
+      if (tokenResp?.idToken) {
+        const res = await fetch(`${API}/auth/session`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: tokenResp.idToken }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setServerSession(data);
+          return data;
+        }
+      }
+    } catch (e) {
+      console.error('Server session creation failed:', e);
+    } finally {
+      setSessionLoading(false);
+    }
+    return null;
+  }, []);
 
   // Handle MSAL redirect on mount
   useEffect(() => {
@@ -1106,21 +1140,32 @@ function AdminDashboard() {
       try {
         const msal = await getMsal();
         const resp = await msal.handleRedirectPromise();
+        let account = null;
         if (resp?.account) {
-          const u = { displayName: resp.account.name, email: resp.account.username?.toLowerCase() };
-          sessionStorage.setItem('cs-ms-user', JSON.stringify(u));
-          setMsUser(u);
+          account = resp.account;
         } else {
           const accounts = msal.getAllAccounts();
-          if (accounts[0]) {
-            const u = { displayName: accounts[0].name, email: accounts[0].username?.toLowerCase() };
-            sessionStorage.setItem('cs-ms-user', JSON.stringify(u));
-            setMsUser(u);
-          }
+          if (accounts[0]) account = accounts[0];
+        }
+        if (account) {
+          const u = { displayName: account.name, email: account.username?.toLowerCase() };
+          sessionStorage.setItem('cs-ms-user', JSON.stringify(u));
+          setMsUser(u);
+          // Create server-side session
+          await createServerSession(account);
+        } else {
+          // Check if we have an existing session cookie
+          try {
+            const meRes = await fetch(`${API}/auth/session`, { credentials: 'include' });
+            if (meRes.ok) {
+              const me = await meRes.json();
+              if (me.authenticated) setServerSession(me);
+            }
+          } catch(e) {}
         }
       } catch(e) { console.error('MSAL redirect:', e); }
     })();
-  }, []);
+  }, [createServerSession]);
 
   const isAdmin = msUser && ADMIN_EMAILS.includes(msUser.email?.toLowerCase());
 
@@ -1149,8 +1194,35 @@ function AdminDashboard() {
     </div>
   );
 
-  // Set legacy admin token so API calls still work
-  if (!sessionStorage.getItem('cs-admin')) sessionStorage.setItem('cs-admin', 'childspree2026');
+  // Server session required — cookie-based auth replaces Bearer token
+  if (sessionLoading) return (
+    <div style={{ maxWidth:360, margin:isMobile?'60px auto 0':'80px auto 0', padding:'0 16px', textAlign:'center' }}>
+      <div style={{ background:C.card, borderRadius:16, padding:32, boxShadow:'0 2px 20px rgba(0,0,0,0.08)' }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🔐</div>
+        <p style={{ color:C.muted, fontSize:14 }}>Creating secure session...</p>
+      </div>
+    </div>
+  );
+
+  if (!serverSession) {
+    // Try to create session if we have an MSAL account but no server session
+    const retrySession = async () => {
+      const msal = await getMsal();
+      const accounts = msal.getAllAccounts();
+      if (accounts[0]) await createServerSession(accounts[0]);
+    };
+    return (
+      <div style={{ maxWidth:400, margin:isMobile?'60px auto 0':'80px auto 0', padding:'0 16px' }}>
+        <div style={{ background:C.card, borderRadius:16, padding:32, boxShadow:'0 2px 20px rgba(0,0,0,0.08)', textAlign:'center' }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>⚠️</div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:12 }}>Session Required</h2>
+          <p style={{ color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:20 }}>Signed in as <strong>{msUser.displayName}</strong>, but the server session couldn't be created. Click below to retry.</p>
+          <button onClick={retrySession} style={{ width:'100%', padding:14, background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:8 }}>Retry Session</button>
+          <button onClick={async()=>{await fetch(`${API}/auth/logout`,{method:'POST',credentials:'include'});await msalSignOut();setMsUser(null);setServerSession(null);}} style={{ width:'100%', padding:12, background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Sign Out</button>
+        </div>
+      </div>
+    );
+  }
 
   const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }];
   return (
@@ -1175,11 +1247,11 @@ function NominationsTab({ isMobile }) {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const load = useCallback(async () => {
-    try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/nominations?${p}`,{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setNominations(data.nominations); } catch(e){console.error(e);}
+    try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/nominations?${p}`); setNominations(data.nominations); } catch(e){console.error(e);}
     setLoading(false);
   }, [filter, search]);
   useEffect(() => { load(); }, [load]);
-  const updateStatus = async(id, status) => { await api(`/nominations/${id}`,{method:'PATCH',body:JSON.stringify({status}),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); load(); };
+  const updateStatus = async(id, status) => { await api(`/nominations/${id}`,{method:'PATCH',body:JSON.stringify({status})}); load(); };
   const copyLink = (token) => { navigator.clipboard.writeText(`${window.location.origin}/#/intake/${token}`); };
   const counts = { all:nominations.length, pending:0, approved:0, sent:0, complete:0, declined:0 };
   nominations.forEach(n => { counts[n.status] = (counts[n.status]||0)+1; });
@@ -1404,20 +1476,20 @@ function VolunteersTab({ isMobile }) {
   const OPS_STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:9,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:8,label:'Clinton',color:'#10B981'} };
 
   const load = useCallback(async () => {
-    try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`,{headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); setVolunteers(data.volunteers); } catch(e){console.error(e);}
+    try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`); setVolunteers(data.volunteers); } catch(e){console.error(e);}
     setLoading(false);
   }, [filter, search]);
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async(id, status) => {
-    await api(`/volunteers/${id}`,{method:'PATCH',body:JSON.stringify({status}),headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}}); load();
+    await api(`/volunteers/${id}`,{method:'PATCH',body:JSON.stringify({status})}); load();
   };
 
   const sendMessage = async() => {
     if (!msg.message.trim()) return;
     setSending(true); setSendResult(null);
     try {
-      const res = await api('/volunteers/message', { method:'POST', body:JSON.stringify(msg), headers:{'Authorization':`Bearer ${sessionStorage.getItem('cs-admin')}`}});
+      const res = await api('/volunteers/message', { method:'POST', body:JSON.stringify(msg)});
       setSendResult(res);
     } catch(e) { setSendResult({ error: e.message }); }
     setSending(false);

@@ -1,5 +1,7 @@
 // functions/api/volunteers/[id].js
-// PATCH — update status or notes
+// PATCH — update status or notes (admin only)
+
+import { requireAdmin } from '../_admin_auth.js';
 
 function cors(r) {
   r.headers.set('Access-Control-Allow-Origin', '*');
@@ -11,6 +13,9 @@ export async function onRequestOptions() { return cors(new Response(null, { stat
 
 export async function onRequestPatch(context) {
   const { env, params, request } = context;
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
+
   const body = await request.json();
   const fields = [], vals = [];
   if (body.status) { fields.push('status = ?'); vals.push(body.status); }

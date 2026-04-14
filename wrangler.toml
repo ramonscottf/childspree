@@ -16,4 +16,5 @@ bucket_name = "childspree-videos"
 
 # Auth secret for admin routes
 [vars]
-ADMIN_PASSWORD = "childspree2026"
+# Auth is handled by Microsoft SSO + server-side sessions
+# No secrets in this file — use Cloudflare Pages encrypted env vars

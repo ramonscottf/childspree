@@ -1,7 +1,8 @@
-// GET /api/nominations/:id
-// PATCH /api/nominations/:id — update status + fire notifications
+// GET /api/nominations/:id — admin only
+// PATCH /api/nominations/:id — update status + fire notifications — admin only
 
 import { notifyParentIntakeReady, notifyParentFamilyIntakeReady } from '../_notify.js';
+import { requireAdmin } from '../_admin_auth.js';
 
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 8); }
 function generateToken() {
@@ -17,7 +18,10 @@ function cors(r) {
 export async function onRequestOptions() { return cors(new Response(null, { status: 204 })); }
 
 export async function onRequestGet(context) {
-  const { env, params } = context;
+  const { env, params, request } = context;
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
+
   const nom = await env.DB.prepare('SELECT * FROM nominations WHERE id = ?').bind(params.id).first();
   if (!nom) return cors(Response.json({ error: 'Not found' }, { status: 404 }));
   const intake = await env.DB.prepare('SELECT * FROM parent_intake WHERE nomination_id = ?').bind(params.id).first();
@@ -39,6 +43,9 @@ export async function onRequestGet(context) {
 
 export async function onRequestPatch(context) {
   const { env, params, request } = context;
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
+
   const body = await request.json();
 
   const nom = await env.DB.prepare('SELECT * FROM nominations WHERE id = ?').bind(params.id).first();

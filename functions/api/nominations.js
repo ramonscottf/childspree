@@ -1,7 +1,8 @@
-// GET /api/nominations — list all (admin)
-// POST /api/nominations — create nomination + notify
+// GET /api/nominations — list all (admin only, authenticated)
+// POST /api/nominations — create nomination + notify (public)
 
 import { notifyNewNomination } from './_notify.js';
+import { requireAdmin } from './_admin_auth.js';
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
@@ -25,6 +26,11 @@ export async function onRequestOptions() {
 
 export async function onRequestGet(context) {
   const { env, request } = context;
+
+  // Auth required — this returns 91 children's PII
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
+
   const url = new URL(request.url);
   const status = url.searchParams.get('status');
   const search = url.searchParams.get('search');

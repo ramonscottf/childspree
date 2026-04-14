@@ -1,4 +1,6 @@
-// GET /api/stats — dashboard stats for admin
+// GET /api/stats — dashboard stats for admin (authenticated only)
+
+import { requireAdmin } from './_admin_auth.js';
 
 function cors(response) {
   response.headers.set('Access-Control-Allow-Origin', '*');
@@ -12,7 +14,9 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { env, request } = context;
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
 
   const [total, byStatus, bySchool, recent] = await Promise.all([
     env.DB.prepare('SELECT COUNT(*) as count FROM nominations').first(),

@@ -1,7 +1,8 @@
 // functions/api/volunteers/message.js
-// POST — send bulk SMS/email to volunteers
+// POST — send bulk SMS/email to volunteers (admin only)
 
 import { sendSMS, sendEmail } from '../_notify.js';
+import { requireAdmin } from '../_admin_auth.js';
 
 function cors(r) {
   r.headers.set('Access-Control-Allow-Origin', '*');
@@ -13,6 +14,9 @@ export async function onRequestOptions() { return cors(new Response(null, { stat
 
 export async function onRequestPost(context) {
   const { env, request } = context;
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
+
   const body = await request.json();
   const { channel = 'both', to = 'all', message, subject, ids } = body;
   if (!message) return cors(Response.json({ error: 'Message required' }, { status: 400 }));

@@ -1,8 +1,9 @@
 // functions/api/volunteers.js
-// GET /api/volunteers — list all (admin)
+// GET /api/volunteers — list all (admin only, authenticated)
 // POST /api/volunteers — register new volunteer (public)
 
 import { notifyVolunteerRegistered } from './_notify.js';
+import { requireAdmin } from './_admin_auth.js';
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
@@ -45,6 +46,10 @@ export async function onRequestGet(context) {
     });
     return cors(Response.json({ shoppers, ops, caps: STORE_CAPS, opsCaps: OPS_CAPS }));
   }
+
+  // Everything below returns PII — admin only
+  const denied = await requireAdmin(env, request);
+  if (denied) return cors(denied);
 
   const status = url.searchParams.get('status');
   const search = url.searchParams.get('search');
