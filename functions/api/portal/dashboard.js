@@ -24,8 +24,8 @@ export async function onRequestGet(context) {
   const { results } = await env.DB.prepare(`
     SELECT
       n.id, n.child_first, n.child_last, n.school, n.grade,
-      n.parent_name, n.parent_phone, n.parent_email,
-      n.status, n.created_at, n.sibling_count,
+      n.parent_name, n.parent_phone, n.parent_email, n.parent_language,
+      n.status, n.created_at, n.sibling_count, n.reason, n.additional_notes,
       n.nominator_name,
       pi.id as intake_id,
       pi.shirt_size, pi.pant_size, pi.shoe_size,
@@ -48,9 +48,12 @@ export async function onRequestGet(context) {
     parentName: r.parent_name,
     parentPhone: r.parent_phone,
     parentEmail: r.parent_email,
+    parentLanguage: r.parent_language || 'en',
     status: r.status,
     createdAt: r.created_at,
     siblingCount: r.sibling_count || 0,
+    reason: r.reason || '',
+    additionalNotes: r.additional_notes || '',
     nominatorName: r.nominator_name,
     intake: r.intake_id ? {
       submitted: true,

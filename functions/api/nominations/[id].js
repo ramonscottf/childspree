@@ -150,5 +150,53 @@ export async function onRequestPatch(context) {
     }
   }
 
+  // Field editing (admin can edit anything)
+  const nomFields = [];
+  const nomValues = [];
+  if (body.childFirst !== undefined) { nomFields.push('child_first = ?'); nomValues.push(body.childFirst); }
+  if (body.childLast !== undefined) { nomFields.push('child_last = ?'); nomValues.push(body.childLast); }
+  if (body.parentName !== undefined) { nomFields.push('parent_name = ?'); nomValues.push(body.parentName); }
+  if (body.parentPhone !== undefined) { nomFields.push('parent_phone = ?'); nomValues.push(body.parentPhone); }
+  if (body.parentEmail !== undefined) { nomFields.push('parent_email = ?'); nomValues.push(body.parentEmail); }
+  if (body.parentLanguage !== undefined) { nomFields.push('parent_language = ?'); nomValues.push(body.parentLanguage); }
+  if (body.school !== undefined) { nomFields.push('school = ?'); nomValues.push(body.school); }
+  if (body.grade !== undefined) { nomFields.push('grade = ?'); nomValues.push(body.grade); }
+  if (body.reason !== undefined) { nomFields.push('reason = ?'); nomValues.push(body.reason); }
+  if (body.additionalNotes !== undefined) { nomFields.push('additional_notes = ?'); nomValues.push(body.additionalNotes); }
+  if (body.nominatorName !== undefined) { nomFields.push('nominator_name = ?'); nomValues.push(body.nominatorName); }
+  if (body.nominatorEmail !== undefined) { nomFields.push('nominator_email = ?'); nomValues.push(body.nominatorEmail); }
+
+  if (nomFields.length > 0) {
+    nomFields.push('updated_at = ?'); nomValues.push(new Date().toISOString());
+    nomValues.push(params.id);
+    await env.DB.prepare(
+      `UPDATE nominations SET ${nomFields.join(', ')} WHERE id = ?`
+    ).bind(...nomValues).run();
+  }
+
+  // Intake field editing
+  if (body.shirtSize !== undefined || body.pantSize !== undefined || body.shoeSize !== undefined ||
+      body.favoriteColors !== undefined || body.avoidColors !== undefined || body.allergies !== undefined ||
+      body.preferences !== undefined || body.gender !== undefined || body.department !== undefined) {
+    const existing = await env.DB.prepare('SELECT id FROM parent_intake WHERE nomination_id = ?').bind(params.id).first();
+    if (existing) {
+      const iFields = [];
+      const iValues = [];
+      if (body.shirtSize !== undefined) { iFields.push('shirt_size = ?'); iValues.push(body.shirtSize); }
+      if (body.pantSize !== undefined) { iFields.push('pant_size = ?'); iValues.push(body.pantSize); }
+      if (body.shoeSize !== undefined) { iFields.push('shoe_size = ?'); iValues.push(body.shoeSize); }
+      if (body.favoriteColors !== undefined) { iFields.push('favorite_colors = ?'); iValues.push(body.favoriteColors); }
+      if (body.avoidColors !== undefined) { iFields.push('avoid_colors = ?'); iValues.push(body.avoidColors); }
+      if (body.allergies !== undefined) { iFields.push('allergies = ?'); iValues.push(body.allergies); }
+      if (body.preferences !== undefined) { iFields.push('preferences = ?'); iValues.push(body.preferences); }
+      if (body.gender !== undefined) { iFields.push('gender = ?'); iValues.push(body.gender); }
+      if (body.department !== undefined) { iFields.push('department = ?'); iValues.push(body.department); }
+      if (iFields.length > 0) {
+        iValues.push(params.id);
+        await env.DB.prepare(`UPDATE parent_intake SET ${iFields.join(', ')} WHERE nomination_id = ?`).bind(...iValues).run();
+      }
+    }
+  }
+
   return cors(Response.json({ id: params.id, status: body.status, updated: true }));
 }

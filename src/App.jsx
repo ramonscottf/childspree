@@ -1902,6 +1902,184 @@ function ShoppingDayTab({ isMobile }) {
 }
 
 
+function AdminNomDetails({ n, isMobile, updateStatus, copyLink, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const pi = n.parentIntake || {};
+  const [form, setForm] = useState({
+    childFirst: n.childFirst||'', childLast: n.childLast||'', grade: n.grade||'', school: n.school||'',
+    parentName: n.parentName||'', parentPhone: n.parentPhone||'', parentEmail: n.parentEmail||'', parentLanguage: n.parentLanguage||'en',
+    nominatorName: n.nominatorName||'', nominatorEmail: n.nominatorEmail||'', reason: n.reason||'', additionalNotes: n.additionalNotes||'',
+    shirtSize: pi.shirtSize||'', pantSize: pi.pantSize||'', shoeSize: pi.shoeSize||'',
+    favoriteColors: pi.favoriteColors||'', avoidColors: pi.avoidColors||'', allergies: pi.allergies||'', preferences: pi.preferences||'',
+  });
+  const upd = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const save = async () => {
+    setSaving(true); setSaved(false);
+    try {
+      await api(`/nominations/${n.id}`, { method:'PATCH', body:JSON.stringify(form) });
+      setSaved(true); setEditing(false);
+      if (onSaved) onSaved();
+      setTimeout(()=>setSaved(false), 3000);
+    } catch(e) { alert('Save failed: ' + e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ borderTop:`1px solid ${C.border}`, padding:'14px 16px' }}>
+      {/* Pipeline tracker */}
+      {n.status!=='declined'&&(
+        <div style={{ display:'flex', gap:0, marginBottom:16, background:'#F8FAFC', borderRadius:8, overflow:'hidden', border:`1px solid ${C.border}` }}>
+          {[
+            { label:'Nominated', done:true, detail:n.createdAt?.split('T')[0]||n.createdAt?.split(' ')[0] },
+            { label:'Approved', done:['approved','sent','complete'].includes(n.status) },
+            { label:'Sent to parent', done:['sent','complete'].includes(n.status) },
+            { label:'Parent submitted sizes', done:!!n.parentIntake },
+            { label:'Parent consent', done:!!n.parentIntake?.consent },
+            { label:'Video recorded', done:n.parentIntake?.hasVideo },
+          ].map((step,i,arr)=>(
+            <div key={step.label} style={{ flex:1, padding:'10px 8px', textAlign:'center', background:step.done?'#D1FAE5':'transparent', borderRight:i<arr.length-1?`1px solid ${C.border}`:'none' }}>
+              <div style={{ fontSize:14, marginBottom:2 }}>{step.done?'✅':'⬜'}</div>
+              <div style={{ fontSize:10, fontWeight:600, color:step.done?'#065F46':C.light, lineHeight:1.3 }}>{step.label}</div>
+              {step.detail&&<div style={{ fontSize:9, color:'#065F46', marginTop:2 }}>{step.detail}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Edit toggle */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>Nomination Details</span>
+        {!editing ? (
+          <button onClick={()=>setEditing(true)} style={{ padding:'5px 14px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer', color:C.navy }}>✏️ Edit All Fields</button>
+        ) : (
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={save} disabled={saving} style={{ padding:'5px 14px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer' }}>{saving?'Saving...':'💾 Save'}</button>
+            <button onClick={()=>setEditing(false)} style={{ padding:'5px 14px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
+          </div>
+        )}
+      </div>
+      {saved && <div style={{ background:'#D1FAE5', color:'#065F46', padding:'6px 12px', borderRadius:6, fontSize:12, marginBottom:10, fontWeight:600 }}>✅ Changes saved!</div>}
+
+      {editing ? (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Child</div>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>First name</label><input style={{...inp(),marginBottom:0}} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Last name</label><input style={{...inp(),marginBottom:0}} value={form.childLast} onChange={e=>upd('childLast',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Grade</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">—</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>School</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">—</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+          </div>
+          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Parent / Guardian</div>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Name</label><input style={{...inp(),marginBottom:0}} value={form.parentName} onChange={e=>upd('parentName',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Phone</label><input style={{...inp(),marginBottom:0}} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Email</label><input style={{...inp(),marginBottom:0}} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Language</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.parentLanguage} onChange={e=>upd('parentLanguage',e.target.value)}><option value="en">English</option><option value="es">Spanish</option><option value="other">Other</option></select></div>
+          </div>
+          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Nominator</div>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:10, marginBottom:14 }}>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Name</label><input style={{...inp(),marginBottom:0}} value={form.nominatorName} onChange={e=>upd('nominatorName',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Email</label><input style={{...inp(),marginBottom:0}} type="email" value={form.nominatorEmail} onChange={e=>upd('nominatorEmail',e.target.value)}/></div>
+          </div>
+          {n.parentIntake && <>
+            <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Clothing & Preferences</div>
+            <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+              <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shirt</label><input style={{...inp(),marginBottom:0}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}/></div>
+              <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Pants</label><input style={{...inp(),marginBottom:0}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}/></div>
+              <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoes</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
+              <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Fav colors</label><input style={{...inp(),marginBottom:0}} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)}/></div>
+              <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Avoid colors</label><input style={{...inp(),marginBottom:0}} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)}/></div>
+              <div style={{gridColumn:'span 2'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Allergies</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
+              <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Preferences</label><input style={{...inp(),marginBottom:0}} value={form.preferences} onChange={e=>upd('preferences',e.target.value)}/></div>
+            </div>
+          </>}
+          <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Notes</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:10 }}>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Reason for nomination</label><textarea style={{...inp(),marginBottom:0,minHeight:48,resize:'vertical'}} value={form.reason} onChange={e=>upd('reason',e.target.value)}/></div>
+            <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Additional notes</label><textarea style={{...inp(),marginBottom:0,minHeight:48,resize:'vertical'}} value={form.additionalNotes} onChange={e=>upd('additionalNotes',e.target.value)}/></div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Read-only info grid */}
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12, marginBottom:12 }}>
+            <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Child</div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
+              <div style={{ fontSize:12, color:C.text, marginTop:2 }}>{n.school} · {n.grade}</div>
+              {n.studentId&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Student ID: {n.studentId}</div>}
+              {n.parentIntake?.childAge&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Age: {n.parentIntake.childAge}</div>}
+            </div>
+            <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Parent / Guardian</div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.parentName}</div>
+              {n.parentPhone&&<div style={{ fontSize:12, color:C.text, marginTop:2 }}>📱 {n.parentPhone}</div>}
+              {n.parentEmail&&<div style={{ fontSize:12, color:C.text, marginTop:1 }}>✉️ {n.parentEmail}</div>}
+              {n.parentLanguage&&n.parentLanguage!=='en'&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>🌐 {n.parentLanguage==='es'?'Spanish':'Other'}</div>}
+            </div>
+            <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Nominated by</div>
+              <div style={{ fontSize:13, color:C.navy }}>{n.nominatorName} · {n.nominatorRole}</div>
+              <div style={{ fontSize:12, color:C.muted, marginTop:1 }}>{n.nominatorEmail}</div>
+            </div>
+            <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>What to do next</div>
+              <div style={{ fontSize:13, color:C.navy, fontWeight:600 }}>
+                {n.status==='pending'&&'Review and approve or decline this nomination.'}
+                {n.status==='approved'&&'Click "Send to Parent" to email/text the sizing form.'}
+                {n.status==='sent'&&!n.parentIntake&&'Waiting for parent to fill out sizes.'}
+                {n.status==='sent'&&n.parentIntake&&!n.parentIntake.hasVideo&&<span style={{color:'#92400E'}}>⚠️ Sizes received! Video needed.</span>}
+                {n.status==='sent'&&n.parentIntake?.hasVideo&&'Sizes + video done. Mark complete when ready.'}
+                {n.status==='complete'&&n.parentIntake?.hasVideo&&'Ready for shopping day! 🎉'}
+                {n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)&&<span style={{color:'#DC2626'}}>⚠️ Incomplete — video needed.</span>}
+                {n.status==='declined'&&'Declined. Click "Undo Decline" to reopen.'}
+              </div>
+            </div>
+          </div>
+
+          {n.reason&&<div style={{ padding:'8px 12px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5, marginBottom:12 }}><strong>Reason:</strong> {n.reason}</div>}
+
+          {n.parentIntake ? (
+            <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:8, padding:'12px 16px', marginBottom:12 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#065F46', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Parent submitted sizes</div>
+              <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr 1fr':'repeat(5,1fr)', gap:8 }}>
+                {[{icon:'👕',label:'Shirt',val:n.parentIntake.shirtSize},{icon:'👖',label:'Pants',val:n.parentIntake.pantSize},{icon:'👟',label:'Shoes',val:n.parentIntake.shoeSize},{icon:'❤️',label:'Loves',val:n.parentIntake.favoriteColors},{icon:'✗',label:'Avoid',val:n.parentIntake.avoidColors}].filter(s=>s.val).map(s=>(
+                  <div key={s.label} style={{ textAlign:'center', background:'#fff', borderRadius:6, padding:'6px 8px' }}>
+                    <div style={{ fontSize:16 }}>{s.icon}</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.val}</div>
+                    <div style={{ fontSize:10, color:C.light }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              {(n.parentIntake.allergies||n.parentIntake.preferences)&&(<div style={{ marginTop:8, fontSize:12, color:'#166534', lineHeight:1.5 }}>{n.parentIntake.allergies&&<div><strong>Allergies:</strong> {n.parentIntake.allergies}</div>}{n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}</div>)}
+              <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#DC2626' }}>
+                {n.parentIntake.hasVideo?'🎬 Video: Recorded ✓':<span>🎬 VIDEO NEEDED — {n.nominatorName} must record at school</span>}
+              </div>
+            </div>
+          ) : n.status!=='pending' && n.status!=='declined' && (
+            <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:8, padding:'10px 14px', fontSize:12, color:'#92400E', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+              <span>⏳ Waiting for parent to submit sizes. {n.parentToken && <button onClick={()=>copyLink(n.parentToken)} style={{ fontSize:11, color:'#92400E', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', fontWeight:600 }}>Copy intake link</button>}</span>
+              <button onClick={async(e)=>{const btn=e.target;btn.disabled=true;btn.textContent='Sending...';try{await api(`/nominations/${n.id}/remind`,{method:'POST'});btn.textContent='✓ Sent!';btn.style.background='#D1FAE5';btn.style.color='#065F46';setTimeout(()=>{btn.textContent='Send Reminder';btn.disabled=false;btn.style.background=C.amber;btn.style.color='#fff';},3000);}catch(err){btn.textContent='Failed';btn.disabled=false;}}} style={{ padding:'6px 14px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>📩 Send Reminder</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Action buttons */}
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+        {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ padding:'8px 20px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'8px 16px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>✗ Decline</button></>}
+        {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'8px 20px', background:C.blue, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
+        {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'8px 20px', background:C.amber, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>↩ Undo Decline</button>}
+        {n.status==='sent'&&n.parentIntake&&n.parentIntake.hasVideo&&<button onClick={()=>updateStatus(n.id,'complete')} style={{ padding:'8px 20px', background:'#7C3AED', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Mark Complete</button>}
+        {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'8px 16px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>📋 Copy Parent Link</button>}
+      </div>
+    </div>
+  );
+}
+
 function NominationsTab({ isMobile }) {
   const [nominations, setNominations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2005,115 +2183,7 @@ function NominationsTab({ isMobile }) {
 
               {/* Expanded details */}
               {expandedId===n.id&&(
-                <div style={{ borderTop:`1px solid ${C.border}`, padding:'14px 16px' }}>
-                  {/* Pipeline tracker */}
-                  {n.status!=='declined'&&(
-                    <div style={{ display:'flex', gap:0, marginBottom:16, background:'#F8FAFC', borderRadius:8, overflow:'hidden', border:`1px solid ${C.border}` }}>
-                      {[
-                        { label:'Nominated', done:true, detail:n.createdAt?.split('T')[0]||n.createdAt?.split(' ')[0] },
-                        { label:'Approved', done:['approved','sent','complete'].includes(n.status) },
-                        { label:'Sent to parent', done:['sent','complete'].includes(n.status) },
-                        { label:'Parent submitted sizes', done:!!n.parentIntake },
-                        { label:'Parent consent', done:!!n.parentIntake?.consent },
-                        { label:'Video recorded', done:n.parentIntake?.hasVideo },
-                      ].map((step,i,arr)=>(
-                        <div key={step.label} style={{ flex:1, padding:'10px 8px', textAlign:'center', background:step.done?'#D1FAE5':'transparent', borderRight:i<arr.length-1?`1px solid ${C.border}`:'none' }}>
-                          <div style={{ fontSize:14, marginBottom:2 }}>{step.done?'✅':'⬜'}</div>
-                          <div style={{ fontSize:10, fontWeight:600, color:step.done?'#065F46':C.light, lineHeight:1.3 }}>{step.label}</div>
-                          {step.detail&&<div style={{ fontSize:9, color:'#065F46', marginTop:2 }}>{step.detail}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Info grid */}
-                  <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12, marginBottom:12 }}>
-                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Child</div>
-                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.childFirst} {n.childLast}</div>
-                      <div style={{ fontSize:12, color:C.text, marginTop:2 }}>{n.school}</div>
-                      {n.studentId&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Student ID: {n.studentId}</div>}
-                      {n.parentIntake?.childAge&&<div style={{ fontSize:12, color:C.muted, marginTop:1 }}>Age: {n.parentIntake.childAge}</div>}
-                    </div>
-                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Parent / Guardian</div>
-                      <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{n.parentName}</div>
-                      {n.parentPhone&&<div style={{ fontSize:12, color:C.text, marginTop:2 }}>📱 {n.parentPhone}</div>}
-                      {n.parentEmail&&<div style={{ fontSize:12, color:C.text, marginTop:1 }}>✉️ {n.parentEmail}</div>}
-                    </div>
-                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Nominated by</div>
-                      <div style={{ fontSize:13, color:C.navy }}>{n.nominatorName} · {n.nominatorRole}</div>
-                      <div style={{ fontSize:12, color:C.muted, marginTop:1 }}>{n.nominatorEmail}</div>
-                    </div>
-                    <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px' }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>What to do next</div>
-                      <div style={{ fontSize:13, color:C.navy, fontWeight:600 }}>
-                        {n.status==='pending'&&'Review and approve or decline this nomination.'}
-                        {n.status==='approved'&&'Click "Send to Parent" to email/text the sizing form.'}
-                        {n.status==='sent'&&!n.parentIntake&&'Waiting for parent to fill out sizes. You can copy the link and send it manually.'}
-                        {n.status==='sent'&&n.parentIntake&&!n.parentIntake.hasVideo&&<span style={{color:'#92400E'}}>⚠️ Sizes received! {n.nominatorName} needs to record a video with {n.childFirst} at school. This must happen before shopping day.</span>}
-                        {n.status==='sent'&&n.parentIntake?.hasVideo&&'Sizes + video done. Mark complete when ready.'}
-                        {n.status==='complete'&&n.parentIntake?.hasVideo&&'This child is ready for volunteer shopping day! 🎉'}
-                        {n.status==='complete'&&(!n.parentIntake||!n.parentIntake.hasVideo)&&<span style={{color:'#DC2626'}}>⚠️ Incomplete — {n.nominatorName} must record a video with {n.childFirst} at school before shopping day.</span>}
-                        {n.status==='declined'&&'This nomination was declined. Click "Undo Decline" to reopen.'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reason */}
-                  {n.reason&&<div style={{ padding:'8px 12px', background:'#FFFBEB', borderRadius:6, fontSize:12, color:'#78350F', lineHeight:1.5, marginBottom:12 }}><strong>Reason for nomination:</strong> {n.reason}</div>}
-
-                  {/* Parent intake details */}
-                  {n.parentIntake ? (
-                    <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:8, padding:'12px 16px', marginBottom:12 }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:'#065F46', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Parent submitted sizes</div>
-                      <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr 1fr':'repeat(5,1fr)', gap:8 }}>
-                        {[
-                          {icon:'👕',label:'Shirt',val:n.parentIntake.shirtSize},
-                          {icon:'👖',label:'Pants',val:n.parentIntake.pantSize},
-                          {icon:'👟',label:'Shoes',val:n.parentIntake.shoeSize},
-                          {icon:'❤️',label:'Loves',val:n.parentIntake.favoriteColors},
-                          {icon:'✗',label:'Avoid',val:n.parentIntake.avoidColors},
-                        ].filter(s=>s.val).map(s=>(
-                          <div key={s.label} style={{ textAlign:'center', background:'#fff', borderRadius:6, padding:'6px 8px' }}>
-                            <div style={{ fontSize:16 }}>{s.icon}</div>
-                            <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.val}</div>
-                            <div style={{ fontSize:10, color:C.light }}>{s.label}</div>
-                          </div>
-                        ))}
-                      </div>
-                      {(n.parentIntake.allergies||n.parentIntake.preferences)&&(
-                        <div style={{ marginTop:8, fontSize:12, color:'#166534', lineHeight:1.5 }}>
-                          {n.parentIntake.allergies&&<div><strong>Allergies:</strong> {n.parentIntake.allergies}</div>}
-                          {n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}
-                        </div>
-                      )}
-                      <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#DC2626' }}>
-                        {n.parentIntake.hasVideo
-                          ? '🎬 Video: Recorded ✓'
-                          : <span>🎬 VIDEO NEEDED — {n.nominatorName} must record a video with {n.childFirst} at school before shopping day</span>
-                        }
-                      </div>
-                    </div>
-                  ) : n.status!=='pending' && n.status!=='declined' && (
-                    <div style={{ background:'#FFF7ED', border:`1px solid #FED7AA`, borderRadius:8, padding:'10px 14px', fontSize:12, color:'#92400E', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-                      <span>⏳ Waiting for parent to submit sizes.
-                      {n.parentToken && <span> <button onClick={()=>copyLink(n.parentToken)} style={{ fontSize:11, color:'#92400E', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', fontWeight:600 }}>Copy intake link</button></span>}
-                      </span>
-                      <button onClick={async(e)=>{const btn=e.target;btn.disabled=true;btn.textContent='Sending...';try{await api(`/nominations/${n.id}/remind`,{method:'POST'});btn.textContent='✓ Reminder sent!';btn.style.background='#D1FAE5';btn.style.color='#065F46';setTimeout(()=>{btn.textContent='Send Reminder';btn.disabled=false;btn.style.background=C.amber;btn.style.color='#fff';},3000);}catch(err){btn.textContent='Failed';btn.disabled=false;}}} style={{ padding:'6px 14px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>📩 Send Reminder</button>
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                    {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ padding:'8px 20px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'8px 16px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>✗ Decline</button></>}
-                    {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'8px 20px', background:C.blue, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
-                    {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'8px 20px', background:C.amber, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>↩ Undo Decline — Move to Pending</button>}
-                    {n.status==='sent'&&n.parentIntake&&n.parentIntake.hasVideo&&<button onClick={()=>updateStatus(n.id,'complete')} style={{ padding:'8px 20px', background:'#7C3AED', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Mark Complete</button>}
-                    {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'8px 16px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>📋 Copy Parent Link</button>}
-                  </div>
-                </div>
+                <AdminNomDetails n={n} isMobile={isMobile} updateStatus={updateStatus} copyLink={copyLink} onSaved={load}/>
               )}
             </div>
           ))}
@@ -2732,10 +2802,14 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
   const [saved, setSaved] = useState(false);
   const intake = n.intake || { submitted: false, consent: false, videoRecorded: false };
   const [form, setForm] = useState({
+    // Intake fields
     shirtSize: intake.shirtSize||'', pantSize: intake.pantSize||'', shoeSize: intake.shoeSize||'',
     favoriteColors: intake.favoriteColors||'', avoidColors: intake.avoidColors||'',
     allergies: intake.allergies||'', preferences: intake.preferences||'',
-    grade: n.grade||'',
+    // Nomination fields
+    grade: n.grade||'', childFirst: n.childFirst||'', childLast: n.childLast||'',
+    parentName: n.parentName||'', parentPhone: n.parentPhone||'', parentEmail: n.parentEmail||'',
+    parentLanguage: n.parentLanguage||'en', school: n.school||'',
   });
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
 
@@ -2809,22 +2883,43 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                   ) : (
                     <div style={{ display:'flex', gap:6 }}>
                       <button onClick={save} disabled={saving} style={{ padding:'4px 12px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>{saving?'Saving...':'Save'}</button>
-                      <button onClick={()=>{setEditing(false);setForm({shirtSize:intake.shirtSize||'',pantSize:intake.pantSize||'',shoeSize:intake.shoeSize||'',favoriteColors:intake.favoriteColors||'',avoidColors:intake.avoidColors||'',allergies:intake.allergies||'',preferences:intake.preferences||'',grade:n.grade||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
+                      <button onClick={()=>{setEditing(false);setForm({shirtSize:intake.shirtSize||'',pantSize:intake.pantSize||'',shoeSize:intake.shoeSize||'',favoriteColors:intake.favoriteColors||'',avoidColors:intake.avoidColors||'',allergies:intake.allergies||'',preferences:intake.preferences||'',grade:n.grade||'',childFirst:n.childFirst||'',childLast:n.childLast||'',parentName:n.parentName||'',parentPhone:n.parentPhone||'',parentEmail:n.parentEmail||'',parentLanguage:n.parentLanguage||'en',school:n.school||''});}} style={{ padding:'4px 12px', background:'#F1F5F9', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', color:C.muted }}>Cancel</button>
                     </div>
                   )}
                 </div>
                 {saved && <div style={{ background:'#D1FAE5', color:'#065F46', padding:'6px 12px', borderRadius:6, fontSize:12, marginBottom:10, fontWeight:600 }}>✅ Saved!</div>}
 
                 {editing ? (
-                  <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr', gap:10 }}>
-                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Grade</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">—</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></div>
-                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shirt size</label><input style={{...inp(),marginBottom:0}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}/></div>
-                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Pant size</label><input style={{...inp(),marginBottom:0}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}/></div>
-                    <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoe size</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
-                    <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Favorite colors</label><input style={{...inp(),marginBottom:0}} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)}/></div>
-                    <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Colors to avoid</label><input style={{...inp(),marginBottom:0}} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)}/></div>
-                    <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Allergies / notes</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
-                    <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Preferences / special requests</label><input style={{...inp(),marginBottom:0}} value={form.preferences} onChange={e=>upd('preferences',e.target.value)}/></div>
+                  <div>
+                    {/* Child & School info */}
+                    <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Child & School</div>
+                    <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>First name</label><input style={{...inp(),marginBottom:0}} value={form.childFirst} onChange={e=>upd('childFirst',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Last name</label><input style={{...inp(),marginBottom:0}} value={form.childLast} onChange={e=>upd('childLast',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Grade</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.grade} onChange={e=>upd('grade',e.target.value)}><option value="">—</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</select></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>School</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.school} onChange={e=>upd('school',e.target.value)}><option value="">—</option>{SCHOOLS.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+                    </div>
+
+                    {/* Parent info */}
+                    <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Parent / Guardian</div>
+                    <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr 1fr', gap:10, marginBottom:14 }}>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Parent name</label><input style={{...inp(),marginBottom:0}} value={form.parentName} onChange={e=>upd('parentName',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Phone</label><input style={{...inp(),marginBottom:0}} type="tel" value={form.parentPhone} onChange={e=>upd('parentPhone',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Email</label><input style={{...inp(),marginBottom:0}} type="email" value={form.parentEmail} onChange={e=>upd('parentEmail',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Language</label><select style={{...inp(),marginBottom:0,appearance:'auto'}} value={form.parentLanguage} onChange={e=>upd('parentLanguage',e.target.value)}><option value="en">English</option><option value="es">Spanish</option><option value="other">Other</option></select></div>
+                    </div>
+
+                    {/* Sizes & preferences */}
+                    <div style={{ fontSize:12, fontWeight:700, color:C.navy, marginBottom:8 }}>Clothing & Preferences</div>
+                    <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'1fr 1fr 1fr', gap:10 }}>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shirt size</label><input style={{...inp(),marginBottom:0}} value={form.shirtSize} onChange={e=>upd('shirtSize',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Pant size</label><input style={{...inp(),marginBottom:0}} value={form.pantSize} onChange={e=>upd('pantSize',e.target.value)}/></div>
+                      <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoe size</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
+                      <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Favorite colors</label><input style={{...inp(),marginBottom:0}} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)}/></div>
+                      <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Colors to avoid</label><input style={{...inp(),marginBottom:0}} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)}/></div>
+                      <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Allergies / notes</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
+                      <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Preferences / special requests</label><input style={{...inp(),marginBottom:0}} value={form.preferences} onChange={e=>upd('preferences',e.target.value)}/></div>
+                    </div>
                   </div>
                 ) : (
                   <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr 1fr':'repeat(5,1fr)', gap:8 }}>

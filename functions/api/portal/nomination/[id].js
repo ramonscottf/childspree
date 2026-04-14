@@ -72,6 +72,28 @@ export async function onRequestPatch(context) {
 
   const body = await request.json();
 
+  // Update nomination-level fields
+  const nomFields = [];
+  const nomValues = [];
+  if (body.childFirst !== undefined) { nomFields.push('child_first = ?'); nomValues.push(body.childFirst); }
+  if (body.childLast !== undefined) { nomFields.push('child_last = ?'); nomValues.push(body.childLast); }
+  if (body.parentName !== undefined) { nomFields.push('parent_name = ?'); nomValues.push(body.parentName); }
+  if (body.parentPhone !== undefined) { nomFields.push('parent_phone = ?'); nomValues.push(body.parentPhone); }
+  if (body.parentEmail !== undefined) { nomFields.push('parent_email = ?'); nomValues.push(body.parentEmail); }
+  if (body.parentLanguage !== undefined) { nomFields.push('parent_language = ?'); nomValues.push(body.parentLanguage); }
+  if (body.school !== undefined) { nomFields.push('school = ?'); nomValues.push(body.school); }
+  if (body.grade !== undefined && body.grade !== '') { nomFields.push('grade = ?'); nomValues.push(body.grade); }
+  if (body.reason !== undefined) { nomFields.push('reason = ?'); nomValues.push(body.reason); }
+  if (body.additionalNotes !== undefined) { nomFields.push('additional_notes = ?'); nomValues.push(body.additionalNotes); }
+
+  if (nomFields.length > 0) {
+    nomFields.push('updated_at = ?'); nomValues.push(new Date().toISOString());
+    nomValues.push(params.id);
+    await env.DB.prepare(
+      `UPDATE nominations SET ${nomFields.join(', ')} WHERE id = ?`
+    ).bind(...nomValues).run();
+  }
+
   // Check if intake record exists
   const existing = await env.DB.prepare(
     'SELECT id FROM parent_intake WHERE nomination_id = ?'
@@ -96,13 +118,6 @@ export async function onRequestPatch(context) {
         `UPDATE parent_intake SET ${fields.join(', ')} WHERE nomination_id = ?`
       ).bind(...values).run();
     }
-  }
-
-  // Update grade on the nomination itself (not intake)
-  if (body.grade !== undefined && body.grade !== '') {
-    await env.DB.prepare(
-      'UPDATE nominations SET grade = ?, updated_at = datetime("now") WHERE id = ?'
-    ).bind(body.grade, params.id).run();
   }
 
   return cors(Response.json({ updated: true }));
