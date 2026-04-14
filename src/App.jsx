@@ -1513,6 +1513,10 @@ function QRCodesTab({ isMobile }) {
                   <div style={{ fontSize:10, color:C.text, marginTop:4, fontWeight:600 }}>
                     👕{child.shirt_size} 👖{child.pant_size} 👟{child.shoe_size}
                   </div>
+                  <button onClick={()=>printBagTag(child, qr)}
+                    style={{ marginTop:8, padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:11, fontWeight:600, color:C.navy, cursor:'pointer', width:'100%' }}>
+                    🏷️ Print Tag
+                  </button>
                 </div>
               );
             })}
@@ -1528,6 +1532,188 @@ function QRCodesTab({ isMobile }) {
       )}
     </div>
   );
+}
+
+// ─── BAG TAG LABEL PRINTER (Brother QL-800, 62mm continuous) ───
+function printBagTag(child, qrDataUrl) {
+  // Layout: 62mm wide × ~100mm long airline-style bag tag
+  // QR on left, child info on right, sizes prominent
+  // Designed for Brother QL-800 62mm continuous DK tape
+  const win = window.open('', '_blank', 'width=400,height=600');
+  const colors = child.favorite_colors || child.favoriteColors || '';
+  const avoid = child.avoid_colors || child.avoidColors || '';
+  const allergies = child.allergies || '';
+
+  // Generate QR inline if not provided
+  const qrHtml = qrDataUrl
+    ? `<img src="${qrDataUrl}" class="qr"/>`
+    : `<div class="qr" style="background:#eee;display:flex;align-items:center;justify-content:center;font-size:9px;color:#999;">No QR</div>`;
+
+  win.document.write(`<!DOCTYPE html><html><head><title>Bag Tag — ${child.child_first || child.childFirst}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+  @page {
+    size: 62mm auto;
+    margin: 0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    width: 62mm;
+    padding: 3mm;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .tag {
+    width: 100%;
+  }
+  .header {
+    text-align: center;
+    border-bottom: 1.5px solid #000;
+    padding-bottom: 2mm;
+    margin-bottom: 2mm;
+  }
+  .header-title {
+    font-size: 8pt;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .main {
+    display: flex;
+    gap: 2.5mm;
+    align-items: flex-start;
+  }
+  .qr {
+    width: 22mm;
+    height: 22mm;
+    flex-shrink: 0;
+  }
+  .info {
+    flex: 1;
+    min-width: 0;
+  }
+  .name {
+    font-size: 14pt;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 1mm;
+  }
+  .meta {
+    font-size: 7pt;
+    color: #444;
+    margin-bottom: 2mm;
+  }
+  .sizes {
+    display: flex;
+    flex-direction: column;
+    gap: 1mm;
+    margin-top: 1.5mm;
+  }
+  .size-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5mm;
+    font-size: 9pt;
+  }
+  .size-icon {
+    font-size: 8pt;
+    width: 5mm;
+    text-align: center;
+  }
+  .size-label {
+    font-weight: 400;
+    color: #666;
+    width: 10mm;
+    font-size: 7pt;
+  }
+  .size-value {
+    font-weight: 800;
+    font-size: 9pt;
+  }
+  .section {
+    margin-top: 2mm;
+    padding-top: 1.5mm;
+    border-top: 0.5px solid #ccc;
+  }
+  .section-label {
+    font-size: 6pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 0.5mm;
+  }
+  .section-value {
+    font-size: 8pt;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .colors-love { color: #000; }
+  .colors-avoid { color: #000; }
+  .allergy-box {
+    border: 1.5px solid #000;
+    padding: 1mm 2mm;
+    margin-top: 2mm;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+  .allergy-label {
+    font-size: 6pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .footer {
+    margin-top: 2.5mm;
+    padding-top: 1.5mm;
+    border-top: 1.5px solid #000;
+    text-align: center;
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .budget {
+    font-size: 10pt;
+    font-weight: 900;
+    text-align: center;
+    margin-top: 1.5mm;
+  }
+  @media print {
+    body { padding: 2mm; }
+  }
+</style></head><body>
+<div class="tag">
+  <div class="header">
+    <div class="header-title">Child Spree 2026</div>
+  </div>
+
+  <div class="main">
+    ${qrHtml}
+    <div class="info">
+      <div class="name">${child.child_first || child.childFirst}</div>
+      <div class="meta">${child.school || ''} · Gr ${child.grade || '?'}${child.child_age || child.age ? ' · Age '+(child.child_age||child.age) : ''}</div>
+      <div class="sizes">
+        <div class="size-row"><span class="size-icon">👕</span><span class="size-label">Shirt</span><span class="size-value">${child.shirt_size || child.shirtSize || '?'}</span></div>
+        <div class="size-row"><span class="size-icon">👖</span><span class="size-label">Pants</span><span class="size-value">${child.pant_size || child.pantSize || '?'}</span></div>
+        <div class="size-row"><span class="size-icon">👟</span><span class="size-label">Shoes</span><span class="size-value">${child.shoe_size || child.shoeSize || '?'}</span></div>
+      </div>
+    </div>
+  </div>
+
+  ${colors ? `<div class="section"><div class="section-label">♥ Loves</div><div class="section-value colors-love">${colors}</div></div>` : ''}
+  ${avoid ? `<div class="section"><div class="section-label">✕ Avoid</div><div class="section-value colors-avoid">${avoid}</div></div>` : ''}
+  ${allergies ? `<div class="allergy-box"><div class="allergy-label">⚠ Allergy</div>${allergies}</div>` : ''}
+
+  <div class="footer">
+    <div class="budget">$150 — HEAD TO TOE</div>
+    Scan QR for video + full profile
+  </div>
+</div>
+</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 // ─── SHOPPING DAY TAB (Admin — Full Dashboard + Ops) ───
@@ -1627,6 +1813,19 @@ function ShoppingDayTab({ isMobile }) {
       await api(`/assignments/${id}`, { method:'DELETE' });
       await loadDashboard();
     } catch (e) { alert(e.message); }
+  };
+
+  const handlePrintTag = async (assignment) => {
+    const shopUrl = `${window.location.origin}/#/shop/${assignment.parent_token}`;
+    try {
+      const qr = await QRCode.toDataURL(shopUrl, {
+        width: 200, margin: 1, errorCorrectionLevel: 'M',
+        color: { dark: '#1B3A4B', light: '#ffffff' },
+      });
+      printBagTag(assignment, qr);
+    } catch (e) {
+      printBagTag(assignment, null);
+    }
   };
 
   const cs = { background:'#fff', borderRadius:12, padding:16, marginBottom:12, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
@@ -1832,11 +2031,18 @@ function ShoppingDayTab({ isMobile }) {
                     🛒 Shopping for <ElapsedTime since={a.assigned_at}/>
                   </div>
                 </div>
-                <button onClick={()=>handleCheckout(a.id)}
-                  style={{ padding:'10px 16px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
-                    background:C.green, color:'#fff', cursor:'pointer', flexShrink:0 }}>
-                  ✅ Checkout
-                </button>
+                <div style={{ display:'flex', gap:6, flexShrink:0, flexDirection:'column' }}>
+                  <button onClick={()=>handlePrintTag(a)}
+                    style={{ padding:'8px 14px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12, fontWeight:700,
+                      background:'#fff', color:C.navy, cursor:'pointer' }}>
+                    🏷️ Tag
+                  </button>
+                  <button onClick={()=>handleCheckout(a.id)}
+                    style={{ padding:'10px 16px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+                      background:C.green, color:'#fff', cursor:'pointer' }}>
+                    ✅ Checkout
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -1879,6 +2085,11 @@ function ShoppingDayTab({ isMobile }) {
                 )}
               </div>
               <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                <button onClick={()=>handlePrintTag(a)}
+                  style={{ padding:'7px 10px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:11,
+                    background:'#fff', color:C.navy, cursor:'pointer' }}>
+                  🏷️
+                </button>
                 {!a.checked_out && (
                   <button onClick={()=>handleCheckout(a.id)}
                     style={{ padding:'7px 12px', borderRadius:6, border:'none', fontSize:11, fontWeight:700,
