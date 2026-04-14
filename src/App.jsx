@@ -1526,22 +1526,39 @@ function QRCodesTab({ isMobile }) {
   );
 }
 
-// ─── SHOPPING DAY TAB (Admin — Ops Crew Check-in/Checkout) ───
+// ─── SHOPPING DAY TAB (Admin — Full Dashboard + Ops) ───
 const STORES = [
   { id:'layton', label:"Kohl's Layton", cap:200 },
   { id:'centerville', label:"Kohl's Centerville", cap:175 },
   { id:'clinton', label:"Kohl's Clinton", cap:200 },
 ];
 
+function ElapsedTime({ since }) {
+  const [elapsed, setElapsed] = useState('');
+  useEffect(() => {
+    const calc = () => {
+      const mins = Math.floor((Date.now() - new Date(since).getTime()) / 60000);
+      if (mins < 1) setElapsed('just now');
+      else if (mins < 60) setElapsed(`${mins}m`);
+      else setElapsed(`${Math.floor(mins/60)}h ${mins%60}m`);
+    };
+    calc();
+    const i = setInterval(calc, 30000);
+    return () => clearInterval(i);
+  }, [since]);
+  return elapsed;
+}
+
 function ShoppingDayTab({ isMobile }) {
+  const [dashboard, setDashboard] = useState(null);
   const [assignments, setAssignments] = useState([]);
-  const [stats, setStats] = useState({ total:0, active:0, completed:0, unassigned:0, volunteersCheckedIn:0 });
   const [loading, setLoading] = useState(true);
-  const [storeFilter, setStoreFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showAssign, setShowAssign] = useState(false);
+  const [subView, setSubView] = useState('overview'); // overview | assign | unassigned | active | completed
+  const [lastRefresh, setLastRefresh] = useState(null);
+
+  // Assignment form state
   const [volunteers, setVolunteers] = useState([]);
-  const [unassignedKids, setUnassignedKids] = useState([]);
+  const [showAssign, setShowAssign] = useState(false);
   const [selectedVol, setSelectedVol] = useState('');
   const [selectedKid, setSelectedKid] = useState('');
   const [assignStore, setAssignStore] = useState('');
@@ -1549,33 +1566,34 @@ function ShoppingDayTab({ isMobile }) {
   const [volSearch, setVolSearch] = useState('');
   const [kidSearch, setKidSearch] = useState('');
 
-  const loadAssignments = useCallback(async () => {
+  const loadDashboard = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (storeFilter) params.set('store', storeFilter);
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      const data = await api(`/assignments?${params}`);
-      setAssignments(data.assignments || []);
-      setStats(data.stats || {});
+      const [dashData, assignData] = await Promise.all([
+        api('/admin/shopday'),
+        api('/assignments?status=all'),
+      ]);
+      setDashboard(dashData);
+      setAssignments(assignData.assignments || []);
+      setLastRefresh(new Date());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [storeFilter, statusFilter]);
+  }, []);
 
-  const loadFormData = useCallback(async () => {
+  // Auto-refresh every 15 seconds
+  useEffect(() => {
+    loadDashboard();
+    const interval = setInterval(loadDashboard, 15000);
+    return () => clearInterval(interval);
+  }, [loadDashboard]);
+
+  const loadVolunteers = useCallback(async () => {
     try {
-      const [volData, nomData] = await Promise.all([
-        api('/volunteers'),
-        api('/admin/qr-sheet'),
-      ]);
-      setVolunteers((volData.volunteers || []).filter(v => v.status === 'approved' || v.status === 'active' || !v.status));
-      // Get assigned nomination IDs to filter out
-      const assignedNomIds = new Set(assignments.map(a => a.nomination_id));
-      setUnassignedKids((nomData.children || []).filter(c => !assignedNomIds.has(c.id)));
+      const data = await api('/volunteers');
+      setVolunteers((data.volunteers || []).filter(v => v.status !== 'rejected'));
     } catch (e) { console.error(e); }
-  }, [assignments]);
+  }, []);
 
-  useEffect(() => { loadAssignments(); }, [loadAssignments]);
-  useEffect(() => { if (showAssign) loadFormData(); }, [showAssign, loadFormData]);
+  useEffect(() => { if (showAssign) loadVolunteers(); }, [showAssign, loadVolunteers]);
 
   const handleAssign = async () => {
     if (!selectedVol || !selectedKid) return;
@@ -1587,44 +1605,40 @@ function ShoppingDayTab({ isMobile }) {
       });
       setSelectedVol(''); setSelectedKid(''); setAssignStore('');
       setShowAssign(false);
-      await loadAssignments();
-    } catch (e) {
-      alert(e.message);
-    } finally { setAssigning(false); }
+      await loadDashboard();
+    } catch (e) { alert(e.message); }
+    finally { setAssigning(false); }
   };
 
-  const handleCheckout = async (assignmentId) => {
+  const handleCheckout = async (id) => {
     try {
-      await api(`/assignments/${assignmentId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ action: 'checkout' }),
-      });
-      await loadAssignments();
+      await api(`/assignments/${id}`, { method:'PATCH', body: JSON.stringify({ action:'checkout' }) });
+      await loadDashboard();
     } catch (e) { alert(e.message); }
   };
 
-  const handleUnassign = async (assignmentId) => {
+  const handleUnassign = async (id) => {
     if (!confirm('Remove this assignment?')) return;
     try {
-      await api(`/assignments/${assignmentId}`, { method: 'DELETE' });
-      await loadAssignments();
+      await api(`/assignments/${id}`, { method:'DELETE' });
+      await loadDashboard();
     } catch (e) { alert(e.message); }
   };
 
-  const cardStyle = {
-    background:'#fff', borderRadius:12, padding:16, marginBottom:12,
-    boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0',
-  };
+  const cs = { background:'#fff', borderRadius:12, padding:16, marginBottom:12, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
 
-  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading shopping day data…</div>;
+  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading shopping day…</div>;
+  if (!dashboard) return <div style={{ textAlign:'center', padding:40, color:C.red }}>Failed to load dashboard</div>;
+
+  const o = dashboard.overview;
+  const pct = o.totalKids > 0 ? Math.round((o.completed / o.totalKids) * 100) : 0;
 
   const filteredVols = volunteers.filter(v => {
     if (!volSearch) return true;
     const s = volSearch.toLowerCase();
     return (v.first_name||'').toLowerCase().includes(s) || (v.last_name||'').toLowerCase().includes(s) || (v.email||'').toLowerCase().includes(s);
   });
-
-  const filteredKids = unassignedKids.filter(k => {
+  const filteredKids = (dashboard.unassignedKids || []).filter(k => {
     if (!kidSearch) return true;
     const s = kidSearch.toLowerCase();
     return (k.child_first||'').toLowerCase().includes(s) || (k.school||'').toLowerCase().includes(s);
@@ -1632,76 +1646,126 @@ function ShoppingDayTab({ isMobile }) {
 
   return (
     <div>
-      {/* Stats strip */}
-      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(5,1fr)', gap:10, marginBottom:16 }}>
+      {/* Auto-refresh indicator */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <div style={{ fontSize:11, color:C.muted }}>
+          🟢 Live — refreshes every 15s {lastRefresh && `· ${lastRefresh.toLocaleTimeString()}`}
+        </div>
+        <button onClick={loadDashboard} style={{ padding:'4px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:11, fontWeight:600, color:C.navy, cursor:'pointer' }}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* Big progress bar */}
+      <div style={{ ...cs, padding:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
+          <span style={{ fontSize:18, fontWeight:800, color:C.navy }}>Shopping Day Progress</span>
+          <span style={{ fontSize:24, fontWeight:800, color: pct === 100 ? C.green : C.pink }}>{pct}%</span>
+        </div>
+        <div style={{ height:12, background:'#E2E8F0', borderRadius:6, overflow:'hidden' }}>
+          <div style={{
+            height:'100%', borderRadius:6, transition:'width 0.6s ease',
+            width:`${pct}%`,
+            background: pct === 100 ? 'linear-gradient(90deg, #059669, #10B981)' : 'linear-gradient(90deg, #E8548C, #F9A8C9)',
+          }}/>
+        </div>
+        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6, fontSize:11, color:C.muted }}>
+          <span>{o.completed} completed</span>
+          <span>{o.active} shopping</span>
+          <span>{o.unassigned} waiting</span>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(6,1fr)', gap:8, marginBottom:16 }}>
         {[
-          { label:'Assigned', value:stats.total, color:C.blue, icon:'🔗' },
-          { label:'Shopping', value:stats.active, color:C.amber, icon:'🛒' },
-          { label:'Completed', value:stats.completed, color:C.green, icon:'✅' },
-          { label:'Unassigned Kids', value:stats.unassigned, color:C.red, icon:'⏳' },
-          { label:'Volunteers In', value:stats.volunteersCheckedIn, color:C.navy, icon:'👥' },
+          { label:'Total Kids', value:o.totalKids, color:C.navy, icon:'👶' },
+          { label:'Volunteers', value:o.totalVolunteers, color:C.blue, icon:'👥' },
+          { label:'Assigned', value:o.assigned, color:'#7C3AED', icon:'🔗' },
+          { label:'Shopping', value:o.active, color:C.amber, icon:'🛒' },
+          { label:'Done', value:o.completed, color:C.green, icon:'✅' },
+          { label:'Avg Time', value:o.avgShoppingMinutes ? `${o.avgShoppingMinutes}m` : '—', color:C.muted, icon:'⏱️' },
         ].map(s => (
-          <div key={s.label} style={{ ...cardStyle, textAlign:'center', padding:12 }}>
-            <div style={{ fontSize:18 }}>{s.icon}</div>
-            <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.value}</div>
-            <div style={{ fontSize:10, fontWeight:600, color:C.muted, marginTop:2 }}>{s.label}</div>
+          <div key={s.label} style={{ background:'#fff', borderRadius:10, padding:10, textAlign:'center', border:'1px solid #E2E8F0' }}>
+            <div style={{ fontSize:14 }}>{s.icon}</div>
+            <div style={{ fontSize:20, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:9, fontWeight:600, color:C.muted }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Controls */}
-      <div style={{ ...cardStyle, display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
-        <select value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}
-          style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13 }}>
-          <option value="">All Stores</option>
-          {STORES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-        </select>
-        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
-          style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13 }}>
-          <option value="all">All Status</option>
-          <option value="active">🛒 Shopping</option>
-          <option value="completed">✅ Completed</option>
-        </select>
+      {/* Store breakdown */}
+      {dashboard.stores.length > 0 && (
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)', gap:10, marginBottom:16 }}>
+          {STORES.map(store => {
+            const data = dashboard.stores.find(s => s.id === store.id) || { total:0, active:0, completed:0 };
+            const storePct = store.cap > 0 ? Math.round((data.total / store.cap) * 100) : 0;
+            return (
+              <div key={store.id} style={{ ...cs, padding:14 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{store.label}</div>
+                <div style={{ fontSize:10, color:C.muted, marginBottom:8 }}>Capacity: {store.cap}</div>
+                <div style={{ display:'flex', gap:12 }}>
+                  <div><span style={{ fontSize:18, fontWeight:800, color:C.amber }}>{data.active}</span><div style={{ fontSize:9, color:C.muted }}>shopping</div></div>
+                  <div><span style={{ fontSize:18, fontWeight:800, color:C.green }}>{data.completed}</span><div style={{ fontSize:9, color:C.muted }}>done</div></div>
+                  <div><span style={{ fontSize:18, fontWeight:800, color:C.navy }}>{data.total}</span><div style={{ fontSize:9, color:C.muted }}>total</div></div>
+                </div>
+                <div style={{ height:4, background:'#E2E8F0', borderRadius:2, marginTop:8, overflow:'hidden' }}>
+                  <div style={{ height:'100%', width:`${Math.min(storePct,100)}%`, background:C.blue, borderRadius:2 }}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Sub-navigation */}
+      <div style={{ display:'flex', gap:6, marginBottom:12, flexWrap:'wrap' }}>
+        {[
+          { key:'overview', label:`📋 All (${assignments.length})` },
+          { key:'active', label:`🛒 Shopping (${o.active})` },
+          { key:'unassigned', label:`⏳ Unassigned (${o.unassigned})` },
+          { key:'completed', label:`✅ Done (${o.completed})` },
+        ].map(t => (
+          <button key={t.key} onClick={()=>setSubView(t.key)}
+            style={{ padding:'6px 14px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
+              border:`1.5px solid ${subView===t.key?C.navy:C.border}`,
+              background:subView===t.key?C.navy:'#fff', color:subView===t.key?'#fff':C.muted }}>
+            {t.label}
+          </button>
+        ))}
         <div style={{ flex:1 }}/>
         <button onClick={()=>setShowAssign(!showAssign)}
-          style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+          style={{ padding:'8px 16px', borderRadius:8, border:'none', fontSize:12, fontWeight:700,
             background:showAssign?C.light:C.pink, color:'#fff', cursor:'pointer' }}>
-          {showAssign ? '✕ Cancel' : '➕ Assign Volunteer → Child'}
+          {showAssign ? '✕ Cancel' : '➕ Assign'}
         </button>
       </div>
 
       {/* Assign form */}
       {showAssign && (
-        <div style={{ ...cardStyle, background:'#FFFBEB', border:'2px solid #FCD34D' }}>
+        <div style={{ ...cs, background:'#FFFBEB', border:'2px solid #FCD34D' }}>
           <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>New Assignment</div>
           <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:12 }}>
-            {/* Volunteer picker */}
             <div>
               <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>VOLUNTEER</div>
-              <input placeholder="Search volunteer…" value={volSearch} onChange={e=>setVolSearch(e.target.value)}
+              <input placeholder="Search…" value={volSearch} onChange={e=>setVolSearch(e.target.value)}
                 style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:13, marginBottom:6 }}/>
               <select value={selectedVol} onChange={e=>setSelectedVol(e.target.value)} size={5}
                 style={{ width:'100%', padding:4, borderRadius:6, border:`1px solid ${C.border}`, fontSize:12 }}>
                 <option value="">— Select —</option>
-                {filteredVols.map(v => (
-                  <option key={v.id} value={v.id}>{v.first_name} {v.last_name} ({v.store_location || '?'})</option>
-                ))}
+                {filteredVols.map(v => <option key={v.id} value={v.id}>{v.first_name} {v.last_name}</option>)}
               </select>
             </div>
-            {/* Child picker */}
             <div>
-              <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>CHILD (Unassigned)</div>
-              <input placeholder="Search child…" value={kidSearch} onChange={e=>setKidSearch(e.target.value)}
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>CHILD ({(dashboard.unassignedKids||[]).length} unassigned)</div>
+              <input placeholder="Search…" value={kidSearch} onChange={e=>setKidSearch(e.target.value)}
                 style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:13, marginBottom:6 }}/>
               <select value={selectedKid} onChange={e=>setSelectedKid(e.target.value)} size={5}
                 style={{ width:'100%', padding:4, borderRadius:6, border:`1px solid ${C.border}`, fontSize:12 }}>
                 <option value="">— Select —</option>
-                {filteredKids.map(k => (
-                  <option key={k.id} value={k.id}>{k.child_first} — {k.school} (Gr {k.grade})</option>
-                ))}
+                {filteredKids.map(k => <option key={k.id} value={k.id}>{k.child_first} — {k.school} (Gr {k.grade})</option>)}
               </select>
             </div>
-            {/* Store + submit */}
             <div>
               <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>STORE</div>
               <select value={assignStore} onChange={e=>setAssignStore(e.target.value)}
@@ -1712,29 +1776,83 @@ function ShoppingDayTab({ isMobile }) {
               <button onClick={handleAssign} disabled={assigning || !selectedVol || !selectedKid}
                 style={{ width:'100%', padding:'12px 16px', borderRadius:8, border:'none', fontSize:14, fontWeight:700,
                   background:(!selectedVol || !selectedKid) ? C.light : C.green, color:'#fff', cursor:assigning?'default':'pointer' }}>
-                {assigning ? '⏳ Assigning…' : '✅ Assign'}
+                {assigning ? '⏳…' : '✅ Assign'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Assignments list */}
-      {assignments.length === 0 ? (
-        <div style={{ textAlign:'center', padding:40, color:C.muted }}>
-          No assignments yet. Use the button above to match volunteers with children.
-        </div>
-      ) : (
+      {/* Unassigned children list */}
+      {subView === 'unassigned' && (
         <div>
-          {assignments.map(a => (
+          {(dashboard.unassignedKids || []).length === 0 ? (
+            <div style={{ textAlign:'center', padding:32, color:C.green, fontWeight:700 }}>🎉 All children are assigned!</div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:8 }}>
+              {(dashboard.unassignedKids || []).map(k => (
+                <div key={k.id} style={{ ...cs, padding:12, borderLeft:'4px solid #FCD34D' }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{k.child_first}</div>
+                  <div style={{ fontSize:11, color:C.muted }}>{k.school} · Grade {k.grade}</div>
+                  <div style={{ fontSize:10, color:C.text, marginTop:4 }}>👕{k.shirt_size} 👖{k.pant_size} 👟{k.shoe_size}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Active shoppers */}
+      {subView === 'active' && (
+        <div>
+          {(dashboard.activeShoppers || []).length === 0 ? (
+            <div style={{ textAlign:'center', padding:32, color:C.muted }}>No one shopping right now.</div>
+          ) : (
+            dashboard.activeShoppers.map(a => (
+              <div key={a.id} style={{ ...cs, display:'flex', gap:12, alignItems:'center', borderLeft:'4px solid #D97706' }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                    <span style={{ fontSize:15, fontWeight:700, color:C.navy }}>{a.child_first}</span>
+                    <span style={{ fontSize:11, color:C.muted }}>←</span>
+                    <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{a.vol_first} {a.vol_last}</span>
+                    {a.store_location && (
+                      <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:'#E0F2FE', color:'#0369A1', fontWeight:600 }}>
+                        {STORES.find(s=>s.id===a.store_location)?.label || a.store_location}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
+                    {a.school} · 👕{a.shirt_size} 👖{a.pant_size} 👟{a.shoe_size}
+                  </div>
+                  <div style={{ fontSize:12, fontWeight:700, color:C.amber, marginTop:4 }}>
+                    🛒 Shopping for <ElapsedTime since={a.assigned_at}/>
+                  </div>
+                </div>
+                <button onClick={()=>handleCheckout(a.id)}
+                  style={{ padding:'10px 16px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+                    background:C.green, color:'#fff', cursor:'pointer', flexShrink:0 }}>
+                  ✅ Checkout
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* All assignments / completed */}
+      {(subView === 'overview' || subView === 'completed') && (
+        <div>
+          {assignments
+            .filter(a => subView === 'completed' ? a.checked_out : true)
+            .map(a => (
             <div key={a.id} style={{
-              ...cardStyle, display:'flex', gap:12, alignItems:'center',
+              ...cs, display:'flex', gap:12, alignItems:'center',
               background: a.checked_out ? '#F0FDF4' : '#fff',
               borderLeft: `4px solid ${a.checked_out ? C.green : C.amber}`,
             }}>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:15, fontWeight:700, color:C.navy }}>{a.child_first}</span>
+                  <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>{a.child_first}</span>
                   <span style={{ fontSize:11, color:C.muted }}>←</span>
                   <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{a.vol_first} {a.vol_last}</span>
                   {a.store_location && (
@@ -1743,36 +1861,46 @@ function ShoppingDayTab({ isMobile }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+                <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
                   {a.school} · Gr {a.grade} · 👕{a.shirt_size} 👖{a.pant_size} 👟{a.shoe_size}
                 </div>
-                {a.checked_out && (
+                {a.checked_out ? (
                   <div style={{ fontSize:11, color:C.green, fontWeight:600, marginTop:2 }}>
-                    ✅ Checked out {a.checkout_at ? new Date(a.checkout_at).toLocaleTimeString() : ''}
+                    ✅ Done {a.checkout_at ? new Date(a.checkout_at).toLocaleTimeString() : ''}
+                  </div>
+                ) : (
+                  <div style={{ fontSize:11, color:C.amber, fontWeight:600, marginTop:2 }}>
+                    🛒 <ElapsedTime since={a.assigned_at}/>
                   </div>
                 )}
               </div>
               <div style={{ display:'flex', gap:6, flexShrink:0 }}>
                 {!a.checked_out && (
                   <button onClick={()=>handleCheckout(a.id)}
-                    style={{ padding:'8px 14px', borderRadius:8, border:'none', fontSize:12, fontWeight:700,
+                    style={{ padding:'7px 12px', borderRadius:6, border:'none', fontSize:11, fontWeight:700,
                       background:C.green, color:'#fff', cursor:'pointer' }}>
-                    ✅ Checkout
+                    ✅
                   </button>
                 )}
                 <button onClick={()=>handleUnassign(a.id)}
-                  style={{ padding:'8px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12,
+                  style={{ padding:'7px 8px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:11,
                     background:'#fff', color:C.red, cursor:'pointer' }}>
                   ✕
                 </button>
               </div>
             </div>
           ))}
+          {assignments.filter(a => subView === 'completed' ? a.checked_out : true).length === 0 && (
+            <div style={{ textAlign:'center', padding:32, color:C.muted }}>
+              {subView === 'completed' ? 'No completed assignments yet.' : 'No assignments yet. Use ➕ Assign above.'}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 function NominationsTab({ isMobile }) {
   const [nominations, setNominations] = useState([]);
