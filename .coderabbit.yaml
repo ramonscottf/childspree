@@ -1,0 +1,41 @@
+# .coderabbit.yaml — CodeRabbit configuration
+# Cloudflare Workers / Pages project
+# Maintained by Skippy for Scott Foster (Wicko Waypoint LLC)
+
+language: en-US
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: global
+
+instructions: |
+  Project context: This is a Cloudflare Workers/Pages project built by a solo developer.
+  
+  Key rules to enforce:
+  - Workers must use ES module syntax (.mjs extension, export default { fetch })
+  - Never use sed on production HTML files — CSS changes must be CSS-only
+  - D1 schema migrations must be individual SQL statements, not batched
+  - Cloudflare auth uses Global API Key (X-Auth-Key + X-Auth-Email), NOT Bearer tokens
+  - Always use wrangler CLI via OAuth for deployments when possible
+  - Pages deploys are atomic — all files must be included or routes will be deleted
+  - Sensitive data (API keys, tokens, PII) must NEVER appear in client-side code
+  - Voter/contact PII must be behind password-protected or auth-gated endpoints
+  - TCPA compliance required for any SMS/calling features
+  - FEC disclaimers required on any public-facing political content
+  - Prefer open-source dependencies over commercial ones
+  - Single-file Workers preferred unless complexity requires splitting
+  - Mobile-first responsive design required for all user-facing pages
