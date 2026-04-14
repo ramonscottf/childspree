@@ -2423,6 +2423,288 @@ function FAPortal() {
 }
 
 
+// ─── SHOPPER PROFILE (Shopping Day) ───
+function ShopperProfile({ token }) {
+  const isMobile = useIsMobile();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [checklist, setChecklist] = useState({
+    top: false, bottom: false, shoes: false,
+    jacket: false, underwear: false, extras: false,
+  });
+  const completedCount = Object.values(checklist).filter(Boolean).length;
+  const totalItems = Object.keys(checklist).length;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API}/shop/${token}`);
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || 'Could not load profile');
+        }
+        setProfile(await res.json());
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  const toggleCheck = key => setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const checkLabels = {
+    top: '👕 Top / Shirt',
+    bottom: '👖 Pants / Bottoms',
+    shoes: '👟 Shoes',
+    jacket: '🧥 Jacket / Outerwear',
+    underwear: '🧦 Underwear & Socks',
+    extras: '🎁 Extras / Accessories',
+  };
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>🛒</div>
+        <div style={{ color:C.muted, fontSize:15, fontWeight:600 }}>Loading shopper profile…</div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ textAlign:'center', maxWidth:400, padding:24 }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>😞</div>
+        <h2 style={{ color:C.navy, margin:'0 0 8px', fontFamily:"'Playfair Display',serif" }}>Oops</h2>
+        <p style={{ color:C.muted, fontSize:14, lineHeight:1.6 }}>{error}</p>
+      </div>
+    </div>
+  );
+
+  const p = profile;
+  const pad = isMobile ? 16 : 24;
+  const cardStyle = {
+    background:'#fff', borderRadius:16, padding:pad, marginBottom:16,
+    boxShadow:'0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+    border:'1px solid #E2E8F0',
+  };
+  const labelStyle = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:1.2, color:C.muted, marginBottom:6 };
+  const valueStyle = { fontSize:18, fontWeight:700, color:C.navy };
+
+  return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      {/* Header banner */}
+      <div style={{
+        background:'linear-gradient(135deg, #1B3A4B 0%, #2D5A6B 100%)',
+        padding:isMobile ? '28px 20px 24px' : '36px 32px 28px',
+        textAlign:'center',
+      }}>
+        <div style={{ fontSize:13, color:'rgba(249,168,201,0.9)', fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>
+          Child Spree 2026 — Shopping Day
+        </div>
+        <h1 style={{
+          color:'#fff', margin:0, fontFamily:"'Playfair Display',serif",
+          fontSize:isMobile ? '1.8rem' : '2.4rem', fontWeight:700,
+        }}>
+          Shopping for {p.childFirst}
+        </h1>
+        <div style={{ color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:8 }}>
+          {[p.school, p.grade ? `Grade ${p.grade}` : null, p.age ? `Age ${p.age}` : null].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+
+      {/* Budget banner */}
+      <div style={{
+        background:'linear-gradient(135deg, #E8548C 0%, #D63B73 100%)',
+        padding:'14px 20px', textAlign:'center',
+      }}>
+        <div style={{ color:'#fff', fontSize:16, fontWeight:800, letterSpacing:0.5 }}>
+          💳 Budget: $150 per child — head to toe
+        </div>
+      </div>
+
+      <div style={{ maxWidth:560, margin:'0 auto', padding:isMobile ? '16px 16px 100px' : '24px 24px 60px' }}>
+
+        {/* Progress bar */}
+        <div style={{ ...cardStyle, padding:'16px 20px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>Shopping Progress</span>
+            <span style={{ fontSize:13, fontWeight:700, color: completedCount === totalItems ? C.green : C.pink }}>
+              {completedCount}/{totalItems}
+            </span>
+          </div>
+          <div style={{ height:8, background:'#E2E8F0', borderRadius:4, overflow:'hidden' }}>
+            <div style={{
+              height:'100%', borderRadius:4, transition:'width 0.4s ease',
+              width:`${(completedCount / totalItems) * 100}%`,
+              background: completedCount === totalItems
+                ? 'linear-gradient(90deg, #059669, #10B981)'
+                : 'linear-gradient(90deg, #E8548C, #F9A8C9)',
+            }}/>
+          </div>
+          {completedCount === totalItems && (
+            <div style={{ textAlign:'center', marginTop:12, fontSize:15, fontWeight:700, color:C.green }}>
+              ✅ All items found! Head to checkout.
+            </div>
+          )}
+        </div>
+
+        {/* Sizes — the main event */}
+        <div style={cardStyle}>
+          <div style={labelStyle}>Sizes</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginTop:8 }}>
+            {[
+              { label:'Shirt', value:p.shirtSize, icon:'👕' },
+              { label:'Pants', value:p.pantSize, icon:'👖' },
+              { label:'Shoes', value:p.shoeSize, icon:'👟' },
+            ].map(s => (
+              <div key={s.label} style={{
+                background:'#F0F9FF', borderRadius:12, padding:'14px 10px', textAlign:'center',
+                border:'2px solid #BAE6FD',
+              }}>
+                <div style={{ fontSize:24 }}>{s.icon}</div>
+                <div style={{ fontSize:11, fontWeight:600, color:C.muted, marginTop:4 }}>{s.label}</div>
+                <div style={{ fontSize:15, fontWeight:800, color:C.navy, marginTop:2 }}>{s.value || '—'}</div>
+              </div>
+            ))}
+          </div>
+          {p.department && (
+            <div style={{ marginTop:12, textAlign:'center' }}>
+              <span style={{
+                display:'inline-block', padding:'4px 14px', borderRadius:20,
+                background: p.department === 'boys' ? '#DBEAFE' : p.department === 'girls' ? '#FCE7F3' : '#F3E8FF',
+                color: p.department === 'boys' ? '#1E40AF' : p.department === 'girls' ? '#9D174D' : '#6B21A8',
+                fontSize:12, fontWeight:700, textTransform:'capitalize',
+              }}>
+                {p.gender || p.department} — {p.department} department
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Colors */}
+        {(p.favoriteColors || p.avoidColors) && (
+          <div style={cardStyle}>
+            <div style={labelStyle}>Colors</div>
+            {p.favoriteColors && (
+              <div style={{ marginTop:8 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                  <span style={{ fontSize:14 }}>💚</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:C.green }}>LOVES</span>
+                </div>
+                <div style={{ fontSize:15, fontWeight:600, color:C.text, lineHeight:1.5 }}>{p.favoriteColors}</div>
+              </div>
+            )}
+            {p.avoidColors && (
+              <div style={{ marginTop:p.favoriteColors ? 14 : 8 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                  <span style={{ fontSize:14 }}>🚫</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:C.red }}>AVOID</span>
+                </div>
+                <div style={{ fontSize:15, fontWeight:600, color:C.text, lineHeight:1.5 }}>{p.avoidColors}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Allergies */}
+        {p.allergies && (
+          <div style={{ ...cardStyle, border:'2px solid #FCA5A5', background:'#FFF5F5' }}>
+            <div style={{ ...labelStyle, color:C.red }}>⚠️ Allergies / Sensitivities</div>
+            <div style={{ fontSize:15, fontWeight:600, color:C.text, marginTop:4, lineHeight:1.5 }}>{p.allergies}</div>
+          </div>
+        )}
+
+        {/* Preferences / Notes */}
+        {p.preferences && (
+          <div style={cardStyle}>
+            <div style={labelStyle}>Special Notes</div>
+            <div style={{ fontSize:15, color:C.text, marginTop:4, lineHeight:1.6 }}>{p.preferences}</div>
+          </div>
+        )}
+
+        {/* Video */}
+        {p.hasVideo && (
+          <div style={cardStyle}>
+            <div style={labelStyle}>🎥 Meet {p.childFirst}</div>
+            <div style={{ marginTop:8, borderRadius:12, overflow:'hidden', background:'#000' }}>
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                style={{ width:'100%', display:'block', maxHeight:400 }}
+                src={p.videoUrl}
+              >
+                Your browser does not support video playback.
+              </video>
+            </div>
+            <div style={{ textAlign:'center', marginTop:8, fontSize:12, color:C.muted }}>
+              Recorded by their school family advocate
+            </div>
+          </div>
+        )}
+
+        {/* Shopping checklist */}
+        <div style={cardStyle}>
+          <div style={labelStyle}>Shopping Checklist</div>
+          <div style={{ marginTop:8 }}>
+            {Object.entries(checkLabels).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => toggleCheck(key)}
+                style={{
+                  display:'flex', alignItems:'center', gap:12, width:'100%',
+                  padding:'14px 12px', marginBottom:6, borderRadius:10, border:'none',
+                  background: checklist[key] ? '#ECFDF5' : '#F8FAFC',
+                  cursor:'pointer', transition:'all 0.2s',
+                  outline: checklist[key] ? '2px solid #059669' : '1px solid #E2E8F0',
+                }}
+              >
+                <div style={{
+                  width:26, height:26, borderRadius:6, flexShrink:0,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  background: checklist[key] ? '#059669' : '#fff',
+                  border: checklist[key] ? 'none' : '2px solid #CBD5E1',
+                  transition:'all 0.2s',
+                }}>
+                  {checklist[key] && <span style={{ color:'#fff', fontSize:14, fontWeight:700 }}>✓</span>}
+                </div>
+                <span style={{
+                  fontSize:15, fontWeight:600,
+                  color: checklist[key] ? C.green : C.text,
+                  textDecoration: checklist[key] ? 'line-through' : 'none',
+                  opacity: checklist[key] ? 0.7 : 1,
+                }}>
+                  {label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Done shopping CTA */}
+        {completedCount === totalItems && (
+          <div style={{
+            textAlign:'center', padding:24, background:'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+            borderRadius:16, border:'2px solid #059669',
+          }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>🎉</div>
+            <div style={{ fontSize:18, fontWeight:800, color:'#065F46' }}>All Done!</div>
+            <div style={{ fontSize:14, color:'#047857', marginTop:4, lineHeight:1.5 }}>
+              Head to the checkout station with your items.
+              <br/>Show this screen to the ops crew.
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+
 // ─── APP ROUTER ───
 export default function App() {
   const isMobile = useIsMobile();
@@ -2460,7 +2742,7 @@ export default function App() {
   }, []);
   const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
 
-  let view = 'home', token = null, faToken = null, faVideoNomId = null;
+  let view = 'home', token = null, faToken = null, faVideoNomId = null, shopToken = null;
   if (route.startsWith('#/nominate')) view = 'nominate';
   else if (route.startsWith('#/volunteer')) view = 'volunteer';
   else if (route.startsWith('#/admin')) view = 'admin';
@@ -2470,6 +2752,7 @@ export default function App() {
     view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
   }
   else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
+  else if (route.startsWith('#/shop/')) { view = 'shop'; shopToken = route.replace('#/shop/',''); }
   else if (route.startsWith('#/portal')) view = 'portal';
   else if (route === '#/' || route === '#' || route === '') view = 'home';
 
@@ -2479,6 +2762,10 @@ export default function App() {
       <ParentIntake token={token}/>
       {isMobile && <div style={{ height:72 }}/>}
     </div>
+  );
+
+  if (view === 'shop' && shopToken) return (
+    <ShopperProfile token={shopToken}/>
   );
 
   if (view === 'fa' && faToken) return (
