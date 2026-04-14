@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import * as XLSX from 'xlsx';
+import QRCode from 'qrcode';
 
 // ─── MICROSOFT SSO ──────────────────────────────────────────────────────────
 const MSAL_CONFIG = {
@@ -1314,7 +1315,7 @@ function AdminDashboard() {
     );
   }
 
-  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }];
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
       <div style={{ display:'flex', gap:8, marginBottom:20 }}>
@@ -1326,6 +1327,200 @@ function AdminDashboard() {
       </div>
       {activeTab === 'nominations' && <NominationsTab isMobile={isMobile}/>}
       {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
+      {activeTab === 'qrcodes' && <QRCodesTab isMobile={isMobile}/>}
+    </div>
+  );
+}
+
+// ─── QR CODES TAB (Admin) ───
+function QRCodesTab({ isMobile }) {
+  const [children, setChildren] = useState([]);
+  const [schools, setSchools] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [schoolFilter, setSchoolFilter] = useState('');
+  const [qrDataUrls, setQrDataUrls] = useState({});
+  const [generating, setGenerating] = useState(false);
+  const printRef = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = schoolFilter ? `?school=${encodeURIComponent(schoolFilter)}` : '';
+      const data = await api(`/admin/qr-sheet${params}`);
+      setChildren(data.children || []);
+      if (!schoolFilter) setSchools(data.schools || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [schoolFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const generateQRs = async () => {
+    setGenerating(true);
+    const urls = {};
+    for (const child of children) {
+      const shopUrl = `${window.location.origin}/#/shop/${child.parent_token}`;
+      try {
+        urls[child.id] = await QRCode.toDataURL(shopUrl, {
+          width: 200, margin: 1, errorCorrectionLevel: 'M',
+          color: { dark: '#1B3A4B', light: '#ffffff' },
+        });
+      } catch (e) {
+        console.error('QR gen failed for', child.id, e);
+      }
+    }
+    setQrDataUrls(urls);
+    setGenerating(false);
+  };
+
+  const handlePrint = () => {
+    if (!printRef.current) return;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Child Spree QR Codes${schoolFilter ? ' — ' + schoolFilter : ''}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&display=swap');
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Libre Franklin',sans-serif; }
+      .page { page-break-after:always; padding:0.3in; }
+      .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+      .card {
+        border:2px solid #E2E8F0; border-radius:12px; padding:14px;
+        text-align:center; break-inside:avoid;
+      }
+      .card img { width:160px; height:160px; }
+      .name { font-size:16px; font-weight:700; color:#1B3A4B; margin-top:8px; }
+      .meta { font-size:11px; color:#64748B; margin-top:2px; }
+      .sizes { font-size:10px; color:#1B3A4B; margin-top:6px; font-weight:600; }
+      .header { text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #E2E8F0; }
+      .header h1 { font-size:18px; color:#1B3A4B; }
+      .header p { font-size:11px; color:#64748B; margin-top:4px; }
+      @media print {
+        .page { padding:0.25in; }
+        .card { border:1.5px solid #ccc; }
+      }
+    </style></head><body>`);
+
+    // Split into pages of 9 (3x3 grid)
+    const perPage = 9;
+    for (let i = 0; i < children.length; i += perPage) {
+      const batch = children.slice(i, i + perPage);
+      win.document.write(`<div class="page">
+        <div class="header">
+          <h1>🛒 Child Spree 2026 — Shopping Day QR Codes</h1>
+          <p>${schoolFilter || 'All Schools'} · Page ${Math.floor(i / perPage) + 1} of ${Math.ceil(children.length / perPage)} · ${children.length} children</p>
+        </div>
+        <div class="grid">`);
+      for (const child of batch) {
+        const qr = qrDataUrls[child.id];
+        if (!qr) continue;
+        win.document.write(`<div class="card">
+          <img src="${qr}" alt="QR"/>
+          <div class="name">${child.child_first}</div>
+          <div class="meta">${child.school || ''} · Grade ${child.grade || '?'}</div>
+          <div class="sizes">👕 ${child.shirt_size || '?'} · 👖 ${child.pant_size || '?'} · 👟 ${child.shoe_size || '?'}</div>
+        </div>`);
+      }
+      win.document.write('</div></div>');
+    }
+    win.document.write('</body></html>');
+    win.document.close();
+    setTimeout(() => win.print(), 500);
+  };
+
+  const cardStyle = {
+    background:'#fff', borderRadius:12, padding:16, marginBottom:12,
+    boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0',
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading children…</div>;
+
+  return (
+    <div>
+      {/* Controls */}
+      <div style={{ ...cardStyle, display:'flex', flexWrap:'wrap', gap:12, alignItems:'center' }}>
+        <select
+          value={schoolFilter}
+          onChange={e => setSchoolFilter(e.target.value)}
+          style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, minWidth:200 }}
+        >
+          <option value="">All Schools ({children.length})</option>
+          {schools.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <button
+          onClick={generateQRs}
+          disabled={generating || !children.length}
+          style={{
+            padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+            background: generating ? C.light : C.navy, color:'#fff', cursor: generating ? 'default' : 'pointer',
+          }}
+        >
+          {generating ? '⏳ Generating…' : `📱 Generate ${children.length} QR Codes`}
+        </button>
+
+        {Object.keys(qrDataUrls).length > 0 && (
+          <button
+            onClick={handlePrint}
+            style={{
+              padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+              background:C.pink, color:'#fff', cursor:'pointer',
+            }}
+          >
+            🖨️ Print QR Sheets
+          </button>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap:12, marginBottom:16 }}>
+        {[
+          { label:'Complete Intakes', value:children.length, color:C.green },
+          { label:'QRs Generated', value:Object.keys(qrDataUrls).length, color:C.blue },
+          { label:'Schools', value:schools.length, color:C.navy },
+          { label:'With Video', value:children.filter(c => c.video_uploaded).length, color:C.pink },
+        ].map(s => (
+          <div key={s.label} style={{ ...cardStyle, textAlign:'center', padding:14 }}>
+            <div style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.muted, marginTop:2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Preview grid */}
+      {Object.keys(qrDataUrls).length > 0 && (
+        <div ref={printRef}>
+          <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>
+            Preview — {children.length} QR codes ready to print
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap:12 }}>
+            {children.map(child => {
+              const qr = qrDataUrls[child.id];
+              if (!qr) return null;
+              return (
+                <div key={child.id} style={{ ...cardStyle, textAlign:'center', padding:12 }}>
+                  <img src={qr} alt="QR" style={{ width:120, height:120 }}/>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginTop:6 }}>{child.child_first}</div>
+                  <div style={{ fontSize:11, color:C.muted }}>{child.school}</div>
+                  <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>Grade {child.grade || '?'}</div>
+                  <div style={{ fontSize:10, color:C.text, marginTop:4, fontWeight:600 }}>
+                    👕{child.shirt_size} 👖{child.pant_size} 👟{child.shoe_size}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!children.length && (
+        <div style={{ textAlign:'center', padding:40, color:C.muted }}>
+          No children with completed intakes{schoolFilter ? ` at ${schoolFilter}` : ''}.
+        </div>
+      )}
     </div>
   );
 }
