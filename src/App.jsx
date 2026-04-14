@@ -654,6 +654,69 @@ function NominationForm() {
   );
 }
 
+// ─── TYPE SELECTOR CARD (interactive) ───
+function TypeCard({ active, onClick, icon, label, color, activeBg, desc, extra, isMobile }) {
+  const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
+
+  const scale = pressed ? 'scale(0.97)' : hovered && !active ? 'scale(1.02)' : 'scale(1)';
+  const shadow = active
+    ? `0 4px 20px ${color}25, 0 0 0 1px ${color}40`
+    : hovered
+      ? '0 4px 16px rgba(0,0,0,0.08)'
+      : '0 1px 4px rgba(0,0,0,0.04)';
+  const bg = active ? activeBg : hovered ? '#FAFBFC' : '#fff';
+  const borderColor = active ? color : hovered ? color + '66' : '#E2E8F0';
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={()=>setHovered(true)}
+      onMouseLeave={()=>{setHovered(false);setPressed(false);}}
+      onMouseDown={()=>setPressed(true)}
+      onMouseUp={()=>setPressed(false)}
+      style={{
+        flex:1, cursor:'pointer', borderRadius:14,
+        border:`2px solid ${borderColor}`,
+        padding:isMobile?'14px 16px':'20px 22px',
+        background:bg,
+        boxShadow:shadow,
+        transform:scale,
+        transition:'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        position:'relative', overflow:'hidden',
+      }}
+    >
+      {/* Subtle gradient overlay on active */}
+      {active && <div style={{ position:'absolute', top:0, right:0, width:80, height:80, background:`radial-gradient(circle at top right, ${color}12, transparent 70%)`, pointerEvents:'none' }}/>}
+
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+        <span style={{
+          fontSize:28, display:'inline-block',
+          transform: hovered || active ? 'scale(1.15)' : 'scale(1)',
+          transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}>{icon}</span>
+        <span style={{ fontWeight:700, fontSize:16, color }}>{label}</span>
+        {active && (
+          <span style={{
+            marginLeft:'auto', fontSize:11, fontWeight:700,
+            background:color, color:'#fff',
+            padding:'3px 10px', borderRadius:10,
+            animation:'fadeIn 0.2s ease',
+          }}>Selected</span>
+        )}
+        {!active && hovered && (
+          <span style={{
+            marginLeft:'auto', fontSize:11, fontWeight:600,
+            color, opacity:0.6,
+          }}>Click to select</span>
+        )}
+      </div>
+      <p style={{ fontSize:13, color:C.muted, lineHeight:1.5, margin:0 }}>{desc}</p>
+      {extra}
+    </div>
+  );
+}
+
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
@@ -737,23 +800,21 @@ function VolunteerForm() {
       <div style={{ marginBottom:24 }}>
         <p style={{ ...secHead(isMobile), marginBottom:12 }}>How would you like to help?</p>
         <div style={{ display:'flex', gap:12, flexDirection:isMobile?'column':'row' }}>
-          <div onClick={()=>upd('volunteerType','shopper')} style={{ flex:1, cursor:'pointer', borderRadius:12, border:`2px solid ${form.volunteerType==='shopper'?C.navy:'#E2E8F0'}`, padding:isMobile?'14px 16px':'18px 20px', background:form.volunteerType==='shopper'?'#F0F4FF':'#fff', transition:'all 0.2s' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-              <span style={{ fontSize:24 }}>🛒</span>
-              <span style={{ fontWeight:700, fontSize:15, color:C.navy }}>Shopper</span>
-              {form.volunteerType==='shopper' && <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, background:C.navy, color:'#fff', padding:'2px 8px', borderRadius:10 }}>Selected</span>}
-            </div>
-            <p style={{ fontSize:13, color:C.muted, lineHeight:1.5, margin:0 }}>Get matched with one child and shop for them head to toe. You'll watch their video, know their favorite colors, and pick out a complete outfit. The fun part!</p>
-          </div>
-          <div onClick={()=>upd('volunteerType','ops_crew')} style={{ flex:1, cursor:'pointer', borderRadius:12, border:`2px solid ${form.volunteerType==='ops_crew'?'#7C3AED':'#E2E8F0'}`, padding:isMobile?'14px 16px':'18px 20px', background:form.volunteerType==='ops_crew'?'#F5F3FF':'#fff', transition:'all 0.2s' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-              <span style={{ fontSize:24 }}>🎯</span>
-              <span style={{ fontWeight:700, fontSize:15, color:'#7C3AED' }}>Operations Crew</span>
-              {form.volunteerType==='ops_crew' && <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, background:'#7C3AED', color:'#fff', padding:'2px 8px', borderRadius:10 }}>Selected</span>}
-            </div>
-            <p style={{ fontSize:13, color:C.muted, lineHeight:1.5, margin:0 }}>Run the show from start to finish — check families in, manage gift cards, scan QR codes, help load vans, set up tables. You'll stay the full event and keep everything running smoothly.</p>
-            <p style={{ fontSize:11, color:'#7C3AED', marginTop:6, fontWeight:600, opacity:0.8 }}>Limited spots · Full commitment · High impact</p>
-          </div>
+          <TypeCard
+            active={form.volunteerType==='shopper'}
+            onClick={()=>upd('volunteerType','shopper')}
+            icon="🛒" label="Shopper" color={C.navy} activeBg="#F0F4FF"
+            isMobile={isMobile}
+            desc="Get matched with one child and shop for them head to toe. You'll watch their video, know their favorite colors, and pick out a complete outfit. The fun part!"
+          />
+          <TypeCard
+            active={form.volunteerType==='ops_crew'}
+            onClick={()=>upd('volunteerType','ops_crew')}
+            icon="🎯" label="Operations Crew" color="#7C3AED" activeBg="#F5F3FF"
+            isMobile={isMobile}
+            desc="Run the show from start to finish — check families in, manage gift cards, scan QR codes, help load vans, set up tables. You'll stay the full event and keep everything running smoothly."
+            extra={<p style={{ fontSize:11, color:'#7C3AED', marginTop:6, fontWeight:600, opacity:0.8 }}>Limited spots · Full commitment · High impact</p>}
+          />
         </div>
       </div>
 
