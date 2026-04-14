@@ -1315,7 +1315,7 @@ function AdminDashboard() {
     );
   }
 
-  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }];
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }, { key:'shopday', icon:'🏪', label:'Shopping Day' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
       <div style={{ display:'flex', gap:8, marginBottom:20 }}>
@@ -1328,6 +1328,7 @@ function AdminDashboard() {
       {activeTab === 'nominations' && <NominationsTab isMobile={isMobile}/>}
       {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
       {activeTab === 'qrcodes' && <QRCodesTab isMobile={isMobile}/>}
+      {activeTab === 'shopday' && <ShoppingDayTab isMobile={isMobile}/>}
     </div>
   );
 }
@@ -1519,6 +1520,254 @@ function QRCodesTab({ isMobile }) {
       {!children.length && (
         <div style={{ textAlign:'center', padding:40, color:C.muted }}>
           No children with completed intakes{schoolFilter ? ` at ${schoolFilter}` : ''}.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SHOPPING DAY TAB (Admin — Ops Crew Check-in/Checkout) ───
+const STORES = [
+  { id:'layton', label:"Kohl's Layton", cap:200 },
+  { id:'centerville', label:"Kohl's Centerville", cap:175 },
+  { id:'clinton', label:"Kohl's Clinton", cap:200 },
+];
+
+function ShoppingDayTab({ isMobile }) {
+  const [assignments, setAssignments] = useState([]);
+  const [stats, setStats] = useState({ total:0, active:0, completed:0, unassigned:0, volunteersCheckedIn:0 });
+  const [loading, setLoading] = useState(true);
+  const [storeFilter, setStoreFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showAssign, setShowAssign] = useState(false);
+  const [volunteers, setVolunteers] = useState([]);
+  const [unassignedKids, setUnassignedKids] = useState([]);
+  const [selectedVol, setSelectedVol] = useState('');
+  const [selectedKid, setSelectedKid] = useState('');
+  const [assignStore, setAssignStore] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [volSearch, setVolSearch] = useState('');
+  const [kidSearch, setKidSearch] = useState('');
+
+  const loadAssignments = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (storeFilter) params.set('store', storeFilter);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      const data = await api(`/assignments?${params}`);
+      setAssignments(data.assignments || []);
+      setStats(data.stats || {});
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [storeFilter, statusFilter]);
+
+  const loadFormData = useCallback(async () => {
+    try {
+      const [volData, nomData] = await Promise.all([
+        api('/volunteers'),
+        api('/admin/qr-sheet'),
+      ]);
+      setVolunteers((volData.volunteers || []).filter(v => v.status === 'approved' || v.status === 'active' || !v.status));
+      // Get assigned nomination IDs to filter out
+      const assignedNomIds = new Set(assignments.map(a => a.nomination_id));
+      setUnassignedKids((nomData.children || []).filter(c => !assignedNomIds.has(c.id)));
+    } catch (e) { console.error(e); }
+  }, [assignments]);
+
+  useEffect(() => { loadAssignments(); }, [loadAssignments]);
+  useEffect(() => { if (showAssign) loadFormData(); }, [showAssign, loadFormData]);
+
+  const handleAssign = async () => {
+    if (!selectedVol || !selectedKid) return;
+    setAssigning(true);
+    try {
+      await api('/assignments', {
+        method: 'POST',
+        body: JSON.stringify({ nominationId: selectedKid, volunteerId: selectedVol, storeLocation: assignStore || null }),
+      });
+      setSelectedVol(''); setSelectedKid(''); setAssignStore('');
+      setShowAssign(false);
+      await loadAssignments();
+    } catch (e) {
+      alert(e.message);
+    } finally { setAssigning(false); }
+  };
+
+  const handleCheckout = async (assignmentId) => {
+    try {
+      await api(`/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'checkout' }),
+      });
+      await loadAssignments();
+    } catch (e) { alert(e.message); }
+  };
+
+  const handleUnassign = async (assignmentId) => {
+    if (!confirm('Remove this assignment?')) return;
+    try {
+      await api(`/assignments/${assignmentId}`, { method: 'DELETE' });
+      await loadAssignments();
+    } catch (e) { alert(e.message); }
+  };
+
+  const cardStyle = {
+    background:'#fff', borderRadius:12, padding:16, marginBottom:12,
+    boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0',
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading shopping day data…</div>;
+
+  const filteredVols = volunteers.filter(v => {
+    if (!volSearch) return true;
+    const s = volSearch.toLowerCase();
+    return (v.first_name||'').toLowerCase().includes(s) || (v.last_name||'').toLowerCase().includes(s) || (v.email||'').toLowerCase().includes(s);
+  });
+
+  const filteredKids = unassignedKids.filter(k => {
+    if (!kidSearch) return true;
+    const s = kidSearch.toLowerCase();
+    return (k.child_first||'').toLowerCase().includes(s) || (k.school||'').toLowerCase().includes(s);
+  });
+
+  return (
+    <div>
+      {/* Stats strip */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(5,1fr)', gap:10, marginBottom:16 }}>
+        {[
+          { label:'Assigned', value:stats.total, color:C.blue, icon:'🔗' },
+          { label:'Shopping', value:stats.active, color:C.amber, icon:'🛒' },
+          { label:'Completed', value:stats.completed, color:C.green, icon:'✅' },
+          { label:'Unassigned Kids', value:stats.unassigned, color:C.red, icon:'⏳' },
+          { label:'Volunteers In', value:stats.volunteersCheckedIn, color:C.navy, icon:'👥' },
+        ].map(s => (
+          <div key={s.label} style={{ ...cardStyle, textAlign:'center', padding:12 }}>
+            <div style={{ fontSize:18 }}>{s.icon}</div>
+            <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:10, fontWeight:600, color:C.muted, marginTop:2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div style={{ ...cardStyle, display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
+        <select value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}
+          style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13 }}>
+          <option value="">All Stores</option>
+          {STORES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}
+          style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13 }}>
+          <option value="all">All Status</option>
+          <option value="active">🛒 Shopping</option>
+          <option value="completed">✅ Completed</option>
+        </select>
+        <div style={{ flex:1 }}/>
+        <button onClick={()=>setShowAssign(!showAssign)}
+          style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+            background:showAssign?C.light:C.pink, color:'#fff', cursor:'pointer' }}>
+          {showAssign ? '✕ Cancel' : '➕ Assign Volunteer → Child'}
+        </button>
+      </div>
+
+      {/* Assign form */}
+      {showAssign && (
+        <div style={{ ...cardStyle, background:'#FFFBEB', border:'2px solid #FCD34D' }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>New Assignment</div>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:12 }}>
+            {/* Volunteer picker */}
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>VOLUNTEER</div>
+              <input placeholder="Search volunteer…" value={volSearch} onChange={e=>setVolSearch(e.target.value)}
+                style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:13, marginBottom:6 }}/>
+              <select value={selectedVol} onChange={e=>setSelectedVol(e.target.value)} size={5}
+                style={{ width:'100%', padding:4, borderRadius:6, border:`1px solid ${C.border}`, fontSize:12 }}>
+                <option value="">— Select —</option>
+                {filteredVols.map(v => (
+                  <option key={v.id} value={v.id}>{v.first_name} {v.last_name} ({v.store_location || '?'})</option>
+                ))}
+              </select>
+            </div>
+            {/* Child picker */}
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>CHILD (Unassigned)</div>
+              <input placeholder="Search child…" value={kidSearch} onChange={e=>setKidSearch(e.target.value)}
+                style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:13, marginBottom:6 }}/>
+              <select value={selectedKid} onChange={e=>setSelectedKid(e.target.value)} size={5}
+                style={{ width:'100%', padding:4, borderRadius:6, border:`1px solid ${C.border}`, fontSize:12 }}>
+                <option value="">— Select —</option>
+                {filteredKids.map(k => (
+                  <option key={k.id} value={k.id}>{k.child_first} — {k.school} (Gr {k.grade})</option>
+                ))}
+              </select>
+            </div>
+            {/* Store + submit */}
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:4 }}>STORE</div>
+              <select value={assignStore} onChange={e=>setAssignStore(e.target.value)}
+                style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.border}`, fontSize:13, marginBottom:12 }}>
+                <option value="">— Select store —</option>
+                {STORES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <button onClick={handleAssign} disabled={assigning || !selectedVol || !selectedKid}
+                style={{ width:'100%', padding:'12px 16px', borderRadius:8, border:'none', fontSize:14, fontWeight:700,
+                  background:(!selectedVol || !selectedKid) ? C.light : C.green, color:'#fff', cursor:assigning?'default':'pointer' }}>
+                {assigning ? '⏳ Assigning…' : '✅ Assign'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assignments list */}
+      {assignments.length === 0 ? (
+        <div style={{ textAlign:'center', padding:40, color:C.muted }}>
+          No assignments yet. Use the button above to match volunteers with children.
+        </div>
+      ) : (
+        <div>
+          {assignments.map(a => (
+            <div key={a.id} style={{
+              ...cardStyle, display:'flex', gap:12, alignItems:'center',
+              background: a.checked_out ? '#F0FDF4' : '#fff',
+              borderLeft: `4px solid ${a.checked_out ? C.green : C.amber}`,
+            }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:15, fontWeight:700, color:C.navy }}>{a.child_first}</span>
+                  <span style={{ fontSize:11, color:C.muted }}>←</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{a.vol_first} {a.vol_last}</span>
+                  {a.store_location && (
+                    <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:'#E0F2FE', color:'#0369A1', fontWeight:600 }}>
+                      {STORES.find(s=>s.id===a.store_location)?.label || a.store_location}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+                  {a.school} · Gr {a.grade} · 👕{a.shirt_size} 👖{a.pant_size} 👟{a.shoe_size}
+                </div>
+                {a.checked_out && (
+                  <div style={{ fontSize:11, color:C.green, fontWeight:600, marginTop:2 }}>
+                    ✅ Checked out {a.checkout_at ? new Date(a.checkout_at).toLocaleTimeString() : ''}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                {!a.checked_out && (
+                  <button onClick={()=>handleCheckout(a.id)}
+                    style={{ padding:'8px 14px', borderRadius:8, border:'none', fontSize:12, fontWeight:700,
+                      background:C.green, color:'#fff', cursor:'pointer' }}>
+                    ✅ Checkout
+                  </button>
+                )}
+                <button onClick={()=>handleUnassign(a.id)}
+                  style={{ padding:'8px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12,
+                    background:'#fff', color:C.red, cursor:'pointer' }}>
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
