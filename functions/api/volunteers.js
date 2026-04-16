@@ -40,15 +40,34 @@ export async function onRequestGet(context) {
 
   // Public endpoint: store counts for capacity display (split by type)
   if (url.pathname.endsWith('/store-counts')) {
+    // group_size can be: NULL, '2', '3', ..., '10', '11-15', '16-20', '20+'
+    // For individuals or NULL group_size, count as 1
+    // For numeric values, use the number
+    // For ranges like '11-15', use the upper bound to be safe
     const { results } = await env.DB.prepare(
-      "SELECT store_location, volunteer_type, COUNT(*) as n FROM volunteers WHERE status != 'waitlisted' GROUP BY store_location, volunteer_type"
+      `SELECT store_location, volunteer_type, group_type, group_size FROM volunteers WHERE status != 'waitlisted'`
     ).all();
+
+    function parseGroupCount(row) {
+      const gs = row.group_size;
+      if (!gs || row.group_type === 'Individual') return 1;
+      // Handle ranges like '11-15', '16-20'
+      if (gs.includes('-')) {
+        const parts = gs.split('-');
+        return parseInt(parts[1]) || parseInt(parts[0]) || 1;
+      }
+      if (gs === '20+') return 20;
+      const n = parseInt(gs);
+      return isNaN(n) ? 1 : n;
+    }
+
     const shoppers = {};
     const ops = {};
     results.forEach(r => {
       if (!r.store_location) return;
-      if (r.volunteer_type === 'ops_crew') { ops[r.store_location] = r.n; }
-      else { shoppers[r.store_location] = r.n; }
+      const count = parseGroupCount(r);
+      if (r.volunteer_type === 'ops_crew') { ops[r.store_location] = (ops[r.store_location] || 0) + count; }
+      else { shoppers[r.store_location] = (shoppers[r.store_location] || 0) + count; }
     });
     return cors(Response.json({ shoppers, ops, caps: STORE_CAPS, opsCaps: OPS_CAPS }));
   }
@@ -93,24 +112,49 @@ export async function onRequestPost(context) {
   const volunteerType = body.volunteerType === 'ops_crew' ? 'ops_crew' : 'shopper';
   const capsToUse = volunteerType === 'ops_crew' ? OPS_CAPS : STORE_CAPS;
 
-  // Check store capacity (type-specific)
+  // Check store capacity (type-specific) — accounting for group sizes
   let waitlisted = false;
   const store = body.storeLocation || null;
+
+  // Helper to sum actual people from volunteer rows
+  function sumPeople(rows) {
+    let total = 0;
+    for (const r of rows) {
+      const gs = r.group_size;
+      if (!gs || r.group_type === 'Individual') { total += 1; continue; }
+      if (gs.includes('-')) { total += parseInt(gs.split('-')[1]) || 1; continue; }
+      if (gs === '20+') { total += 20; continue; }
+      const n = parseInt(gs);
+      total += isNaN(n) ? 1 : n;
+    }
+    return total;
+  }
+
   if (store && capsToUse[store]) {
-    const row = await env.DB.prepare(
-      "SELECT COUNT(*) as n FROM volunteers WHERE store_location = ? AND volunteer_type = ? AND status != 'waitlisted'"
-    ).bind(store, volunteerType).first();
-    const cnt = row?.n || 0;
+    const { results } = await env.DB.prepare(
+      "SELECT group_type, group_size FROM volunteers WHERE store_location = ? AND volunteer_type = ? AND status != 'waitlisted'"
+    ).bind(store, volunteerType).all();
+    const cnt = sumPeople(results);
     if (cnt >= capsToUse[store]) { waitlisted = true; }
   }
 
   // If no store selected but all are full for this type, also waitlist
   if (!store) {
     const { results } = await env.DB.prepare(
-      "SELECT store_location, COUNT(*) as n FROM volunteers WHERE volunteer_type = ? AND status != 'waitlisted' GROUP BY store_location"
+      "SELECT store_location, group_type, group_size FROM volunteers WHERE volunteer_type = ? AND status != 'waitlisted'"
     ).bind(volunteerType).all();
     const cnts = {};
-    results.forEach(r => { if (r.store_location) cnts[r.store_location] = r.n; });
+    results.forEach(r => {
+      if (!r.store_location) return;
+      const gs = r.group_size;
+      let n = 1;
+      if (gs && r.group_type !== 'Individual') {
+        if (gs.includes('-')) n = parseInt(gs.split('-')[1]) || 1;
+        else if (gs === '20+') n = 20;
+        else { const p = parseInt(gs); n = isNaN(p) ? 1 : p; }
+      }
+      cnts[r.store_location] = (cnts[r.store_location] || 0) + n;
+    });
     const allFull = Object.keys(capsToUse).every(k => (cnts[k]||0) >= capsToUse[k]);
     if (allFull) { waitlisted = true; }
   }

@@ -792,11 +792,11 @@ function VolunteerForm() {
           <div style={{ flex:1, paddingTop:4 }}>
             <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:26, color:C.navy, marginBottom:8 }}>Volunteer to Shop</h2>
             <p style={{ color:C.muted, fontSize:14, lineHeight:1.6, marginBottom:12 }}>Join 400+ volunteers on the first Friday of August at three Davis County Kohl's locations (Layton, Centerville & Clinton). You'll be matched to one child and shop for them head to toe.</p>
-            <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div>
+            <div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 14px', fontSize:13, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · 6:30–9:00 AM</div>
           </div>
         </div>
       )}
-      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={photo} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Volunteer to Shop</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Join 400+ volunteers. Be matched to one child. Shop for them like they're family.</p></div><div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · ~7:00 AM</div></>}
+      {isMobile && <><div style={{ borderRadius:12, overflow:'hidden', marginBottom:16 }}><img src={photo} alt="" style={{ width:'100%', height:140, objectFit:'cover', display:'block' }}/></div><div style={{ textAlign:'center', marginBottom:16 }}><h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, color:C.navy, marginBottom:4 }}>Volunteer to Shop</h2><p style={{ color:C.muted, fontSize:13, lineHeight:1.5 }}>Join 400+ volunteers. Be matched to one child. Shop for them like they're family.</p></div><div style={{ background:'#F0FDF4', border:`1px solid #BBF7D0`, borderRadius:10, padding:'10px 12px', marginBottom:16, fontSize:12, color:'#166534' }}>📅 First Friday of August · Three Kohl's · Layton, Centerville, Clinton · 6:30–9:00 AM</div></>}
       {error && <div style={{ background:'#FEF2F2', border:`1px solid #FECACA`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B' }}>{error}</div>}
 
       {/* ── Volunteer Type Selector ── */}
