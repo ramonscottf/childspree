@@ -2731,8 +2731,8 @@ function NominationsTab({ isMobile }) {
   useEffect(() => { load(); }, [load]);
   const updateStatus = async(id, status) => { await api(`/nominations/${id}`,{method:'PATCH',body:JSON.stringify({status})}); load(); };
   const copyLink = (token) => { navigator.clipboard.writeText(`${window.location.origin}/#/intake/${token}`); };
-  const counts = { all:nominations.length, pending:0, approved:0, sent:0, complete:0, declined:0 };
-  nominations.forEach(n => { counts[n.status] = (counts[n.status]||0)+1; });
+  const counts = { all:0, pending:0, approved:0, sent:0, complete:0, declined:0 };
+  nominations.forEach(n => { counts[n.status] = (counts[n.status]||0)+1; if(n.status!=='declined') counts.all++; });
   const trueComplete = nominations.filter(n => n.status==='complete' && n.parentIntake?.hasVideo).length;
   const incomplete = nominations.filter(n => n.status==='complete' && (!n.parentIntake||!n.parentIntake.hasVideo)).length;
   return (
@@ -2747,9 +2747,9 @@ function NominationsTab({ isMobile }) {
       </div>
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, alignItems:'center' }}>
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', flex:1 }}>
-          {['all','pending','approved','sent','complete'].map(k=>(
+          {['all','pending','approved','sent','complete','declined'].map(k=>(
             <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'6px 10px':'6px 14px', borderRadius:20, border:'none', fontSize:isMobile?11:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
-              {k.charAt(0).toUpperCase()+k.slice(1)} {k!=='all'?`(${counts[k]})`:'' }
+              {k==='all'?'Active':k.charAt(0).toUpperCase()+k.slice(1)} ({counts[k]})
             </button>
           ))}
         </div>
@@ -2783,7 +2783,7 @@ function NominationsTab({ isMobile }) {
       : nominations.length===0 ? <div style={{ textAlign:'center', padding:60, color:C.light, fontSize:14 }}>No nominations yet.</div>
       : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {nominations.map(n=>(
+          {nominations.filter(n => filter === 'all' ? n.status !== 'declined' : true).map(n=>(
             <div key={n.id} style={{ background:C.card, borderRadius:12, border:`1px solid ${expandedId===n.id?C.navy+'33':C.border}`, overflow:'hidden', transition:'border 0.2s' }}>
               {/* Row header — always visible */}
               <div onClick={()=>setExpandedId(expandedId===n.id?null:n.id)} style={{ padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}>
@@ -2813,8 +2813,9 @@ function NominationsTab({ isMobile }) {
                 <div style={{ display:'flex', gap:6, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
                   {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ padding:'5px 12px', background:C.green, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'5px 10px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>Decline</button></>}
                   {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'5px 12px', background:C.blue, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
-                  {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'5px 12px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>↩ Undo Decline</button>}
+                  {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'5px 12px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>↩ Restore</button>}
                   {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
+                  {n.status!=='declined'&&<button onClick={()=>{if(confirm(`Remove ${n.childFirst} ${n.childLast}? You can find them later in the Declined filter.`))updateStatus(n.id,'declined');}} style={{ padding:'5px 8px', background:'none', border:`1px solid #FECACA`, borderRadius:6, fontSize:11, color:'#991B1B', cursor:'pointer' }}>✕</button>}
                 </div>
                 <span style={{ fontSize:16, color:C.light, transition:'transform 0.2s', transform:expandedId===n.id?'rotate(180deg)':'rotate(0)' }}>▼</span>
               </div>
