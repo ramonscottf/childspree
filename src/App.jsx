@@ -1320,10 +1320,10 @@ function AdminDashboard() {
     );
   }
 
-  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }, { key:'shopday', icon:'🏪', label:'Shopping Day' }];
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'allocations', icon:'🏫', label:'Schools' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }, { key:'shopday', icon:'🏪', label:'Shopping Day' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
-      <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+      <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
         {tabs.map(t => (
           <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{ padding:isMobile?'8px 14px':'10px 20px', borderRadius:8, border:`1.5px solid ${activeTab===t.key?C.navy:C.border}`, background:activeTab===t.key?C.navy:'#fff', color:activeTab===t.key?'#fff':C.muted, fontSize:13, fontWeight:700, cursor:'pointer' }}>
             {t.icon} {t.label}
@@ -1331,9 +1331,160 @@ function AdminDashboard() {
         ))}
       </div>
       {activeTab === 'nominations' && <NominationsTab isMobile={isMobile}/>}
+      {activeTab === 'allocations' && <AllocationsTab isMobile={isMobile}/>}
       {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
       {activeTab === 'qrcodes' && <QRCodesTab isMobile={isMobile}/>}
       {activeTab === 'shopday' && <ShoppingDayTab isMobile={isMobile}/>}
+    </div>
+  );
+}
+
+// ─── SCHOOL ALLOCATIONS TAB (Admin — spots allocated vs used) ───
+function AllocationsTab({ isMobile }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all'); // all | over | available | empty
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await api('/admin/allocations');
+        setData(d);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    })();
+  }, []);
+
+  const cs = { background:'#fff', borderRadius:12, padding:16, marginBottom:12, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
+
+  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading allocations…</div>;
+  if (!data) return <div style={{ textAlign:'center', padding:40, color:C.red }}>Failed to load</div>;
+
+  const t = data.totals;
+  const overAllocated = data.schools.filter(s => s.used > s.allocated);
+  const available = data.schools.filter(s => s.remaining > 0 && s.allocated > 0);
+  const atCap = data.schools.filter(s => s.remaining === 0 && s.allocated > 0);
+  const empty = data.schools.filter(s => s.used === 0 && s.allocated > 0);
+
+  let filtered = data.schools;
+  if (filter === 'over') filtered = overAllocated;
+  else if (filter === 'available') filtered = available;
+  else if (filter === 'full') filtered = atCap;
+  else if (filter === 'empty') filtered = empty;
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(4,1fr)', gap:10, marginBottom:16 }}>
+        {[
+          { label:'Total Allocated', value:t.allocated, color:C.navy },
+          { label:'Nominations Used', value:t.used, color:C.pink },
+          { label:'Spots Remaining', value:t.remaining, color:t.remaining>0?C.green:C.red },
+          { label:'Schools', value:t.schoolCount, color:C.blue },
+        ].map(s => (
+          <div key={s.label} style={{ ...cs, textAlign:'center', padding:14 }}>
+            <div style={{ fontSize:28, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.muted, marginTop:2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ ...cs, padding:14 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+          <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>Overall Capacity</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.pink }}>{t.used} / {t.allocated} ({t.allocated>0?Math.round(t.used/t.allocated*100):0}%)</span>
+        </div>
+        <div style={{ height:10, background:'#E2E8F0', borderRadius:5, overflow:'hidden' }}>
+          <div style={{ height:'100%', borderRadius:5, width:`${Math.min(100,t.allocated>0?t.used/t.allocated*100:0)}%`,
+            background: t.used > t.allocated ? '#DC2626' : t.used/t.allocated > 0.8 ? '#D97706' : '#059669',
+            transition:'width 0.4s' }}/>
+        </div>
+      </div>
+
+      {/* Alerts */}
+      {overAllocated.length > 0 && (
+        <div style={{ ...cs, background:'#FEF2F2', border:'2px solid #FECACA', padding:14 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#991B1B', marginBottom:4 }}>
+            ⚠️ {overAllocated.length} school{overAllocated.length>1?'s':''} over allocation
+          </div>
+          <div style={{ fontSize:12, color:'#991B1B' }}>
+            {overAllocated.map(s => `${s.school} (${s.used}/${s.allocated})`).join(' · ')}
+          </div>
+        </div>
+      )}
+
+      {data.orphans.length > 0 && (
+        <div style={{ ...cs, background:'#FFF7ED', border:'2px solid #FED7AA', padding:14 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#92400E', marginBottom:4 }}>
+            📌 {data.orphans.length} school{data.orphans.length>1?'s':''} with nominations but no allocation
+          </div>
+          <div style={{ fontSize:12, color:'#92400E' }}>
+            {data.orphans.map(o => `${o.school} (${o.used} nominations)`).join(' · ')}
+          </div>
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      <div style={{ display:'flex', gap:6, marginBottom:12, flexWrap:'wrap' }}>
+        {[
+          { key:'all', label:`All (${data.schools.length})` },
+          { key:'available', label:`🟢 Available (${available.length})` },
+          { key:'full', label:`🟡 Full (${atCap.length})` },
+          { key:'over', label:`🔴 Over (${overAllocated.length})` },
+          { key:'empty', label:`⬜ No Noms (${empty.length})` },
+        ].map(f => (
+          <button key={f.key} onClick={()=>setFilter(f.key)}
+            style={{ padding:'6px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer',
+              border:`1.5px solid ${filter===f.key?C.navy:C.border}`,
+              background:filter===f.key?C.navy:'#fff', color:filter===f.key?'#fff':C.muted }}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* School table */}
+      <div style={cs}>
+        {/* Header */}
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 2fr', gap:8, padding:'8px 0',
+          borderBottom:'2px solid #E2E8F0', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:1 }}>
+          <div>School</div>
+          <div style={{ textAlign:'center' }}>Allocated</div>
+          <div style={{ textAlign:'center' }}>Used</div>
+          <div style={{ textAlign:'center' }}>Remaining</div>
+          <div>Capacity</div>
+        </div>
+
+        {filtered.map(s => {
+          const pct = s.allocated > 0 ? Math.round(s.used / s.allocated * 100) : 0;
+          const isOver = s.used > s.allocated;
+          const isFull = s.remaining === 0 && s.allocated > 0;
+          const barColor = isOver ? '#DC2626' : pct > 80 ? '#D97706' : '#059669';
+
+          return (
+            <div key={s.school} style={{
+              display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 2fr', gap:8, padding:'10px 0',
+              borderBottom:'1px solid #F1F5F9', alignItems:'center',
+              background: isOver ? '#FEF2F2' : 'transparent',
+            }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.navy }}>{s.school}</div>
+              <div style={{ textAlign:'center', fontSize:14, fontWeight:700, color:C.muted }}>{s.allocated}</div>
+              <div style={{ textAlign:'center', fontSize:14, fontWeight:800, color: isOver ? '#DC2626' : C.navy }}>{s.used}</div>
+              <div style={{ textAlign:'center', fontSize:14, fontWeight:700, color: isOver ? '#DC2626' : s.remaining > 0 ? C.green : C.amber }}>
+                {s.remaining}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ flex:1, height:6, background:'#E2E8F0', borderRadius:3, overflow:'hidden' }}>
+                  <div style={{ height:'100%', borderRadius:3, width:`${Math.min(100, pct)}%`, background:barColor }}/>
+                </div>
+                <span style={{ fontSize:10, fontWeight:600, color: isOver ? '#DC2626' : C.muted, minWidth:32 }}>
+                  {s.allocated > 0 ? `${pct}%` : '—'}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2532,7 +2683,18 @@ function AdminNomDetails({ n, isMobile, updateStatus, copyLink, onSaved }) {
               </div>
               {(n.parentIntake.allergies||n.parentIntake.preferences)&&(<div style={{ marginTop:8, fontSize:12, color:'#166534', lineHeight:1.5 }}>{n.parentIntake.allergies&&<div><strong>Allergies:</strong> {n.parentIntake.allergies}</div>}{n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}</div>)}
               <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#DC2626' }}>
-                {n.parentIntake.hasVideo?'🎬 Video: Recorded ✓':<span>🎬 VIDEO NEEDED — {n.nominatorName} must record at school</span>}
+                {n.parentIntake.hasVideo ? (
+                  <div>
+                    <div style={{ marginBottom:6 }}>🎬 Video: Recorded ✓</div>
+                    <div style={{ borderRadius:10, overflow:'hidden', background:'#000', maxWidth:360 }}>
+                      <video
+                        controls playsInline preload="metadata"
+                        style={{ width:'100%', display:'block', maxHeight:240 }}
+                        src={`/api/video/${n.parentToken}?admin=1`}
+                      >Video not supported</video>
+                    </div>
+                  </div>
+                ) : <span>🎬 VIDEO NEEDED — {n.nominatorName} must record at school</span>}
               </div>
             </div>
           ) : n.status!=='pending' && n.status!=='declined' && (

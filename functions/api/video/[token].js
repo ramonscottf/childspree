@@ -22,11 +22,16 @@ export async function onRequestGet(context) {
   }
 
   // Look up nomination + intake to get video_key
+  // Allow admin access to videos regardless of status (via ?admin=1 query param)
+  const url = new URL(request.url);
+  const isAdminView = url.searchParams.has('admin');
+
+  const statusClause = isAdminView ? '' : "AND n.status = 'complete'";
   const row = await env.DB.prepare(`
     SELECT n.id, i.video_key, i.video_uploaded
     FROM nominations n
     JOIN parent_intake i ON i.nomination_id = n.id
-    WHERE n.parent_token = ? AND n.status = 'complete'
+    WHERE n.parent_token = ? ${statusClause}
   `).bind(token).first();
 
   if (!row) {
