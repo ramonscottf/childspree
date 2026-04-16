@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 // ─── MICROSOFT SSO ──────────────────────────────────────────────────────────
 const MSAL_CONFIG = {
@@ -1767,6 +1768,194 @@ function ElapsedTime({ since }) {
   return elapsed;
 }
 
+// ─── QR SCANNER PANEL (ops crew check-in + checkout) ───
+function QRScannerPanel({ onVolunteerScanned, isMobile }) {
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState(null);
+  const [volData, setVolData] = useState(null);
+  const [loadingVol, setLoadingVol] = useState(false);
+  const scannerRef = useRef(null);
+  const html5QrRef = useRef(null);
+
+  const startScanner = async () => {
+    setScanResult(null); setScanError(null); setVolData(null);
+    setScanning(true);
+    try {
+      const html5Qr = new Html5Qrcode('qr-reader-container');
+      html5QrRef.current = html5Qr;
+      await html5Qr.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        async (decodedText) => {
+          // Got a scan — stop scanning
+          await html5Qr.stop().catch(() => {});
+          setScanning(false);
+          setScanResult(decodedText);
+
+          // Extract volunteer token from URL
+          const match = decodedText.match(/#\/v\/([A-Za-z0-9_-]+)/);
+          if (!match) {
+            setScanError('Not a volunteer QR code. Expected childspree.org/#/v/{token}');
+            return;
+          }
+          const token = match[1];
+          setLoadingVol(true);
+          try {
+            const res = await fetch(`${API}/v/${token}`);
+            if (!res.ok) throw new Error('Volunteer not found');
+            const data = await res.json();
+            setVolData(data);
+          } catch (e) {
+            setScanError(e.message);
+          } finally {
+            setLoadingVol(false);
+          }
+        },
+        () => {} // ignore scan failures (noisy)
+      );
+    } catch (e) {
+      setScanError('Camera error: ' + e.message);
+      setScanning(false);
+    }
+  };
+
+  const stopScanner = async () => {
+    if (html5QrRef.current) {
+      await html5QrRef.current.stop().catch(() => {});
+      html5QrRef.current = null;
+    }
+    setScanning(false);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (html5QrRef.current) html5QrRef.current.stop().catch(() => {});
+    };
+  }, []);
+
+  const cs = { background:'#fff', borderRadius:12, padding:16, marginBottom:12, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
+
+  return (
+    <div>
+      <div style={{ ...cs, textAlign:'center' }}>
+        <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:12 }}>
+          📷 Scan Volunteer QR Code
+        </div>
+        <div style={{ fontSize:12, color:C.muted, marginBottom:16 }}>
+          Point camera at a volunteer's QR code to check them in, assign a child, or check out.
+        </div>
+
+        {!scanning && !scanResult && (
+          <button onClick={startScanner}
+            style={{ padding:'14px 28px', borderRadius:10, border:'none', fontSize:15, fontWeight:700,
+              background:'linear-gradient(135deg, #1B3A4B 0%, #2D5A6B 100%)', color:'#fff', cursor:'pointer',
+              boxShadow:'0 4px 14px rgba(27,58,75,0.3)' }}>
+            📷 Start Camera
+          </button>
+        )}
+
+        {scanning && (
+          <div>
+            <div id="qr-reader-container" ref={scannerRef}
+              style={{ width:'100%', maxWidth:350, margin:'0 auto', borderRadius:12, overflow:'hidden' }}/>
+            <button onClick={stopScanner}
+              style={{ marginTop:12, padding:'10px 20px', borderRadius:8, border:`1px solid ${C.border}`,
+                background:'#fff', fontSize:13, fontWeight:600, color:C.red, cursor:'pointer' }}>
+              ✕ Stop Camera
+            </button>
+          </div>
+        )}
+
+        {scanError && (
+          <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#FEF2F2', border:'1px solid #FECACA' }}>
+            <div style={{ fontSize:13, color:C.red, fontWeight:600 }}>❌ {scanError}</div>
+            <button onClick={() => { setScanError(null); setScanResult(null); setVolData(null); }}
+              style={{ marginTop:8, padding:'6px 16px', borderRadius:6, border:'none', background:C.navy, color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+              Try Again
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Loading */}
+      {loadingVol && (
+        <div style={{ ...cs, textAlign:'center' }}>
+          <div style={{ fontSize:13, color:C.muted }}>⏳ Looking up volunteer…</div>
+        </div>
+      )}
+
+      {/* Volunteer found — show info + actions */}
+      {volData && (
+        <div style={{ ...cs, border:'2px solid #059669' }}>
+          <div style={{ display:'flex', gap:14, alignItems:'center', marginBottom:12 }}>
+            <div style={{ width:52, height:52, borderRadius:14, background:'#EFF6FF', display:'flex', alignItems:'center',
+              justifyContent:'center', fontSize:24, flexShrink:0 }}>
+              {volData.volunteerType === 'ops_crew' ? '🔧' : '🛒'}
+            </div>
+            <div>
+              <div style={{ fontSize:18, fontWeight:800, color:C.navy }}>{volData.firstName} {volData.lastName}</div>
+              <div style={{ fontSize:12, color:C.muted }}>
+                {volData.volunteerType === 'ops_crew' ? 'Ops Crew' : 'Shopper'}
+                {volData.storeLocation && ` · ${volData.storeLocation}`}
+              </div>
+            </div>
+          </div>
+
+          {/* Status badges */}
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
+            <span style={{ padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:700,
+              background: volData.agreedToTerms ? '#D1FAE5' : '#FEF3C7',
+              color: volData.agreedToTerms ? '#065F46' : '#92400E' }}>
+              {volData.agreedToTerms ? '✅ Terms' : '⚠️ No Terms'}
+            </span>
+            <span style={{ padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:700,
+              background: volData.checkedIn ? '#D1FAE5' : '#DBEAFE',
+              color: volData.checkedIn ? '#065F46' : '#1E40AF' }}>
+              {volData.checkedIn ? '✅ Checked In' : '🔵 Not Checked In'}
+            </span>
+            {volData.assignment && (
+              <span style={{ padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:700,
+                background: volData.assignment.checkedOut ? '#D1FAE5' : '#FEF3C7',
+                color: volData.assignment.checkedOut ? '#065F46' : '#92400E' }}>
+                {volData.assignment.checkedOut ? '✅ Complete' : `🛒 Shopping for ${volData.assignment.childFirst}`}
+              </span>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {!volData.agreedToTerms && (
+              <div style={{ fontSize:12, color:C.red, fontWeight:600, padding:8 }}>
+                ⚠️ Volunteer has not agreed to terms. Send them to their QR link first.
+              </div>
+            )}
+
+            {volData.agreedToTerms && (
+              <button onClick={() => onVolunteerScanned(volData)}
+                style={{ flex:1, padding:'14px 20px', borderRadius:10, border:'none', fontSize:14, fontWeight:700,
+                  background:'linear-gradient(135deg, #059669 0%, #10B981 100%)', color:'#fff', cursor:'pointer' }}>
+                {volData.assignment && !volData.assignment.checkedOut
+                  ? '✅ Checkout + Print Bag Tag'
+                  : volData.assignment?.checkedOut
+                    ? '🎉 Already Complete'
+                    : '➡️ Check In + Assign Child'}
+              </button>
+            )}
+
+            <button onClick={() => { setVolData(null); setScanResult(null); setScanError(null); }}
+              style={{ padding:'14px 20px', borderRadius:10, border:`1px solid ${C.border}`,
+                background:'#fff', fontSize:14, fontWeight:600, color:C.navy, cursor:'pointer' }}>
+              📷 Scan Another
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ShoppingDayTab({ isMobile }) {
   const [dashboard, setDashboard] = useState(null);
   const [assignments, setAssignments] = useState([]);
@@ -1844,9 +2033,11 @@ function ShoppingDayTab({ isMobile }) {
   };
 
   const handlePrintTag = async (assignment) => {
-    const shopUrl = `${window.location.origin}/#/shop/${assignment.parent_token}`;
+    // QR #3 — bag label encodes delivery confirmation URL, not shop URL
+    const nomId = assignment.nomination_id || assignment.nominationId || assignment.id;
+    const bagUrl = `${window.location.origin}/#/bag/${nomId}`;
     try {
-      const qr = await QRCode.toDataURL(shopUrl, {
+      const qr = await QRCode.toDataURL(bagUrl, {
         width: 200, margin: 1, errorCorrectionLevel: 'M',
         color: { dark: '#1B3A4B', light: '#ffffff' },
       });
@@ -1956,6 +2147,7 @@ function ShoppingDayTab({ isMobile }) {
           { key:'active', label:`🛒 Shopping (${o.active})` },
           { key:'unassigned', label:`⏳ Unassigned (${o.unassigned})` },
           { key:'completed', label:`✅ Done (${o.completed})` },
+          { key:'scan', label:'📷 Scan QR' },
         ].map(t => (
           <button key={t.key} onClick={()=>setSubView(t.key)}
             style={{ padding:'6px 14px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
@@ -1971,6 +2163,47 @@ function ShoppingDayTab({ isMobile }) {
           {showAssign ? '✕ Cancel' : '➕ Assign'}
         </button>
       </div>
+
+      {/* QR Scanner for check-in and checkout */}
+      {subView === 'scan' && (
+        <QRScannerPanel
+          onVolunteerScanned={async (volData) => {
+            // Check them in if not already
+            if (!volData.checkedIn) {
+              try {
+                await fetch(`${API}/v/${volData.token}`, {
+                  method: 'POST', credentials: 'include',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'checkin' }),
+                });
+              } catch (e) { console.error('Checkin failed:', e); }
+            }
+            // If they have an active assignment, offer checkout
+            if (volData.assignment && !volData.assignment.checkedOut) {
+              if (confirm(`${volData.firstName} is shopping for ${volData.assignment.childFirst}. Check out and print bag tag?`)) {
+                await handleCheckout(volData.assignment.id);
+                await handlePrintTag({
+                  child_first: volData.assignment.childFirst,
+                  school: volData.assignment.school,
+                  grade: volData.assignment.grade,
+                  shirt_size: volData.assignment.shirtSize,
+                  pant_size: volData.assignment.pantSize,
+                  shoe_size: volData.assignment.shoeSize,
+                  parent_token: volData.assignment.videoUrl?.replace('/api/video/','') || '',
+                  ...volData.assignment,
+                });
+              }
+            } else if (!volData.assignment) {
+              // No assignment — switch to manual assign with volunteer pre-selected
+              setSelectedVol(volData.id);
+              setShowAssign(true);
+              setSubView('overview');
+            }
+            await loadDashboard();
+          }}
+          isMobile={isMobile}
+        />
+      )}
 
       {/* Assign form */}
       {showAssign && (
