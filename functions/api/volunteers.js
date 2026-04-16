@@ -8,6 +8,12 @@ import { requireAdmin } from './_admin_auth.js';
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
 }
+function generateToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let token = '';
+  for (let i = 0; i < 22; i++) token += chars[Math.floor(Math.random() * chars.length)];
+  return token;
+}
 function cors(r) {
   r.headers.set('Access-Control-Allow-Origin', '*');
   r.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -70,6 +76,10 @@ export async function onRequestGet(context) {
     experience: r.experience, hearAbout: r.hear_about,
     smsOptIn: !!r.sms_opt_in, notes: r.notes,
     createdAt: r.created_at,
+    token: r.token,
+    agreedToTerms: !!r.agreed_to_terms, agreedAt: r.agreed_at,
+    checkedIn: !!r.checked_in, checkedInAt: r.checked_in_at,
+    qrSent: !!r.qr_sent,
   }));
   return cors(Response.json({ volunteers, total: volunteers.length }));
 }
@@ -106,23 +116,24 @@ export async function onRequestPost(context) {
   }
 
   const id = generateId();
+  const token = generateToken();
   const status = waitlisted ? 'waitlisted' : 'registered';
 
   await env.DB.prepare(`
-    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, group_size, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in, status, volunteer_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO volunteers (id, first_name, last_name, email, phone, organization, group_type, group_size, shirt_size, store_location, arrival_time, early_arrival, experience, hear_about, sms_opt_in, status, volunteer_type, token)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(id, body.firstName, body.lastName, body.email||null, body.phone||null,
     body.organization||null, body.groupType||'Individual', body.groupSize||null, body.shirtSize||null, store, body.arrivalTime||null,
     (body.arrivalTime||'').includes('Setup') ? 1 : 0, body.experience||null, body.hearAbout||null,
-    body.smsOptIn!==false?1:0, status, volunteerType
+    body.smsOptIn!==false?1:0, status, volunteerType, token
   ).run();
 
   context.waitUntil(notifyVolunteerRegistered(env, {
     firstName: body.firstName, lastName: body.lastName,
     email: body.email, phone: body.phone,
     organization: body.organization, groupType: body.groupType,
-    shirtSize: body.shirtSize, waitlisted, volunteerType,
+    shirtSize: body.shirtSize, waitlisted, volunteerType, token,
   }));
 
-  return cors(Response.json({ id, status, waitlisted }, { status: 201 }));
+  return cors(Response.json({ id, status, waitlisted, token }, { status: 201 }));
 }

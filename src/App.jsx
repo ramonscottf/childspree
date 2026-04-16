@@ -1339,6 +1339,8 @@ function AdminDashboard() {
 
 // ─── QR CODES TAB (Admin) ───
 function QRCodesTab({ isMobile }) {
+  const [mode, setMode] = useState('volunteers'); // 'volunteers' | 'bags'
+  const [volunteers, setVolunteers] = useState([]);
   const [children, setChildren] = useState([]);
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1350,31 +1352,38 @@ function QRCodesTab({ isMobile }) {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const params = schoolFilter ? `?school=${encodeURIComponent(schoolFilter)}` : '';
-      const data = await api(`/admin/qr-sheet${params}`);
-      setChildren(data.children || []);
-      if (!schoolFilter) setSchools(data.schools || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [schoolFilter]);
+      if (mode === 'volunteers') {
+        const data = await api('/volunteers');
+        setVolunteers((data.volunteers || []).filter(v => v.status !== 'rejected'));
+      } else {
+        const params = schoolFilter ? `?school=${encodeURIComponent(schoolFilter)}` : '';
+        const data = await api(`/admin/qr-sheet${params}`);
+        setChildren(data.children || []);
+        if (!schoolFilter) setSchools(data.schools || []);
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [mode, schoolFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); setQrDataUrls({}); }, [load]);
 
   const generateQRs = async () => {
     setGenerating(true);
     const urls = {};
-    for (const child of children) {
-      const shopUrl = `${window.location.origin}/#/shop/${child.parent_token}`;
-      try {
-        urls[child.id] = await QRCode.toDataURL(shopUrl, {
-          width: 200, margin: 1, errorCorrectionLevel: 'M',
-          color: { dark: '#1B3A4B', light: '#ffffff' },
-        });
-      } catch (e) {
-        console.error('QR gen failed for', child.id, e);
+    if (mode === 'volunteers') {
+      for (const vol of volunteers) {
+        if (!vol.token) continue;
+        const url = `${window.location.origin}/#/v/${vol.token}`;
+        try {
+          urls[vol.id] = await QRCode.toDataURL(url, { width: 200, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1B3A4B', light: '#ffffff' } });
+        } catch (e) { console.error('QR gen failed for', vol.id, e); }
+      }
+    } else {
+      for (const child of children) {
+        const bagUrl = `${window.location.origin}/#/bag/${child.id}`;
+        try {
+          urls[child.id] = await QRCode.toDataURL(bagUrl, { width: 200, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1B3A4B', light: '#ffffff' } });
+        } catch (e) { console.error('QR gen failed for', child.id, e); }
       }
     }
     setQrDataUrls(urls);
@@ -1382,19 +1391,18 @@ function QRCodesTab({ isMobile }) {
   };
 
   const handlePrint = () => {
-    if (!printRef.current) return;
+    const items = mode === 'volunteers' ? volunteers.filter(v => qrDataUrls[v.id]) : children.filter(c => qrDataUrls[c.id]);
+    if (!items.length) return;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Child Spree QR Codes${schoolFilter ? ' — ' + schoolFilter : ''}</title>
+    const title = mode === 'volunteers' ? 'Volunteer QR Codes' : `Bag Labels${schoolFilter ? ' — ' + schoolFilter : ''}`;
+    win.document.write(`<!DOCTYPE html><html><head><title>Child Spree — ${title}</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&display=swap');
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family:'Libre Franklin',sans-serif; }
       .page { page-break-after:always; padding:0.3in; }
       .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
-      .card {
-        border:2px solid #E2E8F0; border-radius:12px; padding:14px;
-        text-align:center; break-inside:avoid;
-      }
+      .card { border:2px solid #E2E8F0; border-radius:12px; padding:14px; text-align:center; break-inside:avoid; }
       .card img { width:160px; height:160px; }
       .name { font-size:16px; font-weight:700; color:#1B3A4B; margin-top:8px; }
       .meta { font-size:11px; color:#64748B; margin-top:2px; }
@@ -1402,31 +1410,32 @@ function QRCodesTab({ isMobile }) {
       .header { text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #E2E8F0; }
       .header h1 { font-size:18px; color:#1B3A4B; }
       .header p { font-size:11px; color:#64748B; margin-top:4px; }
-      @media print {
-        .page { padding:0.25in; }
-        .card { border:1.5px solid #ccc; }
-      }
+      @media print { .page { padding:0.25in; } .card { border:1.5px solid #ccc; } }
     </style></head><body>`);
 
-    // Split into pages of 9 (3x3 grid)
     const perPage = 9;
-    for (let i = 0; i < children.length; i += perPage) {
-      const batch = children.slice(i, i + perPage);
-      win.document.write(`<div class="page">
-        <div class="header">
-          <h1>🛒 Child Spree 2026 — Shopping Day QR Codes</h1>
-          <p>${schoolFilter || 'All Schools'} · Page ${Math.floor(i / perPage) + 1} of ${Math.ceil(children.length / perPage)} · ${children.length} children</p>
-        </div>
-        <div class="grid">`);
-      for (const child of batch) {
-        const qr = qrDataUrls[child.id];
+    for (let i = 0; i < items.length; i += perPage) {
+      const batch = items.slice(i, i + perPage);
+      win.document.write(`<div class="page"><div class="header"><h1>🛒 Child Spree 2026 — ${title}</h1>
+        <p>Page ${Math.floor(i / perPage) + 1} of ${Math.ceil(items.length / perPage)} · ${items.length} ${mode}</p></div><div class="grid">`);
+      for (const item of batch) {
+        const qr = qrDataUrls[item.id];
         if (!qr) continue;
-        win.document.write(`<div class="card">
-          <img src="${qr}" alt="QR"/>
-          <div class="name">${child.child_first}</div>
-          <div class="meta">${child.school || ''} · Grade ${child.grade || '?'}</div>
-          <div class="sizes">👕 ${child.shirt_size || '?'} · 👖 ${child.pant_size || '?'} · 👟 ${child.shoe_size || '?'}</div>
-        </div>`);
+        if (mode === 'volunteers') {
+          win.document.write(`<div class="card">
+            <img src="${qr}" alt="QR"/>
+            <div class="name">${item.firstName} ${item.lastName}</div>
+            <div class="meta">${item.volunteerType === 'ops_crew' ? 'Ops Crew' : 'Shopper'} · ${item.storeLocation || 'TBD'}</div>
+            <div class="sizes">${item.agreedToTerms ? '✅ Terms' : '⏳ Terms'}</div>
+          </div>`);
+        } else {
+          win.document.write(`<div class="card">
+            <img src="${qr}" alt="QR"/>
+            <div class="name">${item.child_first}</div>
+            <div class="meta">${item.school || ''} · Grade ${item.grade || '?'}</div>
+            <div class="sizes">👕 ${item.shirt_size || '?'} · 👖 ${item.pant_size || '?'} · 👟 ${item.shoe_size || '?'}</div>
+          </div>`);
+        }
       }
       win.document.write('</div></div>');
     }
@@ -1435,53 +1444,59 @@ function QRCodesTab({ isMobile }) {
     setTimeout(() => win.print(), 500);
   };
 
-  const cardStyle = {
-    background:'#fff', borderRadius:12, padding:16, marginBottom:12,
-    boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0',
-  };
+  const cardStyle = { background:'#fff', borderRadius:12, padding:16, marginBottom:12, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
+  const itemCount = mode === 'volunteers' ? volunteers.filter(v => v.token).length : children.length;
 
-  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading children…</div>;
+  if (loading) return <div style={{ textAlign:'center', padding:40, color:C.muted }}>Loading…</div>;
 
   return (
     <div>
+      {/* Mode toggle */}
+      <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+        <button onClick={()=>setMode('volunteers')} style={{ padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer',
+          border:`1.5px solid ${mode==='volunteers'?C.navy:C.border}`, background:mode==='volunteers'?C.navy:'#fff', color:mode==='volunteers'?'#fff':C.muted }}>
+          👤 Volunteer QRs
+        </button>
+        <button onClick={()=>setMode('bags')} style={{ padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer',
+          border:`1.5px solid ${mode==='bags'?C.navy:C.border}`, background:mode==='bags'?C.navy:'#fff', color:mode==='bags'?'#fff':C.muted }}>
+          📦 Bag Labels
+        </button>
+      </div>
+
       {/* Controls */}
       <div style={{ ...cardStyle, display:'flex', flexWrap:'wrap', gap:12, alignItems:'center' }}>
-        <select
-          value={schoolFilter}
-          onChange={e => setSchoolFilter(e.target.value)}
-          style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, minWidth:200 }}
-        >
-          <option value="">All Schools ({children.length})</option>
-          {schools.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-
-        <button
-          onClick={generateQRs}
-          disabled={generating || !children.length}
-          style={{
-            padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
-            background: generating ? C.light : C.navy, color:'#fff', cursor: generating ? 'default' : 'pointer',
-          }}
-        >
-          {generating ? '⏳ Generating…' : `📱 Generate ${children.length} QR Codes`}
+        {mode === 'bags' && (
+          <select value={schoolFilter} onChange={e => setSchoolFilter(e.target.value)}
+            style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, minWidth:200 }}>
+            <option value="">All Schools ({children.length})</option>
+            {schools.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        <button onClick={generateQRs} disabled={generating || !itemCount}
+          style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+            background: generating ? C.light : C.navy, color:'#fff', cursor: generating ? 'default' : 'pointer' }}>
+          {generating ? '⏳ Generating…' : `📱 Generate ${itemCount} QR Codes`}
         </button>
-
         {Object.keys(qrDataUrls).length > 0 && (
-          <button
-            onClick={handlePrint}
-            style={{
-              padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
-              background:C.pink, color:'#fff', cursor:'pointer',
-            }}
-          >
-            🖨️ Print QR Sheets
+          <button onClick={handlePrint} style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, background:C.pink, color:'#fff', cursor:'pointer' }}>
+            🖨️ Print Sheets
           </button>
         )}
       </div>
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap:12, marginBottom:16 }}>
-        {[
+        {mode === 'volunteers' ? [
+          { label:'Total Volunteers', value:volunteers.length, color:C.navy },
+          { label:'With Token', value:volunteers.filter(v=>v.token).length, color:C.blue },
+          { label:'Terms Agreed', value:volunteers.filter(v=>v.agreedToTerms).length, color:C.green },
+          { label:'QRs Generated', value:Object.keys(qrDataUrls).length, color:C.pink },
+        ].map(s => (
+          <div key={s.label} style={{ ...cardStyle, textAlign:'center', padding:14 }}>
+            <div style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:C.muted, marginTop:2 }}>{s.label}</div>
+          </div>
+        )) : [
           { label:'Complete Intakes', value:children.length, color:C.green },
           { label:'QRs Generated', value:Object.keys(qrDataUrls).length, color:C.blue },
           { label:'Schools', value:schools.length, color:C.navy },
@@ -1498,10 +1513,26 @@ function QRCodesTab({ isMobile }) {
       {Object.keys(qrDataUrls).length > 0 && (
         <div ref={printRef}>
           <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:12 }}>
-            Preview — {children.length} QR codes ready to print
+            Preview — {Object.keys(qrDataUrls).length} QR codes ready to print
           </div>
           <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap:12 }}>
-            {children.map(child => {
+            {mode === 'volunteers' ? volunteers.map(vol => {
+              const qr = qrDataUrls[vol.id];
+              if (!qr) return null;
+              return (
+                <div key={vol.id} style={{ ...cardStyle, textAlign:'center', padding:12 }}>
+                  <img src={qr} alt="QR" style={{ width:120, height:120 }}/>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginTop:6 }}>{vol.firstName} {vol.lastName}</div>
+                  <div style={{ fontSize:11, color:C.muted }}>{vol.volunteerType === 'ops_crew' ? 'Ops Crew' : 'Shopper'}</div>
+                  <div style={{ fontSize:10, marginTop:4 }}>
+                    <span style={{ padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:600,
+                      background: vol.agreedToTerms ? '#D1FAE5' : '#FEF3C7', color: vol.agreedToTerms ? '#065F46' : '#92400E' }}>
+                      {vol.agreedToTerms ? '✅ Terms' : '⏳ Pending'}
+                    </span>
+                  </div>
+                </div>
+              );
+            }) : children.map(child => {
               const qr = qrDataUrls[child.id];
               if (!qr) return null;
               return (
@@ -1510,9 +1541,7 @@ function QRCodesTab({ isMobile }) {
                   <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginTop:6 }}>{child.child_first}</div>
                   <div style={{ fontSize:11, color:C.muted }}>{child.school}</div>
                   <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>Grade {child.grade || '?'}</div>
-                  <div style={{ fontSize:10, color:C.text, marginTop:4, fontWeight:600 }}>
-                    👕{child.shirt_size} 👖{child.pant_size} 👟{child.shoe_size}
-                  </div>
+                  <div style={{ fontSize:10, color:C.text, marginTop:4, fontWeight:600 }}>👕{child.shirt_size} 👖{child.pant_size} 👟{child.shoe_size}</div>
                   <button onClick={()=>printBagTag(child, qr)}
                     style={{ marginTop:8, padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:11, fontWeight:600, color:C.navy, cursor:'pointer', width:'100%' }}>
                     🏷️ Print Tag
@@ -1524,10 +1553,9 @@ function QRCodesTab({ isMobile }) {
         </div>
       )}
 
-      {/* Empty state */}
-      {!children.length && (
+      {!itemCount && (
         <div style={{ textAlign:'center', padding:40, color:C.muted }}>
-          No children with completed intakes{schoolFilter ? ` at ${schoolFilter}` : ''}.
+          {mode === 'volunteers' ? 'No volunteers registered yet.' : `No children with completed intakes${schoolFilter ? ` at ${schoolFilter}` : ''}.`}
         </div>
       )}
     </div>
@@ -3475,15 +3503,33 @@ function FAPortal() {
 
 
 // ─── SHOPPER PROFILE (Shopping Day) ───
-function ShopperProfile({ token }) {
+function ShopperProfile({ token, volunteerView, assignment, volunteer }) {
   const isMobile = useIsMobile();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(assignment ? {
+    childFirst: assignment.childFirst,
+    school: assignment.school,
+    grade: assignment.grade,
+    age: assignment.age,
+    gender: assignment.gender,
+    department: assignment.department,
+    shirtSize: assignment.shirtSize,
+    pantSize: assignment.pantSize,
+    shoeSize: assignment.shoeSize,
+    favoriteColors: assignment.favoriteColors,
+    avoidColors: assignment.avoidColors,
+    allergies: assignment.allergies,
+    preferences: assignment.preferences,
+    hasVideo: assignment.hasVideo,
+    videoUrl: assignment.videoUrl,
+  } : null);
+  const [loading, setLoading] = useState(!assignment);
   const [error, setError] = useState(null);
   const [checklist, setChecklist] = useState({
     top: false, bottom: false, shoes: false,
     jacket: false, underwear: false, extras: false,
   });
+  const [receiptUploading, setReceiptUploading] = useState(false);
+  const [receiptDone, setReceiptDone] = useState(false);
   const completedCount = Object.values(checklist).filter(Boolean).length;
   const totalItems = Object.keys(checklist).length;
 
@@ -3747,9 +3793,378 @@ function ShopperProfile({ token }) {
               Head to the checkout station with your items.
               <br/>Show this screen to the ops crew.
             </div>
+            {/* Receipt upload */}
+            {volunteerView && token && (
+              <div style={{ marginTop:16 }}>
+                {receiptDone ? (
+                  <div style={{ fontSize:13, fontWeight:700, color:'#065F46' }}>📸 Receipt uploaded!</div>
+                ) : (
+                  <label style={{
+                    display:'inline-block', padding:'10px 20px', borderRadius:8,
+                    background:'#fff', border:'1px solid #059669', fontSize:13, fontWeight:700,
+                    color:'#059669', cursor:'pointer',
+                  }}>
+                    {receiptUploading ? '⏳ Uploading…' : '📸 Upload Receipt Photo'}
+                    <input type="file" accept="image/*" capture="environment" style={{ display:'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setReceiptUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append('receipt', file);
+                          const res = await fetch(`${API}/receipts/${token}`, { method:'POST', body: form });
+                          if (res.ok) setReceiptDone(true);
+                          else alert('Upload failed');
+                        } catch (err) { alert(err.message); }
+                        finally { setReceiptUploading(false); }
+                      }}/>
+                  </label>
+                )}
+              </div>
+            )}
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+
+// ─── VOLUNTEER HOME PAGE (QR scan resolves here) ───
+function VolunteerHome({ token }) {
+  const isMobile = useIsMobile();
+  const [vol, setVol] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [qrUrl, setQrUrl] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API}/v/${token}`);
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Not found'); }
+        const data = await res.json();
+        setVol(data);
+        // Generate QR code
+        const url = `${window.location.origin}/#/v/${token}`;
+        const qr = await QRCode.toDataURL(url, { width: 280, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#1B3A4B', light: '#ffffff' } });
+        setQrUrl(qr);
+      } catch (e) { setError(e.message); }
+      finally { setLoading(false); }
+    })();
+  }, [token]);
+
+  // Auto-refresh every 10s to pick up assignment pushes
+  useEffect(() => {
+    if (!vol) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/v/${token}`);
+        if (res.ok) setVol(await res.json());
+      } catch (e) {}
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [vol, token]);
+
+  const pad = isMobile ? 16 : 24;
+  const cardStyle = { background:'#fff', borderRadius:16, padding:pad, marginBottom:16, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
+  const labelStyle = { fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:1.2, color:C.muted, marginBottom:6 };
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ textAlign:'center' }}><div style={{ fontSize:48, marginBottom:16 }}>🛒</div><div style={{ color:C.muted, fontSize:15, fontWeight:600 }}>Loading your profile…</div></div>
+    </div>
+  );
+  if (error) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ textAlign:'center', maxWidth:400, padding:24 }}><div style={{ fontSize:48, marginBottom:16 }}>😞</div><h2 style={{ color:C.navy, margin:'0 0 8px', fontFamily:"'Playfair Display',serif" }}>Oops</h2><p style={{ color:C.muted, fontSize:14 }}>{error}</p></div>
+    </div>
+  );
+
+  const v = vol;
+  const hasAssignment = !!v.assignment;
+
+  // If they haven't agreed to terms, redirect them
+  if (!v.agreedToTerms) {
+    return <VolunteerTerms token={token} volunteer={v} onAgreed={() => window.location.reload()} />;
+  }
+
+  // If assigned → show the shopping profile (repurposed ShopperProfile view)
+  if (hasAssignment && !v.assignment.checkedOut) {
+    const a = v.assignment;
+    return <ShopperProfile token={token} volunteerView={true} assignment={a} volunteer={v} />;
+  }
+
+  // Default: show QR code + event details + status
+  return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ background:'linear-gradient(135deg, #1B3A4B 0%, #2D5A6B 100%)', padding:isMobile?'28px 20px 24px':'36px 32px 28px', textAlign:'center' }}>
+        <div style={{ fontSize:13, color:'rgba(249,168,201,0.9)', fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Child Spree 2026</div>
+        <h1 style={{ color:'#fff', margin:0, fontFamily:"'Playfair Display',serif", fontSize:isMobile?'1.6rem':'2rem', fontWeight:700 }}>
+          Welcome, {v.firstName}!
+        </h1>
+        <div style={{ color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:8 }}>
+          {v.volunteerType === 'ops_crew' ? 'Ops Crew' : 'Shopper'} · {v.storeLocation ? STORES.find(s=>s.id===v.storeLocation)?.label || v.storeLocation : 'Store TBD'}
+        </div>
+      </div>
+
+      <div style={{ maxWidth:480, margin:'0 auto', padding:isMobile?'16px 16px 100px':'24px 24px 60px' }}>
+
+        {/* Status badges */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
+          <span style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:700,
+            background: v.agreedToTerms ? '#D1FAE5' : '#FEF3C7', color: v.agreedToTerms ? '#065F46' : '#92400E' }}>
+            {v.agreedToTerms ? '✅ Terms Agreed' : '⏳ Terms Pending'}
+          </span>
+          <span style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:700,
+            background: v.checkedIn ? '#D1FAE5' : '#F1F5F9', color: v.checkedIn ? '#065F46' : C.muted }}>
+            {v.checkedIn ? '✅ Checked In' : '⬜ Not Checked In'}
+          </span>
+          {hasAssignment && v.assignment.checkedOut && (
+            <span style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:700, background:'#D1FAE5', color:'#065F46' }}>
+              ✅ Shopping Complete
+            </span>
+          )}
+        </div>
+
+        {/* QR Code — the main event */}
+        <div style={{ ...cardStyle, textAlign:'center' }}>
+          <div style={labelStyle}>Your Shopping Day QR Code</div>
+          <div style={{ fontSize:13, color:C.muted, marginBottom:16, lineHeight:1.5 }}>
+            Show this to the ops crew when you arrive at your Kohl's store.
+          </div>
+          {qrUrl && <img src={qrUrl} alt="Your QR Code" style={{ width:240, height:240, borderRadius:12, border:'3px solid #E2E8F0' }}/>}
+          <div style={{ fontSize:12, color:C.light, marginTop:12 }}>
+            {v.firstName} {v.lastName}
+          </div>
+        </div>
+
+        {/* Event Details */}
+        <div style={cardStyle}>
+          <div style={labelStyle}>Event Details</div>
+          <div style={{ display:'grid', gap:12, marginTop:8 }}>
+            {[
+              { icon:'📅', label:'Date', value:'August 1, 2026' },
+              { icon:'🏪', label:'Store', value:v.storeLocation ? (STORES.find(s=>s.id===v.storeLocation)?.label || v.storeLocation) : 'TBD' },
+              { icon:'⏰', label:'Arrival', value:v.arrivalTime || '8:00 AM' },
+              { icon:'💳', label:'Budget', value:'$150 per child — head to toe' },
+            ].map(d => (
+              <div key={d.label} style={{ display:'flex', gap:12, alignItems:'center' }}>
+                <span style={{ fontSize:20 }}>{d.icon}</span>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:600, color:C.muted }}>{d.label}</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:C.navy }}>{d.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* What to expect */}
+        <div style={cardStyle}>
+          <div style={labelStyle}>What to Expect</div>
+          <div style={{ fontSize:14, color:C.text, lineHeight:1.7, marginTop:8 }}>
+            <strong>1.</strong> Show your QR code at check-in<br/>
+            <strong>2.</strong> Get matched with a child<br/>
+            <strong>3.</strong> Watch their video to meet them<br/>
+            <strong>4.</strong> Shop using the sizes and preferences on your phone<br/>
+            <strong>5.</strong> Check out at Kohl's register with the gift card<br/>
+            <strong>6.</strong> Bring everything to the foundation checkout station
+          </div>
+        </div>
+
+        {/* Completed state */}
+        {hasAssignment && v.assignment.checkedOut && (
+          <div style={{ textAlign:'center', padding:24, background:'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', borderRadius:16, border:'2px solid #059669' }}>
+            <div style={{ fontSize:48, marginBottom:8 }}>🎉</div>
+            <div style={{ fontSize:20, fontWeight:800, color:'#065F46' }}>Thank You!</div>
+            <div style={{ fontSize:14, color:'#047857', marginTop:8, lineHeight:1.6 }}>
+              You made a child's day. The clothes you picked will be delivered to their school. Thank you for being part of Child Spree 2026.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── VOLUNTEER TERMS AGREEMENT ───
+function VolunteerTerms({ token, volunteer, onAgreed }) {
+  const isMobile = useIsMobile();
+  const [agreeing, setAgreeing] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const v = volunteer || {};
+
+  const handleAgree = async () => {
+    setAgreeing(true);
+    try {
+      const res = await fetch(`${API}/v/${token}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'agree' }),
+      });
+      if (res.ok) { setAgreed(true); setTimeout(() => onAgreed && onAgreed(), 1000); }
+      else { const d = await res.json().catch(()=>({})); alert(d.error || 'Failed'); }
+    } catch (e) { alert(e.message); }
+    finally { setAgreeing(false); }
+  };
+
+  const cardStyle = { background:'#fff', borderRadius:16, padding:isMobile?16:24, marginBottom:16, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
+
+  return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ background:'linear-gradient(135deg, #1B3A4B 0%, #2D5A6B 100%)', padding:isMobile?'28px 20px 24px':'36px 32px 28px', textAlign:'center' }}>
+        <div style={{ fontSize:13, color:'rgba(249,168,201,0.9)', fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Child Spree 2026</div>
+        <h1 style={{ color:'#fff', margin:0, fontFamily:"'Playfair Display',serif", fontSize:isMobile?'1.5rem':'1.8rem' }}>Volunteer Agreement</h1>
+        {v.firstName && <div style={{ color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:8 }}>Welcome, {v.firstName} {v.lastName}</div>}
+      </div>
+
+      <div style={{ maxWidth:560, margin:'0 auto', padding:isMobile?'16px 16px 60px':'24px 24px 60px' }}>
+        <div style={cardStyle}>
+          <h2 style={{ fontSize:18, fontWeight:700, color:C.navy, margin:'0 0 16px' }}>Volunteer Guidelines</h2>
+          <div style={{ fontSize:14, color:C.text, lineHeight:1.8 }}>
+            <p style={{ marginBottom:12 }}>Thank you for volunteering with Child Spree! Please review and agree to the following:</p>
+            <p style={{ marginBottom:8 }}><strong>Privacy:</strong> You will receive personal information about a child (first name, sizes, preferences). This information is confidential and must not be shared on social media or with anyone outside the event.</p>
+            <p style={{ marginBottom:8 }}><strong>Budget:</strong> Each child has a $150 budget. Please shop head-to-toe: shirt, pants, shoes, jacket/outerwear, underwear, and socks. Stay within budget.</p>
+            <p style={{ marginBottom:8 }}><strong>Conduct:</strong> You represent the Davis Education Foundation. Please be respectful to store staff, fellow volunteers, and families.</p>
+            <p style={{ marginBottom:8 }}><strong>Photos:</strong> You may take a photo of the shopping haul for the checkout station. Do not photograph children's personal information or share identifying details.</p>
+            <p style={{ marginBottom:8 }}><strong>Returns:</strong> All items must be new with tags. The foundation handles any necessary returns.</p>
+          </div>
+        </div>
+
+        {agreed ? (
+          <div style={{ textAlign:'center', padding:24, background:'#D1FAE5', borderRadius:16, border:'2px solid #059669' }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'#065F46' }}>You're all set!</div>
+            <div style={{ fontSize:13, color:'#047857', marginTop:4 }}>Redirecting to your volunteer page…</div>
+          </div>
+        ) : (
+          <button onClick={handleAgree} disabled={agreeing}
+            style={{
+              width:'100%', padding:'18px 24px', borderRadius:12, border:'none',
+              fontSize:16, fontWeight:800, color:'#fff', cursor: agreeing ? 'default' : 'pointer',
+              background: agreeing ? C.light : 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+              boxShadow:'0 4px 14px rgba(5,150,105,0.3)',
+            }}>
+            {agreeing ? '⏳ Saving…' : '✅ I Agree — Show Me My QR Code'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── BAG DELIVERY CONFIRMATION (FA scans bag QR) ───
+function BagDelivery({ nominationId }) {
+  const isMobile = useIsMobile();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [faName, setFaName] = useState('');
+  const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API}/delivery/confirm?nomination_id=${nominationId}`);
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Not found'); }
+        setData(await res.json());
+      } catch (e) { setError(e.message); }
+      finally { setLoading(false); }
+    })();
+  }, [nominationId]);
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      const form = new FormData();
+      form.append('nomination_id', nominationId);
+      form.append('confirmed_by', faName || 'FA');
+      form.append('notes', notes);
+      if (photoFile) form.append('photo', photoFile);
+
+      const res = await fetch(`${API}/delivery/confirm`, { method: 'POST', body: form });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Failed'); }
+      setConfirmed(true);
+      setData(prev => ({ ...prev, delivered: true }));
+    } catch (e) { alert(e.message); }
+    finally { setConfirming(false); }
+  };
+
+  const cardStyle = { background:'#fff', borderRadius:16, padding:isMobile?16:24, marginBottom:16, boxShadow:'0 1px 3px rgba(0,0,0,0.06)', border:'1px solid #E2E8F0' };
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ textAlign:'center' }}><div style={{ fontSize:48, marginBottom:16 }}>📦</div><div style={{ color:C.muted, fontSize:15, fontWeight:600 }}>Loading delivery info…</div></div>
+    </div>
+  );
+  if (error) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ textAlign:'center', maxWidth:400, padding:24 }}><div style={{ fontSize:48, marginBottom:16 }}>😞</div><h2 style={{ color:C.navy, margin:'0 0 8px' }}>Not Found</h2><p style={{ color:C.muted, fontSize:14 }}>{error}</p></div>
+    </div>
+  );
+
+  const d = data;
+
+  return (
+    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#F8FAFC 0%,#EFF6FF 100%)' }}>
+      <div style={{ background:'linear-gradient(135deg, #1B3A4B 0%, #2D5A6B 100%)', padding:isMobile?'28px 20px 24px':'36px 32px 28px', textAlign:'center' }}>
+        <div style={{ fontSize:13, color:'rgba(249,168,201,0.9)', fontWeight:700, letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Child Spree 2026</div>
+        <h1 style={{ color:'#fff', margin:0, fontFamily:"'Playfair Display',serif", fontSize:isMobile?'1.5rem':'1.8rem' }}>Delivery Confirmation</h1>
+      </div>
+
+      <div style={{ maxWidth:480, margin:'0 auto', padding:isMobile?'16px 16px 60px':'24px 24px 60px' }}>
+        <div style={cardStyle}>
+          <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:16 }}>
+            <div style={{ width:56, height:56, borderRadius:14, background:'#EFF6FF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, flexShrink:0 }}>📦</div>
+            <div>
+              <div style={{ fontSize:20, fontWeight:800, color:C.navy }}>{d.childFirst}</div>
+              <div style={{ fontSize:13, color:C.muted }}>{d.school} · Grade {d.grade}</div>
+            </div>
+          </div>
+
+          {d.delivered || confirmed ? (
+            <div style={{ textAlign:'center', padding:20, background:'#D1FAE5', borderRadius:12, border:'2px solid #059669' }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
+              <div style={{ fontSize:16, fontWeight:700, color:'#065F46' }}>Delivery Confirmed</div>
+              {d.confirmedAt && <div style={{ fontSize:12, color:'#047857', marginTop:4 }}>Confirmed {new Date(d.confirmedAt).toLocaleString()}</div>}
+              {d.confirmedBy && <div style={{ fontSize:12, color:'#047857' }}>by {d.confirmedBy}</div>}
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize:14, color:C.text, lineHeight:1.6, marginBottom:16 }}>
+                Confirm you've received this bag at your school. Optionally take a photo as proof of delivery.
+              </div>
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>YOUR NAME</label>
+                <input value={faName} onChange={e=>setFaName(e.target.value)} placeholder="Family Advocate name"
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:14 }}/>
+              </div>
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>NOTES (optional)</label>
+                <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any issues or notes…" rows={2}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:14, resize:'vertical' }}/>
+              </div>
+              <div style={{ marginBottom:16 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:'block', marginBottom:4 }}>PHOTO (optional)</label>
+                <input type="file" accept="image/*" capture="environment" onChange={e=>setPhotoFile(e.target.files?.[0]||null)}
+                  style={{ fontSize:13 }}/>
+              </div>
+              <button onClick={handleConfirm} disabled={confirming}
+                style={{
+                  width:'100%', padding:'16px 24px', borderRadius:12, border:'none',
+                  fontSize:16, fontWeight:800, color:'#fff', cursor: confirming ? 'default' : 'pointer',
+                  background: confirming ? C.light : 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                }}>
+                {confirming ? '⏳ Confirming…' : '✅ Confirm Delivery'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3793,7 +4208,7 @@ export default function App() {
   }, []);
   const navigate = hash => { window.location.hash = hash; window.scrollTo(0,0); };
 
-  let view = 'home', token = null, faToken = null, faVideoNomId = null, shopToken = null;
+  let view = 'home', token = null, faToken = null, faVideoNomId = null, shopToken = null, volToken = null, bagNomId = null;
   if (route.startsWith('#/nominate')) view = 'nominate';
   else if (route.startsWith('#/volunteer')) view = 'volunteer';
   else if (route.startsWith('#/admin')) view = 'admin';
@@ -3803,6 +4218,8 @@ export default function App() {
     view = 'fa-video'; faToken = m[1]; faVideoNomId = m[2];
   }
   else if (route.startsWith('#/fa/')) { view = 'fa'; faToken = route.replace('#/fa/',''); }
+  else if (route.startsWith('#/v/')) { view = 'vol-home'; volToken = route.replace('#/v/','').replace(/\/.*$/,''); }
+  else if (route.startsWith('#/bag/')) { view = 'bag'; bagNomId = route.replace('#/bag/',''); }
   else if (route.startsWith('#/shop/')) { view = 'shop'; shopToken = route.replace('#/shop/',''); }
   else if (route.startsWith('#/portal')) view = 'portal';
   else if (route === '#/' || route === '#' || route === '') view = 'home';
@@ -3813,6 +4230,14 @@ export default function App() {
       <ParentIntake token={token}/>
       {isMobile && <div style={{ height:72 }}/>}
     </div>
+  );
+
+  if (view === 'vol-home' && volToken) return (
+    <VolunteerHome token={volToken}/>
+  );
+
+  if (view === 'bag' && bagNomId) return (
+    <BagDelivery nominationId={bagNomId}/>
   );
 
   if (view === 'shop' && shopToken) return (
