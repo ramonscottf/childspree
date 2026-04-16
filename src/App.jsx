@@ -2529,6 +2529,75 @@ function ShoppingDayTab({ isMobile }) {
 }
 
 
+// ─── REMOVE WITH REASON (collapsible, inside expanded nomination) ───
+function RemoveWithReason({ nominationId, childName, updateStatus }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [removing, setRemoving] = useState(false);
+
+  const reasons = ['Duplicate entry', 'Moved', 'Parent declined', 'Other'];
+
+  const handleRemove = async () => {
+    if (!reason) return;
+    setRemoving(true);
+    try {
+      await updateStatus(nominationId, 'declined', reason);
+    } catch (e) { alert(e.message); }
+    finally { setRemoving(false); }
+  };
+
+  if (!open) {
+    return (
+      <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid #F1F5F9' }}>
+        <button onClick={()=>setOpen(true)}
+          style={{ padding:'6px 14px', background:'none', border:`1px solid #FECACA`, borderRadius:8,
+            fontSize:12, color:'#991B1B', cursor:'pointer', fontWeight:600 }}>
+          🗑️ Remove Nomination
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid #F1F5F9' }}>
+      <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:14 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:'#991B1B', marginBottom:10 }}>
+          Remove {childName}
+        </div>
+        <div style={{ fontSize:12, color:'#991B1B', marginBottom:10 }}>
+          Select a reason — this helps with tracking. The nomination will be hidden from the active list but can be restored anytime.
+        </div>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
+          {reasons.map(r => (
+            <button key={r} onClick={()=>setReason(r)}
+              style={{
+                padding:'8px 14px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer',
+                border: reason===r ? '2px solid #991B1B' : '1px solid #FECACA',
+                background: reason===r ? '#FEE2E2' : '#fff',
+                color: reason===r ? '#991B1B' : '#64748B',
+              }}>
+              {r}
+            </button>
+          ))}
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={handleRemove} disabled={!reason || removing}
+            style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700,
+              background: !reason ? '#E2E8F0' : '#DC2626', color:'#fff',
+              cursor: !reason || removing ? 'default' : 'pointer' }}>
+            {removing ? '⏳ Removing…' : '🗑️ Confirm Remove'}
+          </button>
+          <button onClick={()=>{setOpen(false);setReason('');}}
+            style={{ padding:'10px 16px', borderRadius:8, border:`1px solid ${C.border}`,
+              background:'#fff', fontSize:13, fontWeight:600, color:C.muted, cursor:'pointer' }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminNomDetails({ n, isMobile, updateStatus, copyLink, onSaved }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2710,10 +2779,16 @@ function AdminNomDetails({ n, isMobile, updateStatus, copyLink, onSaved }) {
       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
         {n.status==='pending'&&<><button onClick={()=>updateStatus(n.id,'approved')} style={{ padding:'8px 20px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Approve</button><button onClick={()=>updateStatus(n.id,'declined')} style={{ padding:'8px 16px', background:'#FEE2E2', color:'#991B1B', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>✗ Decline</button></>}
         {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'8px 20px', background:C.blue, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
-        {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'8px 20px', background:C.amber, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>↩ Undo Decline</button>}
+        {n.status==='declined'&&<>
+          <button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'8px 20px', background:C.amber, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>↩ Restore</button>
+          {n.declineReason && <span style={{ fontSize:12, color:C.muted, padding:'8px 0', alignSelf:'center' }}>Reason: {n.declineReason}</span>}
+        </>}
         {n.status==='sent'&&n.parentIntake&&n.parentIntake.hasVideo&&<button onClick={()=>updateStatus(n.id,'complete')} style={{ padding:'8px 20px', background:'#7C3AED', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>✓ Mark Complete</button>}
         {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'8px 16px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>📋 Copy Parent Link</button>}
       </div>
+
+      {/* Remove with reason — only for non-declined */}
+      {n.status !== 'declined' && <RemoveWithReason nominationId={n.id} childName={`${n.childFirst} ${n.childLast}`} updateStatus={updateStatus} />}
     </div>
   );
 }
@@ -2729,7 +2804,7 @@ function NominationsTab({ isMobile }) {
     setLoading(false);
   }, [filter, search]);
   useEffect(() => { load(); }, [load]);
-  const updateStatus = async(id, status) => { await api(`/nominations/${id}`,{method:'PATCH',body:JSON.stringify({status})}); load(); };
+  const updateStatus = async(id, status, declineReason) => { await api(`/nominations/${id}`,{method:'PATCH',body:JSON.stringify({status, declineReason})}); load(); };
   const copyLink = (token) => { navigator.clipboard.writeText(`${window.location.origin}/#/intake/${token}`); };
   const counts = { all:0, pending:0, approved:0, sent:0, complete:0, declined:0 };
   nominations.forEach(n => { counts[n.status] = (counts[n.status]||0)+1; if(n.status!=='declined') counts.all++; });
@@ -2815,7 +2890,6 @@ function NominationsTab({ isMobile }) {
                   {n.status==='approved'&&<button onClick={()=>updateStatus(n.id,'sent')} style={{ padding:'5px 12px', background:C.blue, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>Send to Parent ✉️</button>}
                   {n.status==='declined'&&<button onClick={()=>updateStatus(n.id,'pending')} style={{ padding:'5px 12px', background:C.amber, color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>↩ Restore</button>}
                   {(n.status==='sent'||n.status==='complete')&&n.parentToken&&<button onClick={()=>copyLink(n.parentToken)} style={{ padding:'5px 10px', background:'#F1F5F9', color:C.navy, border:'none', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>📋 Copy Link</button>}
-                  {n.status!=='declined'&&<button onClick={()=>{if(confirm(`Remove ${n.childFirst} ${n.childLast}? You can find them later in the Declined filter.`))updateStatus(n.id,'declined');}} style={{ padding:'5px 8px', background:'none', border:`1px solid #FECACA`, borderRadius:6, fontSize:11, color:'#991B1B', cursor:'pointer' }}>✕</button>}
                 </div>
                 <span style={{ fontSize:16, color:C.light, transition:'transform 0.2s', transform:expandedId===n.id?'rotate(180deg)':'rotate(0)' }}>▼</span>
               </div>

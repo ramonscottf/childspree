@@ -51,7 +51,7 @@ export async function onRequestPatch(context) {
   const nom = await env.DB.prepare('SELECT * FROM nominations WHERE id = ?').bind(params.id).first();
   if (!nom) return cors(Response.json({ error: 'Not found' }, { status: 404 }));
 
-  const transitions = { pending:['approved','declined'], approved:['sent','declined'], sent:['complete'], declined:['pending'] };
+  const transitions = { pending:['approved','declined'], approved:['sent','declined'], sent:['complete','declined'], complete:['declined'], declined:['pending'] };
   if (body.status) {
     if (!(transitions[nom.status]||[]).includes(body.status)) {
       return cors(Response.json({ error: `Cannot go from ${nom.status} to ${body.status}` }, { status: 400 }));
@@ -61,8 +61,10 @@ export async function onRequestPatch(context) {
     if (body.status==='approved') extra=', approved_at = ?';
     if (body.status==='sent') extra=', sent_at = ?';
     if (body.status==='complete') extra=', completed_at = ?';
+    if (body.status==='declined') extra=', decline_reason = ?';
     const binds = [body.status, now];
-    if (extra) binds.push(now);
+    if (body.status==='declined') binds.push(body.declineReason || null);
+    else if (extra) binds.push(now);
     binds.push(params.id);
     await env.DB.prepare(`UPDATE nominations SET status = ?, updated_at = ?${extra} WHERE id = ?`).bind(...binds).run();
 

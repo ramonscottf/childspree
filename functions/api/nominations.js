@@ -50,6 +50,7 @@ export async function onRequestGet(context) {
     parentName: r.parent_name, parentPhone: r.parent_phone, parentEmail: r.parent_email,
     reason: r.reason, siblingCount: r.sibling_count||0, siblingNames: r.sibling_names||null, additionalNotes: r.additional_notes, parentLanguage: r.parent_language||'en',
     familyGroup: r.family_group || null,
+    declineReason: r.decline_reason || null,
     createdAt: r.created_at, updatedAt: r.updated_at,
     parentIntake: r.shirt_size ? {
       shirtSize: r.shirt_size, pantSize: r.pant_size, shoeSize: r.shoe_size,
