@@ -723,7 +723,7 @@ function TypeCard({ active, onClick, icon, label, color, activeBg, desc, extra, 
 // ─── VOLUNTEER FORM ───
 function VolunteerForm() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:true, volunteerType:'shopper', shoppingPreference:'' });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', organization:'', groupType:'Individual', groupSize:'', shirtSize:'', arrivalTime:'', storeLocation:'', experience:'', hearAbout:'', smsOptIn:false, volunteerType:'shopper', shoppingPreference:'' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -881,7 +881,12 @@ function VolunteerForm() {
           <Field label="How did you hear about Child Spree?"><select style={{...inp(),appearance:'auto'}} value={form.hearAbout} onChange={e=>upd('hearAbout',e.target.value)}><option value="">Select...</option>{['School or teacher','DEF newsletter','Social media','Friend or coworker','My employer','Church','Other'].map(s=><option key={s} value={s}>{s}</option>)}</select></Field>
           <label style={{ display:'flex', alignItems:'flex-start', gap:8, cursor:'pointer', marginTop:8 }}>
             <input type="checkbox" checked={form.smsOptIn} onChange={e=>upd('smsOptIn',e.target.checked)} style={{ marginTop:2, accentColor:C.pink }}/>
-            <span style={{ fontSize:12, color:C.muted, lineHeight:1.5 }}>I agree to receive text message updates about volunteering at Child Spree 2026. Reply STOP to opt out anytime.</span>
+            <span style={{ fontSize:12, color:C.muted, lineHeight:1.5 }}>
+              I agree to receive text messages from <strong>Davis Education Foundation</strong> about Child Spree 2026 volunteer shifts, reminders, and event updates. Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. See our{' '}
+              <a href="https://daviskids.org/privacy" target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} style={{ color:C.pink, textDecoration:'underline', fontWeight:600 }}>Privacy Policy</a>
+              {' '}and{' '}
+              <a href="https://daviskids.org/terms" target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} style={{ color:C.pink, textDecoration:'underline', fontWeight:600 }}>Terms</a>.
+            </span>
           </label>
         </div>
       </div>
