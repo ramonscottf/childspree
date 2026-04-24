@@ -829,7 +829,7 @@ function VolunteerForm() {
           <Field label="Phone (for text updates)"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
           <Field label="Organization / School / Company"><input style={inp()} value={form.organization} onChange={e=>upd('organization',e.target.value)} placeholder="Optional"/></Field>
           <Field label="Group type"><select style={{...inp(),appearance:'auto'}} value={form.groupType} onChange={e=>{upd('groupType',e.target.value);if(e.target.value==='Individual')upd('groupSize','');}}>{['Individual','Corporate Group','Church Group','School Group','Family','Other'].map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
-          {form.groupType!=='Individual'&&<Field label="Group size *"><select style={{...inp(),appearance:'auto'}} value={form.groupSize} onChange={e=>upd('groupSize',e.target.value)}><option value="">How many people?</option>{['2','3','4','5','6','7','8','9','10','11-15','16-20','20+'].map(n=><option key={n} value={n}>{n}</option>)}</select></Field>}
+          {form.groupType!=='Individual'&&<Field label="Group size *"><select style={{...inp(),appearance:'auto'}} value={form.groupSize} onChange={e=>upd('groupSize',e.target.value)}><option value="">How many people?</option>{['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','20+'].map(n=><option key={n} value={n}>{n}</option>)}</select></Field>}
         </div>
         <div>
           <p style={secHead(isMobile)}>Event Details</p>
@@ -2945,21 +2945,40 @@ function VolunteersTab({ isMobile }) {
     setSending(false);
   };
 
+  // Parse group_size from volunteer row — must match server logic in
+  // /api/volunteers/store-counts so admin totals agree with public capacity bars.
+  // Values: null, 'Individual', '2'..'20', '11-15', '16-20', '20+'.
+  const parseGroupCount = (v) => {
+    const gs = v.groupSize;
+    if (!gs || v.groupType === 'Individual') return 1;
+    if (typeof gs === 'string' && gs.includes('-')) {
+      const parts = gs.split('-');
+      return parseInt(parts[1]) || parseInt(parts[0]) || 1;
+    }
+    if (gs === '20+') return 20;
+    const n = parseInt(gs);
+    return isNaN(n) ? 1 : n;
+  };
+
   const counts = { all:volunteers.length, registered:0, confirmed:0, assigned:0, waitlisted:0, attended:0 };
   volunteers.forEach(v => { counts[v.status] = (counts[v.status]||0)+1; });
-  const typeCounts = { shoppers: volunteers.filter(v => v.volunteerType !== 'ops_crew').length, ops: volunteers.filter(v => v.volunteerType === 'ops_crew').length };
+  const typeCounts = {
+    shoppers: volunteers.filter(v => v.volunteerType !== 'ops_crew' && v.status !== 'waitlisted').reduce((s,v) => s + parseGroupCount(v), 0),
+    ops:      volunteers.filter(v => v.volunteerType === 'ops_crew' && v.status !== 'waitlisted').reduce((s,v) => s + parseGroupCount(v), 0),
+  };
   const statColors = { registered:'#7C3AED', confirmed:C.green, assigned:C.blue, waitlisted:'#F59E0B', attended:C.amber };
 
-  // Store counts from volunteer data — split by type
+  // Store counts from volunteer data — split by type, accounting for group sizes
   const shopperCnts = {};
   const opsCnts = {};
   const storeByTime = {};
   volunteers.filter(v=>v.status!=='waitlisted').forEach(v => {
+    const count = parseGroupCount(v);
     if (v.storeLocation) {
-      if (v.volunteerType === 'ops_crew') { opsCnts[v.storeLocation] = (opsCnts[v.storeLocation]||0)+1; }
-      else { shopperCnts[v.storeLocation] = (shopperCnts[v.storeLocation]||0)+1; }
+      if (v.volunteerType === 'ops_crew') { opsCnts[v.storeLocation] = (opsCnts[v.storeLocation]||0)+count; }
+      else { shopperCnts[v.storeLocation] = (shopperCnts[v.storeLocation]||0)+count; }
     }
-    if (v.arrivalTime) { storeByTime[v.arrivalTime] = (storeByTime[v.arrivalTime]||0)+1; }
+    if (v.arrivalTime) { storeByTime[v.arrivalTime] = (storeByTime[v.arrivalTime]||0)+count; }
   });
 
   const StoreBar = ({ storeKey, capsMap, cntsMap, icon }) => {
@@ -2988,7 +3007,7 @@ function VolunteersTab({ isMobile }) {
     <div>
       {/* ── Shopper Capacity Dashboard ── */}
       <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
-        <span>🛒</span> Shoppers <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.shoppers} total)</span>
+        <span>🛒</span> Shoppers <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.shoppers} spots reserved)</span>
       </div>
       <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:16, flexDirection:isMobile?'column':'row' }}>
         {Object.keys(STORE_CAPS).map(k => <StoreBar key={'s-'+k} storeKey={k} capsMap={STORE_CAPS} cntsMap={shopperCnts} icon="📍"/>)}
@@ -2996,7 +3015,7 @@ function VolunteersTab({ isMobile }) {
 
       {/* ── Ops Crew Capacity Dashboard ── */}
       <div style={{ fontSize:12, fontWeight:700, color:'#7C3AED', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
-        <span>🎯</span> Operations Crew <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.ops} total)</span>
+        <span>🎯</span> Operations Crew <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.ops} spots reserved)</span>
       </div>
       <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:20, flexDirection:isMobile?'column':'row' }}>
         {Object.keys(OPS_STORE_CAPS).map(k => <StoreBar key={'o-'+k} storeKey={k} capsMap={OPS_STORE_CAPS} cntsMap={opsCnts} icon="🎯"/>)}
