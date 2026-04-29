@@ -205,6 +205,17 @@ export async function notifyIntakeComplete(env, nom, intake) {
 export async function notifyVolunteerRegistered(env, vol) {
   const adminEmails = env.ADMIN_EMAIL || 'kbuchi@dsdmail.net';
 
+  // Role + store description for confirmation email
+  const isOpsCrew = vol.volunteerType === 'ops_crew';
+  // Extract city from store name like "Kohl's Layton (881 W Antelope Dr)" -> "Layton"
+  const storeCity = vol.storeLocation
+    ? (vol.storeLocation.match(/Kohl's\s+(\w+)/) || [])[1] || null
+    : null;
+  const storeText = storeCity ? `Kohl's in ${storeCity}` : `your assigned Kohl's store`;
+  const roleSentence = isOpsCrew
+    ? `Thank you for signing up to be on the ops crew at Child Spree 2026! You'll be helping the event run smoothly at ${storeText} on the first Friday of August.`
+    : `Thank you for signing up to volunteer at Child Spree 2026! You'll be shopping for one child — someone who needs it and deserves it — at ${storeText} on the first Friday of August.`;
+
   await sendEmail(env, {
     to: adminEmails,
     subject: `🙋 New volunteer — ${vol.firstName} ${vol.lastName}${vol.organization ? ' (' + vol.organization + ')' : ''}`,
@@ -245,7 +256,7 @@ export async function notifyVolunteerRegistered(env, vol) {
           </div>
           <div style="background:#f9f9f9;padding:28px;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 8px 8px;">
             <p style="font-size:15px;color:#333;">Hi ${vol.firstName},</p>
-            <p style="font-size:14px;color:#555;line-height:1.7;">Thank you for signing up to volunteer at Child Spree 2026! You\'ll be shopping for one child — someone who needs it and deserves it — at Kohl\'s in Layton on the first Friday of August.</p>
+            <p style="font-size:14px;color:#555;line-height:1.7;">${roleSentence}</p>
             <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:14px 18px;margin:20px 0;font-size:13px;color:#166534;">
               <strong>What happens next:</strong> The DEF team will send you more details as the event approaches. Make sure to keep an eye on your email and texts.
             </div>

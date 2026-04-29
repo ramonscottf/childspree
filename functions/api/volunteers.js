@@ -177,6 +177,7 @@ export async function onRequestPost(context) {
     email: body.email, phone: body.phone,
     organization: body.organization, groupType: body.groupType,
     shirtSize: body.shirtSize, waitlisted, volunteerType, token,
+    storeLocation: store, arrivalTime: body.arrivalTime,
   }));
 
   return cors(Response.json({ id, status, waitlisted, token }, { status: 201 }));
