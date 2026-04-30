@@ -107,7 +107,8 @@ export async function onRequestPost(context) {
   const { env, request } = context;
   const body = await request.json();
   if (!body.firstName || !body.lastName) return cors(Response.json({ error: 'Name required' }, { status: 400 }));
-  if (!body.email && !body.phone) return cors(Response.json({ error: 'Email or phone required' }, { status: 400 }));
+  if (!body.email) return cors(Response.json({ error: 'Email required' }, { status: 400 }));
+  if (!body.phone) return cors(Response.json({ error: 'Phone number required' }, { status: 400 }));
 
   const volunteerType = body.volunteerType === 'ops_crew' ? 'ops_crew' : 'shopper';
   const capsToUse = volunteerType === 'ops_crew' ? OPS_CAPS : STORE_CAPS;

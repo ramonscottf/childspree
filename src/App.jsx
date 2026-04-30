@@ -757,7 +757,8 @@ function VolunteerForm() {
   const submit = async() => {
     setError(null);
     if (!form.firstName||!form.lastName) { setError('Please enter your name.'); return; }
-    if (!form.email&&!form.phone) { setError('Please provide email or phone so we can reach you.'); return; }
+    if (!form.email) { setError('Please enter your email so we can reach you.'); return; }
+    if (!form.phone) { setError('Please enter your phone number — we need it for shift reminders and day-of contact.'); return; }
     if (form.volunteerType === 'shopper' && !form.arrivalTime) { setError('Please select an arrival time.'); return; }
     setSubmitting(true);
     try {
@@ -826,7 +827,7 @@ function VolunteerForm() {
           <p style={secHead(isMobile)}>Your Information</p>
           <Row cols={2} gap={10}><Field label="First Name *"><input style={inp()} value={form.firstName} onChange={e=>upd('firstName',e.target.value)} placeholder="First"/></Field><Field label="Last Name *"><input style={inp()} value={form.lastName} onChange={e=>upd('lastName',e.target.value)} placeholder="Last"/></Field></Row>
           <Field label="Email *"><input style={inp()} type="email" value={form.email} onChange={e=>upd('email',e.target.value)} placeholder="you@example.com"/></Field>
-          <Field label="Phone (for text updates)"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
+          <Field label="Phone *"><input style={inp()} type="tel" value={form.phone} onChange={e=>upd('phone',e.target.value)} placeholder="(801) 555-0000"/></Field>
           <Field label="Organization / School / Company"><input style={inp()} value={form.organization} onChange={e=>upd('organization',e.target.value)} placeholder="Optional"/></Field>
           <Field label="Group type"><select style={{...inp(),appearance:'auto'}} value={form.groupType} onChange={e=>{upd('groupType',e.target.value);if(e.target.value==='Individual')upd('groupSize','');}}>{['Individual','Corporate Group','Church Group','School Group','Family','Other'].map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
           {form.groupType!=='Individual'&&<Field label="Group size *"><select style={{...inp(),appearance:'auto'}} value={form.groupSize} onChange={e=>upd('groupSize',e.target.value)}><option value="">How many people?</option>{['2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','20+'].map(n=><option key={n} value={n}>{n}</option>)}</select></Field>}
