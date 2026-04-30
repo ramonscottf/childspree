@@ -180,5 +180,45 @@ export async function onRequestPost(context) {
     storeLocation: store, arrivalTime: body.arrivalTime,
   }));
 
+  // Fire-and-forget mirror to unified DEF Volunteer Hub
+  context.waitUntil(mirrorToUnified({
+    event_slug: 'child-spree-2026',
+    first_name: body.firstName,
+    last_name: body.lastName,
+    email: body.email,
+    phone: body.phone,
+    organization: body.organization,
+    group_type: body.groupType || 'Individual',
+    group_size: body.groupSize ? (parseInt(body.groupSize, 10) || 1) : 1,
+    shirt_size: body.shirtSize,
+    role: volunteerType,                  // 'shopper' or 'ops'
+    location: store,                      // store name
+    shift: body.arrivalTime,              // e.g. "Shift 1 — 6:30 AM Setup"
+    arrival_time: body.arrivalTime,
+    early_arrival: (body.arrivalTime || '').includes('Setup'),
+    experience: body.experience,
+    hear_about: body.hearAbout,
+    sms_opt_in: body.smsOptIn !== false,
+    status,
+  }));
+
   return cors(Response.json({ id, status, waitlisted, token }, { status: 201 }));
+}
+
+// ---------- Unified DEF Volunteer Hub mirror ----------
+// Fire-and-forget. Idempotent on (email, event_slug). Never throws.
+async function mirrorToUnified(payload) {
+  try {
+    const res = await fetch('https://volunteers.daviskids.org/api/volunteers', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...payload, upsert: true, source: 'mirror' }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      console.error('[mirror childspree→unified] failed', res.status, txt);
+    }
+  } catch (e) {
+    console.error('[mirror childspree→unified] threw', e?.message || e);
+  }
 }
