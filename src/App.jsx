@@ -2921,6 +2921,14 @@ function VolunteersTab({ isMobile }) {
   const [msg, setMsg] = useState({ channel:'both', to:'all', subject:'', message:'' });
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState(null);
+  // ── Facet filters: clicking capacity cards / time pills narrows the list
+  const [storeFilter, setStoreFilter] = useState(null);     // store_location string
+  const [typeFilter, setTypeFilter]   = useState(null);     // 'shopper' | 'ops_crew'
+  const [timeFilter, setTimeFilter]   = useState(null);     // arrival_time string
+  // ── Edit / Delete state
+  const [editVol, setEditVol] = useState(null);             // volunteer being edited
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); // volunteer being deleted
 
   const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:200,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:175,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:200,label:'Clinton',color:'#10B981'} };
   const OPS_STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:8,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:10,label:'Clinton',color:'#10B981'} };
@@ -2933,6 +2941,42 @@ function VolunteersTab({ isMobile }) {
 
   const updateStatus = async(id, status) => {
     await api(`/volunteers/${id}`,{method:'PATCH',body:JSON.stringify({status})}); load();
+  };
+
+  const saveEdit = async() => {
+    if (!editVol) return;
+    setSavingEdit(true);
+    try {
+      const payload = {
+        firstName: editVol.firstName, lastName: editVol.lastName,
+        email: editVol.email, phone: editVol.phone,
+        organization: editVol.organization,
+        groupType: editVol.groupType, groupSize: editVol.groupSize,
+        shirtSize: editVol.shirtSize,
+        storeLocation: editVol.storeLocation,
+        arrivalTime: editVol.arrivalTime,
+        volunteerType: editVol.volunteerType,
+        earlyArrival: editVol.earlyArrival ? 1 : 0,
+        smsOptIn: editVol.smsOptIn ? 1 : 0,
+        experience: editVol.experience,
+        hearAbout: editVol.hearAbout,
+        notes: editVol.notes,
+        status: editVol.status,
+      };
+      await api(`/volunteers/${editVol.id}`, { method:'PUT', body: JSON.stringify(payload) });
+      setEditVol(null);
+      load();
+    } catch(e) { alert('Save failed: ' + e.message); }
+    setSavingEdit(false);
+  };
+
+  const deleteVolunteer = async(id) => {
+    try {
+      await api(`/volunteers/${id}`, { method:'DELETE' });
+      setConfirmDelete(null);
+      setExpandedId(null);
+      load();
+    } catch(e) { alert('Delete failed: ' + e.message); }
   };
 
   const sendMessage = async() => {
@@ -2981,15 +3025,20 @@ function VolunteersTab({ isMobile }) {
     if (v.arrivalTime) { storeByTime[v.arrivalTime] = (storeByTime[v.arrivalTime]||0)+count; }
   });
 
-  const StoreBar = ({ storeKey, capsMap, cntsMap, icon }) => {
+  const StoreBar = ({ storeKey, capsMap, cntsMap, icon, type }) => {
     const info = capsMap[storeKey];
     const cnt = cntsMap[storeKey]||0;
     const pct = Math.min(100, Math.round(cnt/info.cap*100));
     const full = cnt >= info.cap;
+    const active = storeFilter === storeKey && typeFilter === type;
+    const onClick = () => {
+      if (active) { setStoreFilter(null); setTypeFilter(null); }
+      else { setStoreFilter(storeKey); setTypeFilter(type); }
+    };
     return (
-      <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:isMobile?'12px 14px':'16px 20px', flex:1, minWidth:isMobile?'100%':0 }}>
+      <div onClick={onClick} style={{ background:active?'#FEF2F8':C.card, borderRadius:12, border:`2px solid ${active?C.pink:C.border}`, padding:isMobile?'12px 14px':'16px 20px', flex:1, minWidth:isMobile?'100%':0, cursor:'pointer', transition:'all 0.15s', boxShadow:active?'0 2px 8px rgba(236,72,153,0.18)':'none' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
-          <div style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{icon} {info.label}</div>
+          <div style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{icon} {info.label}{active && <span style={{ marginLeft:6, fontSize:10, fontWeight:700, color:C.pink }}>● FILTERED</span>}</div>
           <div style={{ fontSize:20, fontWeight:800, color:full?'#DC2626':info.color }}>{cnt}<span style={{ fontSize:13, fontWeight:400, color:C.muted }}>/{info.cap}</span></div>
         </div>
         <div style={{ background:'#F1F5F9', borderRadius:20, height:14, overflow:'hidden', marginBottom:6 }}>
@@ -3010,7 +3059,7 @@ function VolunteersTab({ isMobile }) {
         <span>🛒</span> Shoppers <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.shoppers} spots reserved)</span>
       </div>
       <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:16, flexDirection:isMobile?'column':'row' }}>
-        {Object.keys(STORE_CAPS).map(k => <StoreBar key={'s-'+k} storeKey={k} capsMap={STORE_CAPS} cntsMap={shopperCnts} icon="📍"/>)}
+        {Object.keys(STORE_CAPS).map(k => <StoreBar key={'s-'+k} storeKey={k} capsMap={STORE_CAPS} cntsMap={shopperCnts} icon="📍" type="shopper"/>)}
       </div>
 
       {/* ── Ops Crew Capacity Dashboard ── */}
@@ -3018,7 +3067,7 @@ function VolunteersTab({ isMobile }) {
         <span>🎯</span> Operations Crew <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.ops} spots reserved)</span>
       </div>
       <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:20, flexDirection:isMobile?'column':'row' }}>
-        {Object.keys(OPS_STORE_CAPS).map(k => <StoreBar key={'o-'+k} storeKey={k} capsMap={OPS_STORE_CAPS} cntsMap={opsCnts} icon="🎯"/>)}
+        {Object.keys(OPS_STORE_CAPS).map(k => <StoreBar key={'o-'+k} storeKey={k} capsMap={OPS_STORE_CAPS} cntsMap={opsCnts} icon="🎯" type="ops_crew"/>)}
       </div>
 
       {/* ── Summary KPIs ── */}
@@ -3031,15 +3080,23 @@ function VolunteersTab({ isMobile }) {
         ))}
       </div>
 
-      {/* ── Arrival Time Breakdown ── */}
+      {/* ── Arrival Time Breakdown — click to filter ── */}
       {Object.keys(storeByTime).length > 0 && (
         <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:'14px 20px', marginBottom:20 }}>
           <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:10 }}>By Arrival Time</div>
-          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
             {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
               const cnt = storeByTime[t]||0;
               if(!cnt) return null;
-              return <div key={t} style={{ background:'#F1F5F9', borderRadius:8, padding:'6px 12px', fontSize:12 }}><span style={{ fontWeight:700, color:C.navy }}>{cnt}</span> <span style={{ color:C.muted }}>{t}</span></div>;
+              const active = timeFilter === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setTimeFilter(active ? null : t)}
+                  style={{ background:active?C.pink:'#F1F5F9', color:active?'#fff':C.text, border:'none', borderRadius:8, padding:'6px 12px', fontSize:12, cursor:'pointer', fontWeight:active?700:400, transition:'all 0.15s' }}>
+                  <span style={{ fontWeight:700, color:active?'#fff':C.navy }}>{cnt}</span> <span style={{ color:active?'#fff':C.muted }}>{t}</span>
+                </button>
+              );
             })}
           </div>
         </div>
@@ -3128,9 +3185,33 @@ function VolunteersTab({ isMobile }) {
 
       {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
       : volunteers.length===0 ? <div style={{ textAlign:'center', padding:60, color:C.light, fontSize:14 }}>No volunteers registered yet.</div>
-      : (
+      : (() => {
+          const facetFiltered = volunteers.filter(v => {
+            if (storeFilter && v.storeLocation !== storeFilter) return false;
+            if (typeFilter === 'shopper'  && v.volunteerType === 'ops_crew') return false;
+            if (typeFilter === 'ops_crew' && v.volunteerType !== 'ops_crew') return false;
+            if (timeFilter && v.arrivalTime !== timeFilter) return false;
+            return true;
+          });
+          const hasFacet = storeFilter || typeFilter || timeFilter;
+          const labelFor = (k) => ({"Kohl's Layton (881 W Antelope Dr)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
+          return (
+            <>
+              {hasFacet && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', marginBottom:12, padding:'10px 14px', background:'#FEF2F8', border:`1px solid ${C.pink}33`, borderRadius:10 }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:C.pink, textTransform:'uppercase', letterSpacing:0.5 }}>Filtered by:</span>
+                  {typeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>{typeFilter==='ops_crew'?'🎯 Ops Crew':'🛒 Shoppers'} <button onClick={()=>setTypeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
+                  {storeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>📍 {labelFor(storeFilter)} <button onClick={()=>setStoreFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
+                  {timeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>🕐 {timeFilter} <button onClick={()=>setTimeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
+                  <span style={{ fontSize:12, color:C.muted, marginLeft:'auto' }}>{facetFiltered.length} match{facetFiltered.length===1?'':'es'}</span>
+                  <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);}} style={{ fontSize:11, fontWeight:600, background:C.pink, color:'#fff', border:'none', padding:'4px 10px', borderRadius:14, cursor:'pointer' }}>Clear all</button>
+                </div>
+              )}
+              {facetFiltered.length === 0 ? (
+                <div style={{ textAlign:'center', padding:40, color:C.light, fontSize:14 }}>No volunteers match the current filters.</div>
+              ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {volunteers.map(v=>(
+          {facetFiltered.map(v=>(
             <div key={v.id} style={{ background:C.card, borderRadius:12, border:`1px solid ${expandedId===v.id?C.navy+'33':C.border}`, overflow:'hidden', transition:'border 0.2s' }}>
               {/* Header — always visible */}
               <div onClick={()=>setExpandedId(expandedId===v.id?null:v.id)} style={{ padding:'12px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}>
@@ -3185,10 +3266,133 @@ function VolunteersTab({ isMobile }) {
                     <div style={{ fontSize:12, color:C.muted, marginBottom:8 }}>📣 Heard about us: {v.hearAbout}</div>
                   )}
                   <div style={{ fontSize:11, color:C.light }}>Signed up: {v.createdAt?.split('T')[0]||v.createdAt?.split(' ')[0]}</div>
+                  <div style={{ display:'flex', gap:8, marginTop:14, paddingTop:12, borderTop:`1px solid ${C.border}` }}>
+                    <button onClick={()=>setEditVol({...v})} style={{ padding:'8px 16px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>✏️ Edit</button>
+                    <button onClick={()=>setConfirmDelete(v)} style={{ padding:'8px 16px', background:'#fff', color:C.red, border:`1px solid ${C.red}`, borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>🗑️ Delete</button>
+                  </div>
                 </div>
               )}
             </div>
           ))}
+        </div>
+              )}
+            </>
+          );
+        })()
+      }
+
+      {/* Edit Volunteer Modal */}
+      {editVol && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16, overflowY:'auto' }} onClick={()=>!savingEdit && setEditVol(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', borderRadius:16, padding:isMobile?20:28, width:'100%', maxWidth:640, maxHeight:'92vh', overflowY:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+              <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, margin:0 }}>✏️ Edit Volunteer</h3>
+              <button onClick={()=>setEditVol(null)} disabled={savingEdit} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.muted }}>×</button>
+            </div>
+
+            <Row cols={2} gap={12}>
+              <Field label="First name *"><input style={inp()} value={editVol.firstName||''} onChange={e=>setEditVol(p=>({...p,firstName:e.target.value}))}/></Field>
+              <Field label="Last name *"><input style={inp()} value={editVol.lastName||''} onChange={e=>setEditVol(p=>({...p,lastName:e.target.value}))}/></Field>
+            </Row>
+            <Row cols={2} gap={12}>
+              <Field label="Email"><input style={inp()} value={editVol.email||''} onChange={e=>setEditVol(p=>({...p,email:e.target.value}))}/></Field>
+              <Field label="Phone"><input style={inp()} value={editVol.phone||''} onChange={e=>setEditVol(p=>({...p,phone:e.target.value}))}/></Field>
+            </Row>
+            <Field label="Organization"><input style={inp()} value={editVol.organization||''} onChange={e=>setEditVol(p=>({...p,organization:e.target.value}))}/></Field>
+
+            <Row cols={2} gap={12}>
+              <Field label="Volunteer type">
+                <select style={{...inp(),appearance:'auto'}} value={editVol.volunteerType||'shopper'} onChange={e=>setEditVol(p=>({...p,volunteerType:e.target.value}))}>
+                  <option value="shopper">🛒 Shopper</option>
+                  <option value="ops_crew">🎯 Operations Crew</option>
+                </select>
+              </Field>
+              <Field label="Status">
+                <select style={{...inp(),appearance:'auto'}} value={editVol.status||'registered'} onChange={e=>setEditVol(p=>({...p,status:e.target.value}))}>
+                  {['registered','confirmed','assigned','waitlisted','attended'].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                </select>
+              </Field>
+            </Row>
+
+            <Field label="Store location">
+              <select style={{...inp(),appearance:'auto'}} value={editVol.storeLocation||''} onChange={e=>setEditVol(p=>({...p,storeLocation:e.target.value}))}>
+                <option value="">— None —</option>
+                <option value="Kohl's Layton (881 W Antelope Dr)">Kohl's Layton (881 W Antelope Dr)</option>
+                <option value="Kohl's Centerville (510 N 400 W)">Kohl's Centerville (510 N 400 W)</option>
+                <option value="Kohl's Clinton (1526 N 2000 W)">Kohl's Clinton (1526 N 2000 W)</option>
+              </select>
+            </Field>
+
+            <Row cols={2} gap={12}>
+              <Field label="Arrival time">
+                <select style={{...inp(),appearance:'auto'}} value={editVol.arrivalTime||''} onChange={e=>setEditVol(p=>({...p,arrivalTime:e.target.value}))}>
+                  <option value="">— None —</option>
+                  <option value="6:00 AM — Setup">6:00 AM — Setup</option>
+                  <option value="6:30 AM — Early Shopping">6:30 AM — Early Shopping</option>
+                  <option value="7:00 AM — Main Shopping">7:00 AM — Main Shopping</option>
+                  <option value="7:30 AM — Late Shopping">7:30 AM — Late Shopping</option>
+                  <option value="6:00 AM — 9:00 AM (Full Event)">6:00 AM — 9:00 AM (Full Event)</option>
+                </select>
+              </Field>
+              <Field label="Shirt size">
+                <select style={{...inp(),appearance:'auto'}} value={editVol.shirtSize||''} onChange={e=>setEditVol(p=>({...p,shirtSize:e.target.value}))}>
+                  <option value="">— None —</option>
+                  {['XS','S','M','L','XL','XXL','AS','AM','AL','AXL','A2XL','A3XL'].map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+              </Field>
+            </Row>
+
+            <Row cols={2} gap={12}>
+              <Field label="Group type">
+                <select style={{...inp(),appearance:'auto'}} value={editVol.groupType||'Individual'} onChange={e=>setEditVol(p=>({...p,groupType:e.target.value}))}>
+                  <option value="Individual">Individual</option>
+                  <option value="Church">Church group</option>
+                  <option value="School">School group</option>
+                  <option value="Corporate">Corporate group</option>
+                  <option value="Family">Family</option>
+                  <option value="Other">Other group</option>
+                </select>
+              </Field>
+              <Field label="Group size"><input style={inp()} value={editVol.groupSize||''} onChange={e=>setEditVol(p=>({...p,groupSize:e.target.value}))} placeholder="e.g. 5 or 11-15"/></Field>
+            </Row>
+
+            <Field label="Experience / notes from volunteer">
+              <textarea style={{...inp(),minHeight:60,resize:'vertical'}} value={editVol.experience||''} onChange={e=>setEditVol(p=>({...p,experience:e.target.value}))}/>
+            </Field>
+            <Field label="Internal admin notes">
+              <textarea style={{...inp(),minHeight:60,resize:'vertical'}} value={editVol.notes||''} onChange={e=>setEditVol(p=>({...p,notes:e.target.value}))} placeholder="Visible to admins only"/>
+            </Field>
+
+            <div style={{ display:'flex', gap:18, marginBottom:14, fontSize:13 }}>
+              <label style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
+                <input type="checkbox" checked={!!editVol.smsOptIn} onChange={e=>setEditVol(p=>({...p,smsOptIn:e.target.checked}))}/> SMS opted in
+              </label>
+              <label style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
+                <input type="checkbox" checked={!!editVol.earlyArrival} onChange={e=>setEditVol(p=>({...p,earlyArrival:e.target.checked}))}/> Early bird
+              </label>
+            </div>
+
+            <div style={{ display:'flex', gap:10, marginTop:8 }}>
+              <button onClick={()=>setEditVol(null)} disabled={savingEdit} style={{ flex:1, padding:12, background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:savingEdit?'default':'pointer' }}>Cancel</button>
+              <button onClick={saveEdit} disabled={savingEdit||!editVol.firstName||!editVol.lastName} style={{ flex:2, padding:12, background:savingEdit?C.light:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:savingEdit?'default':'pointer' }}>{savingEdit?'Saving...':'Save Changes'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete */}
+      {confirmDelete && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={()=>setConfirmDelete(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', borderRadius:16, padding:28, width:'100%', maxWidth:420, boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, color:C.navy, marginBottom:10 }}>Delete volunteer?</h3>
+            <p style={{ fontSize:14, color:C.text, marginBottom:18, lineHeight:1.5 }}>
+              This will permanently remove <strong>{confirmDelete.firstName} {confirmDelete.lastName}</strong> from the volunteer list. This cannot be undone.
+            </p>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setConfirmDelete(null)} style={{ flex:1, padding:12, background:'#F1F5F9', color:C.muted, border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancel</button>
+              <button onClick={()=>deleteVolunteer(confirmDelete.id)} style={{ flex:1, padding:12, background:C.red, color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
