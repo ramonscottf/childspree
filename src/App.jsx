@@ -3196,18 +3196,64 @@ function VolunteersTab({ isMobile }) {
           });
           const hasFacet = storeFilter || typeFilter || timeFilter;
           const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
+          // Build a human-readable summary of what the big number represents
+          const summaryBits = [];
+          if (typeFilter === 'ops_crew') summaryBits.push('Ops Crew');
+          else if (typeFilter === 'shopper') summaryBits.push('Shoppers');
+          else summaryBits.push('Volunteers');
+          if (storeFilter) summaryBits.push(`at ${labelFor(storeFilter)}`);
+          if (timeFilter) summaryBits.push(`· ${timeFilter.split(' — ')[0]}`);
+          const bigLabel = summaryBits.join(' ');
+          // Color-shift the hero card based on active store
+          const heroColor = storeFilter === "Kohl's Layton (1298 N Main St)" ? '#3B82F6'
+            : storeFilter === "Kohl's Centerville (510 N 400 W)" ? '#8B5CF6'
+            : storeFilter === "Kohl's Clinton (1526 N 2000 W)" ? '#10B981'
+            : C.pink;
           return (
             <>
-              {hasFacet && (
-                <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', marginBottom:12, padding:'10px 14px', background:'#FEF2F8', border:`1px solid ${C.pink}33`, borderRadius:10 }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:C.pink, textTransform:'uppercase', letterSpacing:0.5 }}>Filtered by:</span>
-                  {typeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>{typeFilter==='ops_crew'?'🎯 Ops Crew':'🛒 Shoppers'} <button onClick={()=>setTypeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
-                  {storeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>📍 {labelFor(storeFilter)} <button onClick={()=>setStoreFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
-                  {timeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>🕐 {timeFilter} <button onClick={()=>setTimeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
-                  <span style={{ fontSize:12, color:C.muted, marginLeft:'auto' }}>{facetFiltered.length} match{facetFiltered.length===1?'':'es'}</span>
-                  <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);}} style={{ fontSize:11, fontWeight:600, background:C.pink, color:'#fff', border:'none', padding:'4px 10px', borderRadius:14, cursor:'pointer' }}>Clear all</button>
+              {/* ── Big at-a-glance count for the active filter selection ── */}
+              <div style={{
+                background: hasFacet ? `linear-gradient(135deg, ${heroColor}15 0%, ${heroColor}05 100%)` : '#F8FAFC',
+                border: `1px solid ${hasFacet ? heroColor + '33' : C.border}`,
+                borderRadius: 16,
+                padding: isMobile ? '20px 16px' : '24px 28px',
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                gap: isMobile ? 16 : 24,
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
+                  <div style={{
+                    fontSize: isMobile ? 56 : 80,
+                    fontWeight: 900,
+                    color: hasFacet ? heroColor : C.navy,
+                    lineHeight: 1,
+                    letterSpacing: -2,
+                    fontVariantNumeric: 'tabular-nums'
+                  }}>{facetFiltered.length}</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                    <div style={{
+                      fontSize: isMobile ? 13 : 15,
+                      fontWeight: 700,
+                      color: hasFacet ? heroColor : C.navy,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5
+                    }}>{bigLabel}</div>
+                    <div style={{ fontSize: isMobile?11:12, color: C.muted }}>
+                      {hasFacet ? `of ${volunteers.length} total` : 'all volunteers registered'}
+                    </div>
+                  </div>
                 </div>
-              )}
+                {hasFacet && (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, alignItems:'center', marginLeft:'auto' }}>
+                    {typeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'5px 12px', borderRadius:14, border:`1px solid ${C.border}` }}>{typeFilter==='ops_crew'?'🎯 Ops Crew':'🛒 Shoppers'} <button onClick={()=>setTypeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
+                    {storeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'5px 12px', borderRadius:14, border:`1px solid ${C.border}` }}>📍 {labelFor(storeFilter)} <button onClick={()=>setStoreFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
+                    {timeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'5px 12px', borderRadius:14, border:`1px solid ${C.border}` }}>🕐 {timeFilter} <button onClick={()=>setTimeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
+                    <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);}} style={{ fontSize:11, fontWeight:700, background:heroColor, color:'#fff', border:'none', padding:'5px 12px', borderRadius:14, cursor:'pointer' }}>Clear all</button>
+                  </div>
+                )}
+              </div>
               {facetFiltered.length === 0 ? (
                 <div style={{ textAlign:'center', padding:40, color:C.light, fontSize:14 }}>No volunteers match the current filters.</div>
               ) : (
