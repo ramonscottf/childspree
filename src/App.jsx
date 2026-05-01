@@ -2961,7 +2961,6 @@ function VolunteersTab({ isMobile }) {
   const [storeFilter, setStoreFilter] = useState(null);     // store_location string
   const [typeFilter, setTypeFilter]   = useState(null);     // 'shopper' | 'ops_crew'
   const [timeFilter, setTimeFilter]   = useState(null);     // arrival_time string
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
   // ── Edit / Delete state
   const [editVol, setEditVol] = useState(null);             // volunteer being edited
   const [savingEdit, setSavingEdit] = useState(false);
@@ -3062,36 +3061,9 @@ function VolunteersTab({ isMobile }) {
     if (v.arrivalTime) { storeByTime[v.arrivalTime] = (storeByTime[v.arrivalTime]||0)+count; }
   });
 
-  const StoreBar = ({ storeKey, capsMap, cntsMap, icon, type }) => {
-    const info = capsMap[storeKey];
-    const cnt = cntsMap[storeKey]||0;
-    const pct = Math.min(100, Math.round(cnt/info.cap*100));
-    const full = cnt >= info.cap;
-    const active = storeFilter === storeKey && typeFilter === type;
-    const onClick = () => {
-      if (active) { setStoreFilter(null); setTypeFilter(null); }
-      else { setStoreFilter(storeKey); setTypeFilter(type); }
-    };
-    return (
-      <div onClick={onClick} style={{ background:active?'#FEF2F8':C.card, borderRadius:12, border:`2px solid ${active?C.pink:C.border}`, padding:isMobile?'12px 14px':'16px 20px', flex:1, minWidth:isMobile?'100%':0, cursor:'pointer', transition:'all 0.15s', boxShadow:active?'0 2px 8px rgba(236,72,153,0.18)':'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
-          <div style={{ fontWeight:700, color:C.navy, fontSize:14 }}>{icon} {info.label}{active && <span style={{ marginLeft:6, fontSize:10, fontWeight:700, color:C.pink }}>● FILTERED</span>}</div>
-          <div style={{ fontSize:20, fontWeight:800, color:full?'#DC2626':info.color }}>{cnt}<span style={{ fontSize:13, fontWeight:400, color:C.muted }}>/{info.cap}</span></div>
-        </div>
-        <div style={{ background:'#F1F5F9', borderRadius:20, height:14, overflow:'hidden', marginBottom:6 }}>
-          <div style={{ width:`${pct}%`, height:'100%', borderRadius:20, background:full?'#DC2626':pct>80?'#F59E0B':info.color, transition:'width 0.5s ease' }}/>
-        </div>
-        <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:C.muted }}>
-          <span>{pct}% full</span>
-          <span>{full?'🔴 FULL':`${info.cap-cnt} spots left`}</span>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div>
-      {/* ── UNIFIED CAPACITY + FILTER CARD ── */}
+      {/* ── DENSE UNIFIED DASHBOARD CARD ── */}
       {(() => {
         const tab = typeFilter === 'ops_crew' ? 'ops_crew' : 'shopper';
         const caps = tab === 'ops_crew' ? OPS_STORE_CAPS : STORE_CAPS;
@@ -3102,7 +3074,6 @@ function VolunteersTab({ isMobile }) {
         };
         const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
 
-        // Compute live filtered count
         const facetFiltered = volunteers.filter(v => {
           if (storeFilter && v.storeLocation !== storeFilter) return false;
           if (typeFilter === 'shopper'  && v.volunteerType === 'ops_crew') return false;
@@ -3115,17 +3086,17 @@ function VolunteersTab({ isMobile }) {
         const heroColor = storeFilter === "Kohl's Layton (1298 N Main St)" ? '#3B82F6'
           : storeFilter === "Kohl's Centerville (510 N 400 W)" ? '#8B5CF6'
           : storeFilter === "Kohl's Clinton (1526 N 2000 W)" ? '#10B981'
-          : typeFilter === 'ops_crew' ? '#7C3AED' : C.pink;
+          : typeFilter === 'ops_crew' ? '#7C3AED' : C.navy;
         const summaryBits = [];
         if (typeFilter === 'ops_crew') summaryBits.push('Ops Crew');
         else if (typeFilter === 'shopper') summaryBits.push('Shoppers');
         else summaryBits.push('Volunteers');
-        if (storeFilter) summaryBits.push(`· ${labelFor(storeFilter)}`);
-        if (timeFilter) summaryBits.push(`· ${timeFilter.split(' — ')[0]}`);
-        if (filter !== 'all') summaryBits.push(`· ${filter.charAt(0).toUpperCase()+filter.slice(1)}`);
+        if (storeFilter) summaryBits.push(labelFor(storeFilter));
+        if (timeFilter) summaryBits.push(timeFilter.split(' — ')[0]);
+        if (filter !== 'all') summaryBits.push(filter.charAt(0).toUpperCase()+filter.slice(1));
 
-        // Donut SVG component
-        const Donut = ({ k }) => {
+        // Compact ring component — Linear-style: 32px ring, value next to it
+        const StoreRow = ({ k }) => {
           const info = caps[k];
           const cnt = cnts[k]||0;
           const pct = Math.min(100, Math.round(cnt/info.cap*100));
@@ -3136,123 +3107,118 @@ function VolunteersTab({ isMobile }) {
             else { setStoreFilter(k); setTypeFilter(tab); }
           };
           const ringColor = full ? '#DC2626' : pct>80 ? '#F59E0B' : info.color;
-          const size = isMobile ? 78 : 96;
-          const stroke = isMobile ? 8 : 10;
+          const size = 28;
+          const stroke = 3;
           const r = (size - stroke) / 2;
           const circ = 2 * Math.PI * r;
           const dash = (pct/100) * circ;
           return (
             <button onClick={onClick} style={{
-              flex:1, minWidth:0, background:'none', border:'none', cursor:'pointer', padding:isMobile?'8px 4px':'10px 8px',
-              borderRadius:12, transition:'all 0.15s',
-              boxShadow: isStoreActive ? `inset 0 0 0 2px ${ringColor}` : 'inset 0 0 0 1px transparent',
-              backgroundColor: isStoreActive ? `${ringColor}10` : 'transparent'
+              flex:1, minWidth:0, background: isStoreActive ? `${ringColor}0d` : 'transparent',
+              border:`1px solid ${isStoreActive ? ringColor + '40' : 'transparent'}`,
+              cursor:'pointer', padding:isMobile?'10px 10px':'12px 14px',
+              borderRadius:10, transition:'all 0.12s',
+              display:'flex', alignItems:'center', gap:isMobile?9:11
             }}>
-              <div style={{ position:'relative', width:size, height:size, margin:'0 auto' }}>
+              <div style={{ position:'relative', width:size, height:size, flexShrink:0 }}>
                 <svg width={size} height={size} style={{ transform:'rotate(-90deg)' }}>
-                  <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#F1F5F9" strokeWidth={stroke}/>
+                  <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E5E7EB" strokeWidth={stroke}/>
                   <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke}
-                    strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" style={{ transition:'stroke-dasharray 0.6s ease' }}/>
+                    strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" style={{ transition:'stroke-dasharray 0.5s ease' }}/>
                 </svg>
-                <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
-                  <div style={{ fontSize:isMobile?20:24, fontWeight:900, color:ringColor, fontVariantNumeric:'tabular-nums' }}>{pct}%</div>
-                  {full && <div style={{ fontSize:8, fontWeight:800, color:'#DC2626', marginTop:2, letterSpacing:0.5 }}>FULL</div>}
-                </div>
               </div>
-              <div style={{ marginTop:6, textAlign:'center' }}>
-                <div style={{ fontSize:isMobile?12:13, fontWeight:700, color:C.navy }}>{info.label}</div>
-                <div style={{ fontSize:isMobile?10:11, color:C.muted, fontVariantNumeric:'tabular-nums', marginTop:1 }}>
-                  <strong style={{ color:ringColor }}>{cnt}</strong> / {info.cap}
+              <div style={{ flex:1, minWidth:0, textAlign:'left' }}>
+                <div style={{ fontSize:isMobile?13:13, fontWeight:600, color:C.navy, lineHeight:1.2 }}>{info.label}</div>
+                <div style={{ fontSize:isMobile?11:11, color:C.muted, fontVariantNumeric:'tabular-nums', marginTop:1, lineHeight:1.2 }}>
+                  <span style={{ color:ringColor, fontWeight:600 }}>{cnt}</span><span style={{ color:'#CBD5E1' }}>/</span>{info.cap} · {pct}%
                 </div>
               </div>
             </button>
           );
         };
 
+        const arrivalOptions = ['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].filter(t => storeByTime[t]);
+
         return (
           <div style={{
-            background: hasFacet ? `linear-gradient(180deg, ${heroColor}08 0%, transparent 60%)` : '#fff',
-            border: `1px solid ${hasFacet ? heroColor + '30' : C.border}`,
-            borderRadius:16,
-            padding:isMobile?'12px 12px 14px':'16px 18px 18px',
-            marginBottom:14,
-            transition:'border-color 0.2s'
+            background:'#fff',
+            border:`1px solid ${hasFacet ? heroColor + '30' : C.border}`,
+            borderRadius:12,
+            padding:isMobile?'10px':'12px',
+            marginBottom:12,
+            transition:'border-color 0.18s'
           }}>
-            {/* Type tab toggle */}
-            <div style={{ display:'flex', gap:4, marginBottom:isMobile?12:14, background:'#F1F5F9', padding:3, borderRadius:10 }}>
-              <button onClick={()=>onTab('shopper')} style={{ flex:1, padding:isMobile?'7px 8px':'9px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='shopper'?'#fff':'transparent', color: typeFilter==='shopper'?C.navy:C.muted, boxShadow: typeFilter==='shopper'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
-                🛒 Shoppers <span style={{ fontWeight:500, opacity:0.6 }}>· {typeCounts.shoppers}</span>
-              </button>
-              <button onClick={()=>onTab('ops_crew')} style={{ flex:1, padding:isMobile?'7px 8px':'9px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='ops_crew'?'#fff':'transparent', color: typeFilter==='ops_crew'?'#7C3AED':C.muted, boxShadow: typeFilter==='ops_crew'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
-                🎯 Ops Crew <span style={{ fontWeight:500, opacity:0.6 }}>· {typeCounts.ops}</span>
-              </button>
-            </div>
-
-            {/* Donut row */}
-            <div style={{ display:'flex', gap:isMobile?4:8, marginBottom:isMobile?12:14 }}>
-              {Object.keys(caps).map(k => <Donut key={k} k={k}/>)}
-            </div>
-
-            {/* Big at-a-glance number row */}
-            <div style={{
-              display:'flex', alignItems:'center', gap:14,
-              padding:isMobile?'12px 12px':'14px 16px',
-              background: hasFacet ? `${heroColor}10` : '#F8FAFC',
-              borderRadius:12,
-              borderLeft:`4px solid ${hasFacet ? heroColor : C.border}`
-            }}>
-              <div style={{
-                fontSize:isMobile?44:54, fontWeight:900, lineHeight:1, letterSpacing:-1.5,
-                color: hasFacet ? heroColor : C.navy, fontVariantNumeric:'tabular-nums'
-              }}>{facetFiltered.length}</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:isMobile?12:13, fontWeight:800, color: hasFacet ? heroColor : C.navy, textTransform:'uppercase', letterSpacing:0.5, lineHeight:1.2 }}>{summaryBits.join(' ')}</div>
-                <div style={{ fontSize:isMobile?10:11, color:C.muted, marginTop:2 }}>{hasFacet?`of ${volunteers.length} total`:'all volunteers'}</div>
+            {/* Row 1: Type segmented + secondary filters inline */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:isMobile?'wrap':'nowrap' }}>
+              {/* Segmented control: Shoppers / Ops */}
+              <div style={{ display:'inline-flex', background:'#F1F5F9', padding:2, borderRadius:8, flex:isMobile?1:'none' }}>
+                <button onClick={()=>onTab('shopper')} style={{
+                  flex:isMobile?1:'none', padding:'6px 12px', border:'none', borderRadius:6,
+                  fontSize:12, fontWeight:600, cursor:'pointer',
+                  background: typeFilter==='shopper'?'#fff':'transparent',
+                  color: typeFilter==='shopper'?C.navy:C.muted,
+                  boxShadow: typeFilter==='shopper'?'0 1px 2px rgba(0,0,0,0.06)':'none',
+                  transition:'all 0.12s'
+                }}>Shoppers <span style={{ fontWeight:500, color:C.light, fontVariantNumeric:'tabular-nums' }}>{typeCounts.shoppers}</span></button>
+                <button onClick={()=>onTab('ops_crew')} style={{
+                  flex:isMobile?1:'none', padding:'6px 12px', border:'none', borderRadius:6,
+                  fontSize:12, fontWeight:600, cursor:'pointer',
+                  background: typeFilter==='ops_crew'?'#fff':'transparent',
+                  color: typeFilter==='ops_crew'?'#7C3AED':C.muted,
+                  boxShadow: typeFilter==='ops_crew'?'0 1px 2px rgba(0,0,0,0.06)':'none',
+                  transition:'all 0.12s'
+                }}>Ops <span style={{ fontWeight:500, color:C.light, fontVariantNumeric:'tabular-nums' }}>{typeCounts.ops}</span></button>
               </div>
-              {hasFacet && (
-                <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);setFilter('all');}}
-                  style={{ fontSize:11, fontWeight:700, background:heroColor, color:'#fff', border:'none', padding:'6px 12px', borderRadius:14, cursor:'pointer', whiteSpace:'nowrap' }}>Clear</button>
+
+              {/* Time dropdown */}
+              {arrivalOptions.length>0 && (
+                <select value={timeFilter||''} onChange={e=>setTimeFilter(e.target.value||null)} style={{
+                  padding:'6px 10px', fontSize:12, fontWeight:500,
+                  background: timeFilter?heroColor+'14':'#F1F5F9',
+                  color: timeFilter?heroColor:C.muted,
+                  border:`1px solid ${timeFilter?heroColor+'40':'transparent'}`,
+                  borderRadius:8, cursor:'pointer', appearance:'auto',
+                  flex:isMobile?'1 1 100%':'none', minWidth:0
+                }}>
+                  <option value="">All times</option>
+                  {arrivalOptions.map(t => <option key={t} value={t}>{t.split(' — ')[0]} ({storeByTime[t]})</option>)}
+                </select>
               )}
+
+              {/* Status dropdown */}
+              <select value={filter} onChange={e=>setFilter(e.target.value)} style={{
+                padding:'6px 10px', fontSize:12, fontWeight:500,
+                background: filter!=='all'?heroColor+'14':'#F1F5F9',
+                color: filter!=='all'?heroColor:C.muted,
+                border:`1px solid ${filter!=='all'?heroColor+'40':'transparent'}`,
+                borderRadius:8, cursor:'pointer', appearance:'auto',
+                flex:isMobile?1:'none', minWidth:0
+              }}>
+                <option value="all">All statuses</option>
+                {['registered','confirmed','assigned','waitlisted'].map(k=>(
+                  <option key={k} value={k}>{k.charAt(0).toUpperCase()+k.slice(1)} ({counts[k]||0})</option>
+                ))}
+              </select>
             </div>
 
-            {/* More filters disclosure */}
-            <button onClick={()=>setShowMoreFilters(p=>!p)} style={{
-              marginTop:10, width:'100%', padding:isMobile?'8px':'9px',
-              background:'transparent', border:`1px dashed ${C.border}`, borderRadius:10,
-              color:C.muted, fontSize:11, fontWeight:600, cursor:'pointer', letterSpacing:0.3
-            }}>
-              {showMoreFilters?'▲ Hide filters':'▼ More filters'}{(timeFilter||filter!=='all')?` · ${[timeFilter?timeFilter.split(' — ')[0]:'',filter!=='all'?filter:''].filter(Boolean).join(' · ')}`:''}
-            </button>
-            {showMoreFilters && (
-              <div style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
-                {/* Status pills */}
-                <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Status</div>
-                <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginBottom:Object.keys(storeByTime).length>0?12:0 }}>
-                  {['all','registered','confirmed','assigned','waitlisted'].map(k=>(
-                    <button key={k} onClick={()=>setFilter(k)} style={{ padding:'5px 10px', borderRadius:14, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
-                      {k.charAt(0).toUpperCase()+k.slice(1)}{k!=='all'?` (${counts[k]})`:''}
-                    </button>
-                  ))}
-                </div>
-                {/* Arrival time pills */}
-                {Object.keys(storeByTime).length > 0 && (
-                  <>
-                    <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>By Arrival Time</div>
-                    <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-                      {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
-                        const cnt = storeByTime[t]||0;
-                        if(!cnt) return null;
-                        const active = timeFilter === t;
-                        return (
-                          <button key={t} onClick={() => setTimeFilter(active ? null : t)}
-                            style={{ background:active?C.pink:'#F1F5F9', color:active?'#fff':C.text, border:'none', borderRadius:14, padding:'5px 10px', fontSize:11, cursor:'pointer', fontWeight:active?700:500 }}>
-                            <span style={{ fontWeight:800, color:active?'#fff':C.navy }}>{cnt}</span> <span style={{ color:active?'#fff':C.muted }}>{t.split(' — ')[0]}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
+            {/* Row 2: Three store rings — tight horizontal density */}
+            <div style={{ display:'flex', gap:isMobile?2:4, padding:'2px', background:'#FAFBFC', borderRadius:10 }}>
+              {Object.keys(caps).map(k => <StoreRow key={k} k={k}/>)}
+            </div>
+
+            {/* Row 3: Quiet at-a-glance hero — compact single line, only when filtered */}
+            {hasFacet && (
+              <div style={{
+                display:'flex', alignItems:'center', gap:10, marginTop:10, padding:'9px 12px',
+                background:`${heroColor}0d`, borderRadius:8,
+                fontSize:13, color:C.navy
+              }}>
+                <span style={{ fontSize:18, fontWeight:700, color:heroColor, fontVariantNumeric:'tabular-nums', lineHeight:1, letterSpacing:-0.3 }}>{facetFiltered.length}</span>
+                <span style={{ color:C.muted, fontVariantNumeric:'tabular-nums' }}>of {volunteers.length}</span>
+                <span style={{ color:'#CBD5E1' }}>·</span>
+                <span style={{ flex:1, color:heroColor, fontWeight:600, fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{summaryBits.join(' · ')}</span>
+                <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);setFilter('all');}}
+                  style={{ background:'none', border:'none', color:C.muted, fontSize:12, fontWeight:500, cursor:'pointer', padding:'2px 6px', flexShrink:0 }}>Clear</button>
               </div>
             )}
           </div>
@@ -3260,9 +3226,9 @@ function VolunteersTab({ isMobile }) {
       })()}
 
       {/* ── Search + Actions ── */}
-      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14, alignItems:'center' }}>
-        <input placeholder="Search volunteers..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), flex:1, minWidth:isMobile?'100%':200, fontSize:13}}/>
-        <button onClick={()=>setMsgModal(true)} style={{ padding:isMobile?'10px 14px':'10px 16px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', flex:isMobile?1:'none' }}>📣 Message</button>
+      <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12, alignItems:'center' }}>
+        <input placeholder="Search volunteers..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), flex:1, minWidth:isMobile?'100%':200, fontSize:13, padding:'8px 10px'}}/>
+        <button onClick={()=>setMsgModal(true)} style={{ padding:'8px 12px', background:'#fff', color:C.navy, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', flex:isMobile?1:'none' }}>Message</button>
         <button onClick={()=>{
           const rows = volunteers.map(v => ({
             'First Name': v.firstName, 'Last Name': v.lastName,
@@ -3282,7 +3248,7 @@ function VolunteersTab({ isMobile }) {
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, 'Volunteers');
           XLSX.writeFile(wb, `ChildSpree_Volunteers_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }} style={{ padding:isMobile?'10px 14px':'10px 16px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', flex:isMobile?1:'none' }}>📥 Export</button>
+        }} style={{ padding:'8px 12px', background:'#fff', color:C.navy, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', flex:isMobile?1:'none' }}>Export</button>
       </div>
 
       {/* Send Message Modal */}
