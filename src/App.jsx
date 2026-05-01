@@ -3055,64 +3055,164 @@ function VolunteersTab({ isMobile }) {
 
   return (
     <div>
-      {/* ── Shopper Capacity Dashboard ── */}
-      <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
-        <span>🛒</span> Shoppers <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.shoppers} spots reserved)</span>
-      </div>
-      <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:16, flexDirection:isMobile?'column':'row' }}>
-        {Object.keys(STORE_CAPS).map(k => <StoreBar key={'s-'+k} storeKey={k} capsMap={STORE_CAPS} cntsMap={shopperCnts} icon="📍" type="shopper"/>)}
-      </div>
-
-      {/* ── Ops Crew Capacity Dashboard ── */}
-      <div style={{ fontSize:12, fontWeight:700, color:'#7C3AED', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
-        <span>🎯</span> Operations Crew <span style={{ fontSize:11, fontWeight:400, color:C.light }}>({typeCounts.ops} spots reserved)</span>
-      </div>
-      <div style={{ display:'flex', gap:isMobile?8:12, marginBottom:20, flexDirection:isMobile?'column':'row' }}>
-        {Object.keys(OPS_STORE_CAPS).map(k => <StoreBar key={'o-'+k} storeKey={k} capsMap={OPS_STORE_CAPS} cntsMap={opsCnts} icon="🎯" type="ops_crew"/>)}
-      </div>
-
-      {/* ── Summary KPIs ── */}
-      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(5,1fr)', gap:isMobile?8:12, marginBottom:20 }}>
-        {[{label:'Total',v:counts.all,c:C.navy},{label:'Registered',v:counts.registered,c:'#7C3AED'},{label:'Confirmed',v:counts.confirmed,c:C.green},{label:'Assigned',v:counts.assigned,c:C.blue},{label:'Waitlisted',v:counts.waitlisted,c:'#F59E0B'}].map(s=>(
-          <div key={s.label} style={{ background:C.card, borderRadius:10, padding:isMobile?'10px 8px':'14px 12px', textAlign:'center', border:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:isMobile?20:28, fontWeight:800, color:s.c }}>{s.v}</div>
-            <div style={{ fontSize:isMobile?9:11, color:C.light, fontWeight:600, textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
+      {/* ── Combined Capacity Card with Type Tab (mobile-friendly) ── */}
+      {(() => {
+        const [activeTab, setActiveTab] = [typeFilter === 'ops_crew' ? 'ops_crew' : 'shopper', null];
+        // Use typeFilter as the tab indicator; default to shopper view if no filter
+        const tab = typeFilter === 'ops_crew' ? 'ops_crew' : 'shopper';
+        const caps = tab === 'ops_crew' ? OPS_STORE_CAPS : STORE_CAPS;
+        const cnts = tab === 'ops_crew' ? opsCnts : shopperCnts;
+        const totalReserved = tab === 'ops_crew' ? typeCounts.ops : typeCounts.shoppers;
+        const onTab = (t) => {
+          if (typeFilter === t) setTypeFilter(null);
+          else setTypeFilter(t);
+        };
+        return (
+          <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:isMobile?'14px 14px 12px':'18px 20px 16px', marginBottom:14 }}>
+            {/* Type toggle */}
+            <div style={{ display:'flex', gap:6, marginBottom:14, background:'#F1F5F9', padding:4, borderRadius:10 }}>
+              <button onClick={()=>onTab('shopper')} style={{ flex:1, padding:isMobile?'8px 10px':'10px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='shopper'?'#fff':'transparent', color: typeFilter==='shopper'?C.navy:C.muted, boxShadow: typeFilter==='shopper'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
+                🛒 Shoppers <span style={{ fontWeight:400, color:typeFilter==='shopper'?C.muted:C.light }}>· {typeCounts.shoppers}</span>
+              </button>
+              <button onClick={()=>onTab('ops_crew')} style={{ flex:1, padding:isMobile?'8px 10px':'10px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='ops_crew'?'#fff':'transparent', color: typeFilter==='ops_crew'?'#7C3AED':C.muted, boxShadow: typeFilter==='ops_crew'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
+                🎯 Ops Crew <span style={{ fontWeight:400, color:typeFilter==='ops_crew'?C.muted:C.light }}>· {typeCounts.ops}</span>
+              </button>
+            </div>
+            {/* Compact mini-bars per store */}
+            <div style={{ display:'flex', flexDirection:'column', gap:isMobile?10:12 }}>
+              {Object.keys(caps).map(k => {
+                const info = caps[k];
+                const cnt = cnts[k]||0;
+                const pct = Math.min(100, Math.round(cnt/info.cap*100));
+                const full = cnt >= info.cap;
+                const isStoreActive = storeFilter === k && typeFilter === tab;
+                const onClick = () => {
+                  if (isStoreActive) { setStoreFilter(null); setTypeFilter(null); }
+                  else { setStoreFilter(k); setTypeFilter(tab); }
+                };
+                return (
+                  <div key={k} onClick={onClick} style={{ cursor:'pointer', padding:isMobile?'8px 10px':'10px 14px', borderRadius:10, border:`1.5px solid ${isStoreActive?info.color:'transparent'}`, background: isStoreActive?info.color+'10':'transparent', transition:'all 0.15s' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
+                      <div style={{ fontSize:isMobile?14:15, fontWeight:700, color:C.navy }}>📍 {info.label}{isStoreActive&&<span style={{ marginLeft:6, fontSize:10, fontWeight:700, color:info.color }}>● ACTIVE</span>}</div>
+                      <div style={{ fontSize:isMobile?17:19, fontWeight:800, color:full?'#DC2626':info.color, fontVariantNumeric:'tabular-nums' }}>{cnt}<span style={{ fontSize:12, fontWeight:400, color:C.muted }}>/{info.cap}</span></div>
+                    </div>
+                    <div style={{ background:'#F1F5F9', borderRadius:20, height:8, overflow:'hidden' }}>
+                      <div style={{ width:`${pct}%`, height:'100%', borderRadius:20, background:full?'#DC2626':pct>80?'#F59E0B':info.color, transition:'width 0.5s ease' }}/>
+                    </div>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:C.muted, marginTop:4 }}>
+                      <span>{pct}% full</span>
+                      <span>{full?'🔴 FULL':`${info.cap-cnt} spots left`}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
-      {/* ── Arrival Time Breakdown — click to filter ── */}
-      {Object.keys(storeByTime).length > 0 && (
-        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:'14px 20px', marginBottom:20 }}>
-          <div style={{ fontSize:12, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:10 }}>By Arrival Time</div>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-            {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
-              const cnt = storeByTime[t]||0;
-              if(!cnt) return null;
-              const active = timeFilter === t;
-              return (
-                <button
-                  key={t}
-                  onClick={() => setTimeFilter(active ? null : t)}
-                  style={{ background:active?C.pink:'#F1F5F9', color:active?'#fff':C.text, border:'none', borderRadius:8, padding:'6px 12px', fontSize:12, cursor:'pointer', fontWeight:active?700:400, transition:'all 0.15s' }}>
-                  <span style={{ fontWeight:700, color:active?'#fff':C.navy }}>{cnt}</span> <span style={{ color:active?'#fff':C.muted }}>{t}</span>
-                </button>
-              );
-            })}
+      {/* ── At-a-Glance Hero Card (always visible, reflects current filters) ── */}
+      {(() => {
+        const facetFiltered = volunteers.filter(v => {
+          if (storeFilter && v.storeLocation !== storeFilter) return false;
+          if (typeFilter === 'shopper'  && v.volunteerType === 'ops_crew') return false;
+          if (typeFilter === 'ops_crew' && v.volunteerType !== 'ops_crew') return false;
+          if (timeFilter && v.arrivalTime !== timeFilter) return false;
+          if (filter !== 'all' && v.status !== filter) return false;
+          return true;
+        });
+        const hasFacet = storeFilter || typeFilter || timeFilter || filter !== 'all';
+        const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
+        const heroColor = storeFilter === "Kohl's Layton (1298 N Main St)" ? '#3B82F6'
+          : storeFilter === "Kohl's Centerville (510 N 400 W)" ? '#8B5CF6'
+          : storeFilter === "Kohl's Clinton (1526 N 2000 W)" ? '#10B981'
+          : typeFilter === 'ops_crew' ? '#7C3AED' : C.pink;
+        const summaryBits = [];
+        if (typeFilter === 'ops_crew') summaryBits.push('Ops Crew');
+        else if (typeFilter === 'shopper') summaryBits.push('Shoppers');
+        else summaryBits.push('Volunteers');
+        if (storeFilter) summaryBits.push(`· ${labelFor(storeFilter)}`);
+        if (timeFilter) summaryBits.push(`· ${timeFilter.split(' — ')[0]}`);
+        if (filter !== 'all') summaryBits.push(`· ${filter.charAt(0).toUpperCase()+filter.slice(1)}`);
+        return (
+          <div style={{
+            background: hasFacet ? `linear-gradient(135deg, ${heroColor}18 0%, ${heroColor}05 100%)` : 'linear-gradient(135deg, #1B3A4B 0%, #2C5364 100%)',
+            border: `1px solid ${hasFacet ? heroColor + '40' : 'transparent'}`,
+            borderRadius: 16,
+            padding: isMobile ? '18px 18px' : '22px 26px',
+            marginBottom: 14,
+            color: hasFacet ? C.text : '#fff'
+          }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:14, flexWrap:'wrap' }}>
+              <div style={{
+                fontSize: isMobile ? 64 : 84,
+                fontWeight: 900,
+                color: hasFacet ? heroColor : '#fff',
+                lineHeight: 1,
+                letterSpacing: -2.5,
+                fontVariantNumeric: 'tabular-nums'
+              }}>{facetFiltered.length}</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:3, flex:1, minWidth:0 }}>
+                <div style={{
+                  fontSize: isMobile ? 13 : 15,
+                  fontWeight: 800,
+                  color: hasFacet ? heroColor : 'rgba(255,255,255,0.95)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  lineHeight: 1.25
+                }}>{summaryBits.join(' ')}</div>
+                <div style={{ fontSize: isMobile?11:12, color: hasFacet ? C.muted : 'rgba(255,255,255,0.7)' }}>
+                  {hasFacet ? `of ${volunteers.length} total volunteers` : 'all registered to date'}
+                </div>
+              </div>
+            </div>
+            {hasFacet && (
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, alignItems:'center', marginTop:14, paddingTop:12, borderTop:`1px dashed ${heroColor}40` }}>
+                {filter !== 'all' && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>{filter.charAt(0).toUpperCase()+filter.slice(1)} <button onClick={()=>setFilter('all')} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
+                {typeFilter && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>{typeFilter==='ops_crew'?'🎯 Ops':'🛒 Shoppers'} <button onClick={()=>setTypeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
+                {storeFilter && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>📍 {labelFor(storeFilter)} <button onClick={()=>setStoreFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
+                {timeFilter && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>🕐 {timeFilter.split(' — ')[0]} <button onClick={()=>setTimeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
+                <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);setFilter('all');}} style={{ fontSize:11, fontWeight:700, background:heroColor, color:'#fff', border:'none', padding:'5px 12px', borderRadius:14, cursor:'pointer' }}>Clear all</button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* ── Filters + Actions ── */}
-      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, alignItems:'center' }}>
-        <div style={{ display:'flex', gap:6, flexWrap:'wrap', flex:1 }}>
+      {/* ── Combined Filter Strip: Status + Arrival Time ── */}
+      <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:isMobile?'12px 12px':'14px 18px', marginBottom:14 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Status</div>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:Object.keys(storeByTime).length>0?14:0 }}>
           {['all','registered','confirmed','assigned','waitlisted'].map(k=>(
-            <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'6px 10px':'6px 14px', borderRadius:20, border:'none', fontSize:isMobile?11:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
-              {k.charAt(0).toUpperCase()+k.slice(1)} {k!=='all'?`(${counts[k]})`:'' }
+            <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'7px 12px':'7px 14px', borderRadius:18, border:'none', fontSize:isMobile?12:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
+              {k.charAt(0).toUpperCase()+k.slice(1)}{k!=='all'?` (${counts[k]})`:''}
             </button>
           ))}
         </div>
-        <button onClick={()=>setMsgModal(true)} style={{ padding:isMobile?'6px 12px':'8px 16px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>📣 Send Message</button>
+        {Object.keys(storeByTime).length > 0 && (
+          <>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>By Arrival Time</div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
+                const cnt = storeByTime[t]||0;
+                if(!cnt) return null;
+                const active = timeFilter === t;
+                return (
+                  <button key={t} onClick={() => setTimeFilter(active ? null : t)}
+                    style={{ background:active?C.pink:'#F1F5F9', color:active?'#fff':C.text, border:'none', borderRadius:18, padding:isMobile?'7px 11px':'7px 13px', fontSize:isMobile?12:12, cursor:'pointer', fontWeight:active?700:500, transition:'all 0.15s' }}>
+                    <span style={{ fontWeight:800, color:active?'#fff':C.navy }}>{cnt}</span> <span style={{ color:active?'#fff':C.muted }}>{t.split(' — ')[0]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Search + Actions ── */}
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14, alignItems:'center' }}>
+        <input placeholder="Search volunteers..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), flex:1, minWidth:isMobile?'100%':200, fontSize:13}}/>
+        <button onClick={()=>setMsgModal(true)} style={{ padding:isMobile?'10px 14px':'10px 16px', background:C.green, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', flex:isMobile?1:'none' }}>📣 Message</button>
         <button onClick={()=>{
           const rows = volunteers.map(v => ({
             'First Name': v.firstName, 'Last Name': v.lastName,
@@ -3132,8 +3232,7 @@ function VolunteersTab({ isMobile }) {
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, 'Volunteers');
           XLSX.writeFile(wb, `ChildSpree_Volunteers_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }} style={{ padding:isMobile?'6px 12px':'8px 16px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>📥 Export Excel</button>
-        <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), width:isMobile?'100%':180, fontSize:13}}/>
+        }} style={{ padding:isMobile?'10px 14px':'10px 16px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', flex:isMobile?1:'none' }}>📥 Export</button>
       </div>
 
       {/* Send Message Modal */}
@@ -3192,68 +3291,16 @@ function VolunteersTab({ isMobile }) {
             if (typeFilter === 'shopper'  && v.volunteerType === 'ops_crew') return false;
             if (typeFilter === 'ops_crew' && v.volunteerType !== 'ops_crew') return false;
             if (timeFilter && v.arrivalTime !== timeFilter) return false;
+            if (filter !== 'all' && v.status !== filter) return false;
+            if (search) {
+              const s = search.toLowerCase();
+              const blob = `${v.firstName||''} ${v.lastName||''} ${v.email||''} ${v.phone||''} ${v.organization||''}`.toLowerCase();
+              if (!blob.includes(s)) return false;
+            }
             return true;
           });
-          const hasFacet = storeFilter || typeFilter || timeFilter;
-          const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
-          // Build a human-readable summary of what the big number represents
-          const summaryBits = [];
-          if (typeFilter === 'ops_crew') summaryBits.push('Ops Crew');
-          else if (typeFilter === 'shopper') summaryBits.push('Shoppers');
-          else summaryBits.push('Volunteers');
-          if (storeFilter) summaryBits.push(`at ${labelFor(storeFilter)}`);
-          if (timeFilter) summaryBits.push(`· ${timeFilter.split(' — ')[0]}`);
-          const bigLabel = summaryBits.join(' ');
-          // Color-shift the hero card based on active store
-          const heroColor = storeFilter === "Kohl's Layton (1298 N Main St)" ? '#3B82F6'
-            : storeFilter === "Kohl's Centerville (510 N 400 W)" ? '#8B5CF6'
-            : storeFilter === "Kohl's Clinton (1526 N 2000 W)" ? '#10B981'
-            : C.pink;
           return (
             <>
-              {/* ── Big at-a-glance count for the active filter selection ── */}
-              <div style={{
-                background: hasFacet ? `linear-gradient(135deg, ${heroColor}15 0%, ${heroColor}05 100%)` : '#F8FAFC',
-                border: `1px solid ${hasFacet ? heroColor + '33' : C.border}`,
-                borderRadius: 16,
-                padding: isMobile ? '20px 16px' : '24px 28px',
-                marginBottom: 16,
-                display: 'flex',
-                alignItems: 'center',
-                gap: isMobile ? 16 : 24,
-                flexWrap: 'wrap'
-              }}>
-                <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
-                  <div style={{
-                    fontSize: isMobile ? 56 : 80,
-                    fontWeight: 900,
-                    color: hasFacet ? heroColor : C.navy,
-                    lineHeight: 1,
-                    letterSpacing: -2,
-                    fontVariantNumeric: 'tabular-nums'
-                  }}>{facetFiltered.length}</div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                    <div style={{
-                      fontSize: isMobile ? 13 : 15,
-                      fontWeight: 700,
-                      color: hasFacet ? heroColor : C.navy,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5
-                    }}>{bigLabel}</div>
-                    <div style={{ fontSize: isMobile?11:12, color: C.muted }}>
-                      {hasFacet ? `of ${volunteers.length} total` : 'all volunteers registered'}
-                    </div>
-                  </div>
-                </div>
-                {hasFacet && (
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, alignItems:'center', marginLeft:'auto' }}>
-                    {typeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'5px 12px', borderRadius:14, border:`1px solid ${C.border}` }}>{typeFilter==='ops_crew'?'🎯 Ops Crew':'🛒 Shoppers'} <button onClick={()=>setTypeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
-                    {storeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'5px 12px', borderRadius:14, border:`1px solid ${C.border}` }}>📍 {labelFor(storeFilter)} <button onClick={()=>setStoreFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
-                    {timeFilter && <span style={{ fontSize:12, fontWeight:600, background:'#fff', color:C.navy, padding:'5px 12px', borderRadius:14, border:`1px solid ${C.border}` }}>🕐 {timeFilter} <button onClick={()=>setTimeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:14, lineHeight:1 }}>×</button></span>}
-                    <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);}} style={{ fontSize:11, fontWeight:700, background:heroColor, color:'#fff', border:'none', padding:'5px 12px', borderRadius:14, cursor:'pointer' }}>Clear all</button>
-                  </div>
-                )}
-              </div>
               {facetFiltered.length === 0 ? (
                 <div style={{ textAlign:'center', padding:40, color:C.light, fontSize:14 }}>No volunteers match the current filters.</div>
               ) : (
