@@ -402,11 +402,46 @@ function MobileNav({ view, navigate }) {
   const { t: mnavT } = useLang();
   const items = [{key:'home',hash:'#/',icon:'🏠',label:mnavT('home')},{key:'nominate',hash:'#/nominate',icon:'📋',label:mnavT('nominate')},{key:'volunteer',hash:'#/volunteer',icon:'🛒',label:mnavT('volunteer')},{key:'portal',hash:'#/portal',icon:'📋',label:mnavT('portal')},{key:'admin',hash:'#/admin',icon:'⚙️',label:mnavT('admin')}];
   return (
-    <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'#fff', borderTop:`1px solid ${C.border}`, display:'flex', justifyContent:'space-around', padding:'8px 0 16px', boxShadow:'0 -2px 8px rgba(0,0,0,0.04)', zIndex:100 }}>
+    <div style={{
+      position:'fixed',
+      bottom:`max(12px, env(safe-area-inset-bottom))`,
+      left:'50%',
+      transform:'translateX(-50%)',
+      width:'calc(100% - 20px)',
+      maxWidth:520,
+      background:'rgba(27, 58, 75, 0.92)',
+      backdropFilter:'blur(20px) saturate(1.4)',
+      WebkitBackdropFilter:'blur(20px) saturate(1.4)',
+      borderRadius:24,
+      boxShadow:'0 14px 44px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255,255,255,0.08) inset',
+      display:'flex',
+      justifyContent:'space-around',
+      alignItems:'center',
+      padding:'8px 10px',
+      zIndex:100
+    }}>
       {items.map(item => { const active=view===item.key; return (
-        <button key={item.key} onClick={()=>navigate(item.hash)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2, opacity:active?1:0.4 }}>
-          <span style={{ fontSize:18 }}>{item.icon}</span>
-          <span style={{ fontSize:9, fontWeight:700, letterSpacing:0.5, color:active?C.pink:C.light, textTransform:'uppercase' }}>{item.label}</span>
+        <button key={item.key} onClick={()=>navigate(item.hash)} style={{
+          flex:1,
+          background: active ? 'rgba(236,72,153,0.18)' : 'transparent',
+          border:'none',
+          cursor:'pointer',
+          display:'flex',
+          flexDirection:'column',
+          alignItems:'center',
+          gap:2,
+          padding:'8px 4px',
+          borderRadius:16,
+          transition:'all 0.18s ease'
+        }}>
+          <span style={{ fontSize:18, transition:'transform 0.18s ease', transform:active?'scale(1.08)':'scale(1)' }}>{item.icon}</span>
+          <span style={{
+            fontSize:9,
+            fontWeight:800,
+            letterSpacing:0.6,
+            color: active ? '#F9A8C9' : 'rgba(245,242,237,0.62)',
+            textTransform:'uppercase'
+          }}>{item.label}</span>
         </button>
       ); })}
     </div>
@@ -2926,6 +2961,7 @@ function VolunteersTab({ isMobile }) {
   const [storeFilter, setStoreFilter] = useState(null);     // store_location string
   const [typeFilter, setTypeFilter]   = useState(null);     // 'shopper' | 'ops_crew'
   const [timeFilter, setTimeFilter]   = useState(null);     // arrival_time string
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   // ── Edit / Delete state
   const [editVol, setEditVol] = useState(null);             // volunteer being edited
   const [savingEdit, setSavingEdit] = useState(false);
@@ -3055,64 +3091,18 @@ function VolunteersTab({ isMobile }) {
 
   return (
     <div>
-      {/* ── Combined Capacity Card with Type Tab (mobile-friendly) ── */}
+      {/* ── UNIFIED CAPACITY + FILTER CARD ── */}
       {(() => {
-        const [activeTab, setActiveTab] = [typeFilter === 'ops_crew' ? 'ops_crew' : 'shopper', null];
-        // Use typeFilter as the tab indicator; default to shopper view if no filter
         const tab = typeFilter === 'ops_crew' ? 'ops_crew' : 'shopper';
         const caps = tab === 'ops_crew' ? OPS_STORE_CAPS : STORE_CAPS;
         const cnts = tab === 'ops_crew' ? opsCnts : shopperCnts;
-        const totalReserved = tab === 'ops_crew' ? typeCounts.ops : typeCounts.shoppers;
         const onTab = (t) => {
           if (typeFilter === t) setTypeFilter(null);
           else setTypeFilter(t);
         };
-        return (
-          <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:isMobile?'14px 14px 12px':'18px 20px 16px', marginBottom:14 }}>
-            {/* Type toggle */}
-            <div style={{ display:'flex', gap:6, marginBottom:14, background:'#F1F5F9', padding:4, borderRadius:10 }}>
-              <button onClick={()=>onTab('shopper')} style={{ flex:1, padding:isMobile?'8px 10px':'10px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='shopper'?'#fff':'transparent', color: typeFilter==='shopper'?C.navy:C.muted, boxShadow: typeFilter==='shopper'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
-                🛒 Shoppers <span style={{ fontWeight:400, color:typeFilter==='shopper'?C.muted:C.light }}>· {typeCounts.shoppers}</span>
-              </button>
-              <button onClick={()=>onTab('ops_crew')} style={{ flex:1, padding:isMobile?'8px 10px':'10px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='ops_crew'?'#fff':'transparent', color: typeFilter==='ops_crew'?'#7C3AED':C.muted, boxShadow: typeFilter==='ops_crew'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
-                🎯 Ops Crew <span style={{ fontWeight:400, color:typeFilter==='ops_crew'?C.muted:C.light }}>· {typeCounts.ops}</span>
-              </button>
-            </div>
-            {/* Compact mini-bars per store */}
-            <div style={{ display:'flex', flexDirection:'column', gap:isMobile?10:12 }}>
-              {Object.keys(caps).map(k => {
-                const info = caps[k];
-                const cnt = cnts[k]||0;
-                const pct = Math.min(100, Math.round(cnt/info.cap*100));
-                const full = cnt >= info.cap;
-                const isStoreActive = storeFilter === k && typeFilter === tab;
-                const onClick = () => {
-                  if (isStoreActive) { setStoreFilter(null); setTypeFilter(null); }
-                  else { setStoreFilter(k); setTypeFilter(tab); }
-                };
-                return (
-                  <div key={k} onClick={onClick} style={{ cursor:'pointer', padding:isMobile?'8px 10px':'10px 14px', borderRadius:10, border:`1.5px solid ${isStoreActive?info.color:'transparent'}`, background: isStoreActive?info.color+'10':'transparent', transition:'all 0.15s' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
-                      <div style={{ fontSize:isMobile?14:15, fontWeight:700, color:C.navy }}>📍 {info.label}{isStoreActive&&<span style={{ marginLeft:6, fontSize:10, fontWeight:700, color:info.color }}>● ACTIVE</span>}</div>
-                      <div style={{ fontSize:isMobile?17:19, fontWeight:800, color:full?'#DC2626':info.color, fontVariantNumeric:'tabular-nums' }}>{cnt}<span style={{ fontSize:12, fontWeight:400, color:C.muted }}>/{info.cap}</span></div>
-                    </div>
-                    <div style={{ background:'#F1F5F9', borderRadius:20, height:8, overflow:'hidden' }}>
-                      <div style={{ width:`${pct}%`, height:'100%', borderRadius:20, background:full?'#DC2626':pct>80?'#F59E0B':info.color, transition:'width 0.5s ease' }}/>
-                    </div>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:C.muted, marginTop:4 }}>
-                      <span>{pct}% full</span>
-                      <span>{full?'🔴 FULL':`${info.cap-cnt} spots left`}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+        const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
 
-      {/* ── At-a-Glance Hero Card (always visible, reflects current filters) ── */}
-      {(() => {
+        // Compute live filtered count
         const facetFiltered = volunteers.filter(v => {
           if (storeFilter && v.storeLocation !== storeFilter) return false;
           if (typeFilter === 'shopper'  && v.volunteerType === 'ops_crew') return false;
@@ -3122,7 +3112,6 @@ function VolunteersTab({ isMobile }) {
           return true;
         });
         const hasFacet = storeFilter || typeFilter || timeFilter || filter !== 'all';
-        const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
         const heroColor = storeFilter === "Kohl's Layton (1298 N Main St)" ? '#3B82F6'
           : storeFilter === "Kohl's Centerville (510 N 400 W)" ? '#8B5CF6'
           : storeFilter === "Kohl's Clinton (1526 N 2000 W)" ? '#10B981'
@@ -3134,80 +3123,141 @@ function VolunteersTab({ isMobile }) {
         if (storeFilter) summaryBits.push(`· ${labelFor(storeFilter)}`);
         if (timeFilter) summaryBits.push(`· ${timeFilter.split(' — ')[0]}`);
         if (filter !== 'all') summaryBits.push(`· ${filter.charAt(0).toUpperCase()+filter.slice(1)}`);
-        return (
-          <div style={{
-            background: hasFacet ? `linear-gradient(135deg, ${heroColor}18 0%, ${heroColor}05 100%)` : 'linear-gradient(135deg, #1B3A4B 0%, #2C5364 100%)',
-            border: `1px solid ${hasFacet ? heroColor + '40' : 'transparent'}`,
-            borderRadius: 16,
-            padding: isMobile ? '18px 18px' : '22px 26px',
-            marginBottom: 14,
-            color: hasFacet ? C.text : '#fff'
-          }}>
-            <div style={{ display:'flex', alignItems:'baseline', gap:14, flexWrap:'wrap' }}>
-              <div style={{
-                fontSize: isMobile ? 64 : 84,
-                fontWeight: 900,
-                color: hasFacet ? heroColor : '#fff',
-                lineHeight: 1,
-                letterSpacing: -2.5,
-                fontVariantNumeric: 'tabular-nums'
-              }}>{facetFiltered.length}</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:3, flex:1, minWidth:0 }}>
-                <div style={{
-                  fontSize: isMobile ? 13 : 15,
-                  fontWeight: 800,
-                  color: hasFacet ? heroColor : 'rgba(255,255,255,0.95)',
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.6,
-                  lineHeight: 1.25
-                }}>{summaryBits.join(' ')}</div>
-                <div style={{ fontSize: isMobile?11:12, color: hasFacet ? C.muted : 'rgba(255,255,255,0.7)' }}>
-                  {hasFacet ? `of ${volunteers.length} total volunteers` : 'all registered to date'}
+
+        // Donut SVG component
+        const Donut = ({ k }) => {
+          const info = caps[k];
+          const cnt = cnts[k]||0;
+          const pct = Math.min(100, Math.round(cnt/info.cap*100));
+          const full = cnt >= info.cap;
+          const isStoreActive = storeFilter === k && typeFilter === tab;
+          const onClick = () => {
+            if (isStoreActive) { setStoreFilter(null); setTypeFilter(null); }
+            else { setStoreFilter(k); setTypeFilter(tab); }
+          };
+          const ringColor = full ? '#DC2626' : pct>80 ? '#F59E0B' : info.color;
+          const size = isMobile ? 78 : 96;
+          const stroke = isMobile ? 8 : 10;
+          const r = (size - stroke) / 2;
+          const circ = 2 * Math.PI * r;
+          const dash = (pct/100) * circ;
+          return (
+            <button onClick={onClick} style={{
+              flex:1, minWidth:0, background:'none', border:'none', cursor:'pointer', padding:isMobile?'8px 4px':'10px 8px',
+              borderRadius:12, transition:'all 0.15s',
+              boxShadow: isStoreActive ? `inset 0 0 0 2px ${ringColor}` : 'inset 0 0 0 1px transparent',
+              backgroundColor: isStoreActive ? `${ringColor}10` : 'transparent'
+            }}>
+              <div style={{ position:'relative', width:size, height:size, margin:'0 auto' }}>
+                <svg width={size} height={size} style={{ transform:'rotate(-90deg)' }}>
+                  <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#F1F5F9" strokeWidth={stroke}/>
+                  <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke}
+                    strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" style={{ transition:'stroke-dasharray 0.6s ease' }}/>
+                </svg>
+                <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
+                  <div style={{ fontSize:isMobile?20:24, fontWeight:900, color:ringColor, fontVariantNumeric:'tabular-nums' }}>{pct}%</div>
+                  {full && <div style={{ fontSize:8, fontWeight:800, color:'#DC2626', marginTop:2, letterSpacing:0.5 }}>FULL</div>}
                 </div>
               </div>
+              <div style={{ marginTop:6, textAlign:'center' }}>
+                <div style={{ fontSize:isMobile?12:13, fontWeight:700, color:C.navy }}>{info.label}</div>
+                <div style={{ fontSize:isMobile?10:11, color:C.muted, fontVariantNumeric:'tabular-nums', marginTop:1 }}>
+                  <strong style={{ color:ringColor }}>{cnt}</strong> / {info.cap}
+                </div>
+              </div>
+            </button>
+          );
+        };
+
+        return (
+          <div style={{
+            background: hasFacet ? `linear-gradient(180deg, ${heroColor}08 0%, transparent 60%)` : '#fff',
+            border: `1px solid ${hasFacet ? heroColor + '30' : C.border}`,
+            borderRadius:16,
+            padding:isMobile?'12px 12px 14px':'16px 18px 18px',
+            marginBottom:14,
+            transition:'border-color 0.2s'
+          }}>
+            {/* Type tab toggle */}
+            <div style={{ display:'flex', gap:4, marginBottom:isMobile?12:14, background:'#F1F5F9', padding:3, borderRadius:10 }}>
+              <button onClick={()=>onTab('shopper')} style={{ flex:1, padding:isMobile?'7px 8px':'9px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='shopper'?'#fff':'transparent', color: typeFilter==='shopper'?C.navy:C.muted, boxShadow: typeFilter==='shopper'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
+                🛒 Shoppers <span style={{ fontWeight:500, opacity:0.6 }}>· {typeCounts.shoppers}</span>
+              </button>
+              <button onClick={()=>onTab('ops_crew')} style={{ flex:1, padding:isMobile?'7px 8px':'9px 14px', border:'none', borderRadius:8, fontSize:isMobile?12:13, fontWeight:700, cursor:'pointer', background: typeFilter==='ops_crew'?'#fff':'transparent', color: typeFilter==='ops_crew'?'#7C3AED':C.muted, boxShadow: typeFilter==='ops_crew'?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
+                🎯 Ops Crew <span style={{ fontWeight:500, opacity:0.6 }}>· {typeCounts.ops}</span>
+              </button>
             </div>
-            {hasFacet && (
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6, alignItems:'center', marginTop:14, paddingTop:12, borderTop:`1px dashed ${heroColor}40` }}>
-                {filter !== 'all' && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>{filter.charAt(0).toUpperCase()+filter.slice(1)} <button onClick={()=>setFilter('all')} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
-                {typeFilter && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>{typeFilter==='ops_crew'?'🎯 Ops':'🛒 Shoppers'} <button onClick={()=>setTypeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
-                {storeFilter && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>📍 {labelFor(storeFilter)} <button onClick={()=>setStoreFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
-                {timeFilter && <span style={{ fontSize:11, fontWeight:600, background:'#fff', color:C.navy, padding:'4px 10px', borderRadius:14, border:`1px solid ${C.border}` }}>🕐 {timeFilter.split(' — ')[0]} <button onClick={()=>setTimeFilter(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.muted, marginLeft:4, fontSize:13, lineHeight:1 }}>×</button></span>}
-                <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);setFilter('all');}} style={{ fontSize:11, fontWeight:700, background:heroColor, color:'#fff', border:'none', padding:'5px 12px', borderRadius:14, cursor:'pointer' }}>Clear all</button>
+
+            {/* Donut row */}
+            <div style={{ display:'flex', gap:isMobile?4:8, marginBottom:isMobile?12:14 }}>
+              {Object.keys(caps).map(k => <Donut key={k} k={k}/>)}
+            </div>
+
+            {/* Big at-a-glance number row */}
+            <div style={{
+              display:'flex', alignItems:'center', gap:14,
+              padding:isMobile?'12px 12px':'14px 16px',
+              background: hasFacet ? `${heroColor}10` : '#F8FAFC',
+              borderRadius:12,
+              borderLeft:`4px solid ${hasFacet ? heroColor : C.border}`
+            }}>
+              <div style={{
+                fontSize:isMobile?44:54, fontWeight:900, lineHeight:1, letterSpacing:-1.5,
+                color: hasFacet ? heroColor : C.navy, fontVariantNumeric:'tabular-nums'
+              }}>{facetFiltered.length}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:isMobile?12:13, fontWeight:800, color: hasFacet ? heroColor : C.navy, textTransform:'uppercase', letterSpacing:0.5, lineHeight:1.2 }}>{summaryBits.join(' ')}</div>
+                <div style={{ fontSize:isMobile?10:11, color:C.muted, marginTop:2 }}>{hasFacet?`of ${volunteers.length} total`:'all volunteers'}</div>
+              </div>
+              {hasFacet && (
+                <button onClick={()=>{setStoreFilter(null);setTypeFilter(null);setTimeFilter(null);setFilter('all');}}
+                  style={{ fontSize:11, fontWeight:700, background:heroColor, color:'#fff', border:'none', padding:'6px 12px', borderRadius:14, cursor:'pointer', whiteSpace:'nowrap' }}>Clear</button>
+              )}
+            </div>
+
+            {/* More filters disclosure */}
+            <button onClick={()=>setShowMoreFilters(p=>!p)} style={{
+              marginTop:10, width:'100%', padding:isMobile?'8px':'9px',
+              background:'transparent', border:`1px dashed ${C.border}`, borderRadius:10,
+              color:C.muted, fontSize:11, fontWeight:600, cursor:'pointer', letterSpacing:0.3
+            }}>
+              {showMoreFilters?'▲ Hide filters':'▼ More filters'}{(timeFilter||filter!=='all')?` · ${[timeFilter?timeFilter.split(' — ')[0]:'',filter!=='all'?filter:''].filter(Boolean).join(' · ')}`:''}
+            </button>
+            {showMoreFilters && (
+              <div style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
+                {/* Status pills */}
+                <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Status</div>
+                <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginBottom:Object.keys(storeByTime).length>0?12:0 }}>
+                  {['all','registered','confirmed','assigned','waitlisted'].map(k=>(
+                    <button key={k} onClick={()=>setFilter(k)} style={{ padding:'5px 10px', borderRadius:14, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
+                      {k.charAt(0).toUpperCase()+k.slice(1)}{k!=='all'?` (${counts[k]})`:''}
+                    </button>
+                  ))}
+                </div>
+                {/* Arrival time pills */}
+                {Object.keys(storeByTime).length > 0 && (
+                  <>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>By Arrival Time</div>
+                    <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                      {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
+                        const cnt = storeByTime[t]||0;
+                        if(!cnt) return null;
+                        const active = timeFilter === t;
+                        return (
+                          <button key={t} onClick={() => setTimeFilter(active ? null : t)}
+                            style={{ background:active?C.pink:'#F1F5F9', color:active?'#fff':C.text, border:'none', borderRadius:14, padding:'5px 10px', fontSize:11, cursor:'pointer', fontWeight:active?700:500 }}>
+                            <span style={{ fontWeight:800, color:active?'#fff':C.navy }}>{cnt}</span> <span style={{ color:active?'#fff':C.muted }}>{t.split(' — ')[0]}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
         );
       })()}
-
-      {/* ── Combined Filter Strip: Status + Arrival Time ── */}
-      <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:isMobile?'12px 12px':'14px 18px', marginBottom:14 }}>
-        <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Status</div>
-        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:Object.keys(storeByTime).length>0?14:0 }}>
-          {['all','registered','confirmed','assigned','waitlisted'].map(k=>(
-            <button key={k} onClick={()=>setFilter(k)} style={{ padding:isMobile?'7px 12px':'7px 14px', borderRadius:18, border:'none', fontSize:isMobile?12:12, fontWeight:600, cursor:'pointer', background:filter===k?C.pink:'#F1F5F9', color:filter===k?'#fff':C.muted }}>
-              {k.charAt(0).toUpperCase()+k.slice(1)}{k!=='all'?` (${counts[k]})`:''}
-            </button>
-          ))}
-        </div>
-        {Object.keys(storeByTime).length > 0 && (
-          <>
-            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>By Arrival Time</div>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-              {['6:00 AM — Setup','6:30 AM — Early Shopping','7:00 AM — Main Shopping','7:30 AM — Late Shopping'].map(t => {
-                const cnt = storeByTime[t]||0;
-                if(!cnt) return null;
-                const active = timeFilter === t;
-                return (
-                  <button key={t} onClick={() => setTimeFilter(active ? null : t)}
-                    style={{ background:active?C.pink:'#F1F5F9', color:active?'#fff':C.text, border:'none', borderRadius:18, padding:isMobile?'7px 11px':'7px 13px', fontSize:isMobile?12:12, cursor:'pointer', fontWeight:active?700:500, transition:'all 0.15s' }}>
-                    <span style={{ fontWeight:800, color:active?'#fff':C.navy }}>{cnt}</span> <span style={{ color:active?'#fff':C.muted }}>{t.split(' — ')[0]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
 
       {/* ── Search + Actions ── */}
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14, alignItems:'center' }}>
@@ -5049,7 +5099,7 @@ export default function App() {
   );
 
   return (
-    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:isMobile?72:0 }}>
+    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:isMobile?100:0 }}>
       {isMobile ? <MobileHeader onHome={()=>navigate('#/')}/> : <TopNav view={view} navigate={navigate}/>}
       {view === 'home' && <LandingPage navigate={navigate}/>}
       {view === 'nominate' && <div style={{ maxWidth:isMobile?'100%':1100, margin:'0 auto' }}><NominationForm/></div>}
