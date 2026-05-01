@@ -23,13 +23,13 @@ function cors(r) {
 export async function onRequestOptions() { return cors(new Response(null, { status: 204 })); }
 
 const STORE_CAPS = {
-  "Kohl's Layton (881 W Antelope Dr)": 200,
+  "Kohl's Layton (1298 N Main St)": 200,
   "Kohl's Centerville (510 N 400 W)": 175,
   "Kohl's Clinton (1526 N 2000 W)": 200,
 };
 
 const OPS_CAPS = {
-  "Kohl's Layton (881 W Antelope Dr)": 8,
+  "Kohl's Layton (1298 N Main St)": 8,
   "Kohl's Centerville (510 N 400 W)": 8,
   "Kohl's Clinton (1526 N 2000 W)": 10,
 };

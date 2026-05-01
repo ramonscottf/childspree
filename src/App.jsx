@@ -729,8 +729,8 @@ function VolunteerForm() {
   const [error, setError] = useState(null);
   const [storeCounts, setStoreCounts] = useState(null);
   const [waitlisted, setWaitlisted] = useState(false);
-  const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":200, "Kohl's Centerville (510 N 400 W)":175, "Kohl's Clinton (1526 N 2000 W)":200 };
-  const OPS_CAPS = { "Kohl's Layton (881 W Antelope Dr)":8, "Kohl's Centerville (510 N 400 W)":8, "Kohl's Clinton (1526 N 2000 W)":10 };
+  const STORE_CAPS = { "Kohl's Layton (1298 N Main St)":200, "Kohl's Centerville (510 N 400 W)":175, "Kohl's Clinton (1526 N 2000 W)":200 };
+  const OPS_CAPS = { "Kohl's Layton (1298 N Main St)":8, "Kohl's Centerville (510 N 400 W)":8, "Kohl's Clinton (1526 N 2000 W)":10 };
   const activeCaps = form.volunteerType === 'ops_crew' ? OPS_CAPS : STORE_CAPS;
   const upd = (k,v) => setForm(p=>({...p,[k]:v}));
   useEffect(() => {
@@ -869,7 +869,7 @@ function VolunteerForm() {
           <Field label="Preferred Kohl's location *">
             <select style={{...inp(),appearance:'auto'}} value={form.storeLocation} onChange={e=>upd('storeLocation',e.target.value)}>
               <option value="">Select a store...</option>
-              {["Kohl's Layton (881 W Antelope Dr)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=>{
+              {["Kohl's Layton (1298 N Main St)","Kohl's Centerville (510 N 400 W)","Kohl's Clinton (1526 N 2000 W)"].map(s=>{
                 const cnt = getCountForStore(s);
                 const cap = activeCaps[s];
                 const full = cnt >= cap;
@@ -2931,8 +2931,8 @@ function VolunteersTab({ isMobile }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // volunteer being deleted
 
-  const STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:200,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:175,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:200,label:'Clinton',color:'#10B981'} };
-  const OPS_STORE_CAPS = { "Kohl's Layton (881 W Antelope Dr)":{cap:8,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:10,label:'Clinton',color:'#10B981'} };
+  const STORE_CAPS = { "Kohl's Layton (1298 N Main St)":{cap:200,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:175,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:200,label:'Clinton',color:'#10B981'} };
+  const OPS_STORE_CAPS = { "Kohl's Layton (1298 N Main St)":{cap:8,label:'Layton',color:'#3B82F6'}, "Kohl's Centerville (510 N 400 W)":{cap:8,label:'Centerville',color:'#8B5CF6'}, "Kohl's Clinton (1526 N 2000 W)":{cap:10,label:'Clinton',color:'#10B981'} };
 
   const load = useCallback(async () => {
     try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/volunteers?${p}`); setVolunteers(data.volunteers); } catch(e){console.error(e);}
@@ -3195,7 +3195,7 @@ function VolunteersTab({ isMobile }) {
             return true;
           });
           const hasFacet = storeFilter || typeFilter || timeFilter;
-          const labelFor = (k) => ({"Kohl's Layton (881 W Antelope Dr)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
+          const labelFor = (k) => ({"Kohl's Layton (1298 N Main St)":'Layton',"Kohl's Centerville (510 N 400 W)":'Centerville',"Kohl's Clinton (1526 N 2000 W)":'Clinton'}[k]||k);
           return (
             <>
               {hasFacet && (
@@ -3318,7 +3318,7 @@ function VolunteersTab({ isMobile }) {
             <Field label="Store location">
               <select style={{...inp(),appearance:'auto'}} value={editVol.storeLocation||''} onChange={e=>setEditVol(p=>({...p,storeLocation:e.target.value}))}>
                 <option value="">— None —</option>
-                <option value="Kohl's Layton (881 W Antelope Dr)">Kohl's Layton (881 W Antelope Dr)</option>
+                <option value="Kohl's Layton (1298 N Main St)">Kohl's Layton (1298 N Main St)</option>
                 <option value="Kohl's Centerville (510 N 400 W)">Kohl's Centerville (510 N 400 W)</option>
                 <option value="Kohl's Clinton (1526 N 2000 W)">Kohl's Clinton (1526 N 2000 W)</option>
               </select>

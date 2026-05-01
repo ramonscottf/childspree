@@ -207,7 +207,7 @@ export async function notifyVolunteerRegistered(env, vol) {
 
   // Role + store description for confirmation email
   const isOpsCrew = vol.volunteerType === 'ops_crew';
-  // Extract city from store name like "Kohl's Layton (881 W Antelope Dr)" -> "Layton"
+  // Extract city from store name like "Kohl's Layton (1298 N Main St)" -> "Layton"
   const storeCity = vol.storeLocation
     ? (vol.storeLocation.match(/Kohl's\s+(\w+)/) || [])[1] || null
     : null;
