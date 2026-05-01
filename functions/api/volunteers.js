@@ -115,7 +115,12 @@ export async function onRequestPost(context) {
 
   // Check store capacity (type-specific) — accounting for group sizes
   let waitlisted = false;
-  const store = body.storeLocation || null;
+  // Normalize legacy/stale store strings from cached client deployments
+  const STORE_ALIASES = {
+    "Kohl's Layton (881 W Antelope Dr)": "Kohl's Layton (1298 N Main St)"
+  };
+  const rawStore = body.storeLocation || null;
+  const store = rawStore && STORE_ALIASES[rawStore] ? STORE_ALIASES[rawStore] : rawStore;
 
   // Helper to sum actual people from volunteer rows
   function sumPeople(rows) {
