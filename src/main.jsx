@@ -62,6 +62,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { PublicClientApplication } from '@azure/msal-browser';
 import App from './App';
+import HelpTab from './HelpTab';
 
 // ─── MSAL REDIRECT HANDLER ─────────────────────────────────────────────────
 // Microsoft SSO uses redirect flow: user clicks "Sign in with Microsoft" →
@@ -119,6 +120,7 @@ window.__msalInstance = msalInstance;
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       <App />
+      <HelpTab />
     </React.StrictMode>
   );
 })();
