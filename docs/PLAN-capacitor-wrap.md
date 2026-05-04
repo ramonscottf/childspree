@@ -5,7 +5,7 @@ project: childspree
 phase: Phase 1 — Android wrap (prep done in chat, runbook ready for Dutchman)
 source_chat: "childspree capacitor wrap (May 4 2026)"
 created: 2026-05-04
-last_updated: 2026-05-04
+last_updated: 2026-05-04 (cloud session)
 supersedes: 2026-04-06-childspree-native-expo (phantom row, no file ever committed)
 ---
 
@@ -214,3 +214,33 @@ patterns) — not actively maintained, not in CI.
     (skip enrollment wait), and a Pixel for Android sideload testing
   - All committed and pushed to `ramonscottf/childspree@main` (commit 3a93f74)
   - Status: blocked only on Dutchman session for `npm install` + `npx cap add android`
+
+- **2026-05-04 (cloud session, Claude Code)** — Steps A-E shipped from a
+  cloud container (no Dutchman, no Pixel). Branch
+  `claude/build-capacitor-apk-vTnbC`:
+  - ✅ `npm install --legacy-peer-deps` → 249 packages
+  - ✅ Container had JDK 21 (Ubuntu OpenJDK); installed Android command-line
+    tools, accepted licenses, installed `platform-tools`, `platforms;android-34`,
+    `build-tools;34.0.0` to `/home/user/android-sdk`
+  - ✅ Added `typescript@^6.0.3` as devDep (Capacitor CLI needs it to read
+    `capacitor.config.ts`) — committed alongside android shell
+  - ✅ `npx cap add android` → clean scaffold with bundle ID
+    `com.wickowaypoint.childspree`
+  - ✅ `npm run build:native` → `dist/` with `CAPACITOR=1` (relative paths)
+  - ✅ `npx cap copy android && npx cap sync android` → 5 plugins resolved
+    (@capacitor/app 8.1.0, camera 8.2.0, push-notifications 8.0.3,
+    splash-screen 8.0.1, status-bar 8.0.2)
+  - ✅ `./gradlew assembleDebug` → **BUILD SUCCESSFUL in 2m 17s**, 247 tasks
+  - ✅ Output APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+    (11 MB) — gitignored, doesn't ship in the repo
+  - ✅ `android/` source tree committed and pushed to
+    `claude/build-capacitor-apk-vTnbC` (the build/.gradle/local.properties
+    are gitignored by the Capacitor-supplied `android/.gitignore`)
+  - ⏳ **Step F (device verification) — pending Dutchman + Pixel.**
+    Scott pulls the branch, runs `npx cap run android` with Pixel attached,
+    grants camera permission, runs through nomination flow, confirms
+    VideoCapture records and uploads. If broken, cloud follow-up swaps in
+    `@capacitor/camera`.
+  - No directional changes from the locked plan. The only improvisation was
+    adding `typescript` to devDeps, which is mechanical (CLI requirement,
+    not a design call).
