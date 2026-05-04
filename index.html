@@ -20,6 +20,36 @@
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: 'DM Sans', sans-serif; background: #F8FAFC; -webkit-font-smoothing: antialiased; }
     </style>
+    <script>
+      // Path-to-hash bridge for shareable deep links.
+      // The SPA uses hash routing (#/intake/TOKEN), but path-based links
+      // (/intake/TOKEN) are easier to share via email/SMS without getting
+      // mangled. Convert known UI paths to hash form before React mounts.
+      (function () {
+        try {
+          var p = window.location.pathname;
+          if (p === '/' || p === '') return;
+          // UI routes that should be deep-linkable via path. Anything not
+          // matched here falls through to the default SPA fallback (home).
+          var routes = [
+            /^\/(intake)\/([^\/]+)\/?$/,
+            /^\/(v)\/([^\/]+)\/?$/,
+            /^\/(bag)\/([^\/]+)\/?$/,
+            /^\/(shop)\/([^\/]+)\/?$/,
+            /^\/(fa)\/([^\/]+)(?:\/(video)\/([^\/]+))?\/?$/,
+            /^\/(nominate|volunteer|portal|admin)\/?$/
+          ];
+          for (var i = 0; i < routes.length; i++) {
+            var m = p.match(routes[i]);
+            if (!m) continue;
+            // Reconstruct the hash from the matched path segments.
+            var hash = '#/' + m.slice(1).filter(Boolean).join('/');
+            window.history.replaceState(null, '', '/' + (window.location.search || '') + hash);
+            return;
+          }
+        } catch (e) { /* fall through to normal SPA boot */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
