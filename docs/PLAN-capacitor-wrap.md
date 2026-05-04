@@ -1,8 +1,8 @@
 ---
 title: Child Spree — Capacitor wrap (iOS + Android)
-status: spec
+status: in-progress
 project: childspree
-phase: Phase 1 — Android wrap (next)
+phase: Phase 1 — Android wrap (prep done in chat, runbook ready for Dutchman)
 source_chat: "childspree capacitor wrap (May 4 2026)"
 created: 2026-05-04
 last_updated: 2026-05-04
@@ -85,15 +85,26 @@ This is the only known technical risk. Everything else is paperwork.
 ## Phases
 
 ### Phase 1 — Android wrap (~2 hours active work)
-- [ ] Install Android Studio on Dutchman (couple-GB download)
-- [ ] `npm install @capacitor/core @capacitor/cli @capacitor/android`
-- [ ] `npx cap init "Child Spree" com.wickowaypoint.childspree --web-dir=dist`
-- [ ] Configure `capacitor.config.json` with theme color, splash, status bar
+
+**Pre-work done by Skippy in chat (May 4 2026):**
+- [x] Capacitor packages added to `package.json` (^8.3.x, all 9 deps + CLI)
+- [x] `vite.config.js` updated with conditional base path via `CAPACITOR=1` env
+- [x] `capacitor.config.ts` written with bundle ID, splash, status bar config
+- [x] Native build scripts added (`build:native`, `cap:sync`, `cap:android`, `cap:ios`)
+- [x] `childspree-native/ARCHIVED.md` written
+- [x] `docs/CAPACITOR-SETUP.md` runbook written
+
+**Pending (requires Dutchman + Pixel):**
+- [ ] Pull latest `main` on Dutchman
+- [ ] Install Android Studio (~3 GB download)
+- [ ] Install JDK 21 (or verify existing JDK is ≥17)
+- [ ] `npm install`
 - [ ] `npx cap add android`
-- [ ] `npm run build && npx cap copy android`
-- [ ] `npx cap open android` — first build, run in emulator
+- [ ] `npm run cap:sync` (builds web with `CAPACITOR=1`, syncs into android shell)
+- [ ] Enable USB debugging on Pixel, connect to Dutchman
+- [ ] `npx cap run android` — first build to physical device
 - [ ] **Verify VideoCapture works in WebView** (the one real risk)
-- [ ] Test nomination flow end-to-end on emulator + physical Android device
+- [ ] Test nomination flow end-to-end on Pixel
 - [ ] If video fails, swap to `@capacitor/camera` plugin
 - [ ] Commit Android shell to repo
 
@@ -121,11 +132,11 @@ This is the only known technical risk. Everything else is paperwork.
 - [ ] APNs cert setup in Apple Developer portal, wire to FCM
 
 ### Phase 4 — Store submission (~3 hours active, 1-7 days waiting)
-- [ ] **Apple Developer enrollment** under Wicko Waypoint LLC ($99/yr)
-  - Need Wicko EIN (41-5171763) and bank info
-  - Verification 24-48 hr typical
+- [x] **Apple Developer enrollment** — Scott already has an active account with
+      apps in TestFlight. Skip enrollment; reuse existing Wicko cert / team ID.
 - [ ] **Google Play Console** under Wicko Waypoint LLC ($25 one-time)
   - Verification a few hours to a few days
+  - **Pixel hardware available** for direct sideload testing before public listing
 - [ ] **Icon set generation** — one script takes the 512px and outputs:
   - Apple: 24 sizes (20pt @2x/@3x, 29pt, 40pt, 60pt, 76pt iPad, 1024 marketing)
   - Android: adaptive icon foreground + background, legacy 48/72/96/144/192
@@ -191,4 +202,15 @@ patterns) — not actively maintained, not in CI.
 
 - **2026-05-04** — Plan written. Capacitor decision locked. Wicko publisher.
   Push notifications in v1. Privacy policy verified live at daviskids.org/privacy.
-  Phase 1 next: install Android Studio on Dutchman, run the wrap.
+
+- **2026-05-04 (later)** — Phase 1 prep done in-chat without Dutchman:
+  - Capacitor 8.3.x deps wired into `package.json` (9 packages + CLI)
+  - `vite.config.js` switched to conditional base path (`./` for native, `/` for web)
+  - `capacitor.config.ts` written with bundle ID, splash, status bar config
+  - 4 npm scripts added: `build:native`, `cap:sync`, `cap:android`, `cap:ios`
+  - `childspree-native/ARCHIVED.md` filed
+  - `docs/CAPACITOR-SETUP.md` runbook written for cold sit-down execution
+  - Confirmed: Scott already has an Apple Dev account with TestFlight apps
+    (skip enrollment wait), and a Pixel for Android sideload testing
+  - All committed and pushed to `ramonscottf/childspree@main` (commit 3a93f74)
+  - Status: blocked only on Dutchman session for `npm install` + `npx cap add android`
