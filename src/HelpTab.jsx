@@ -123,11 +123,13 @@ export default function HelpTab() {
 
   // ---------- styles ----------
   const fab = {
-    position: 'fixed', bottom: 20, right: 20, zIndex: 9999,
+    position: 'fixed',
+    bottom: 'calc(96px + env(safe-area-inset-bottom))',
+    right: 20, zIndex: 9999,
     width: 56, height: 56, borderRadius: '50%',
-    background: '#00d4aa', color: '#08080d',
+    background: '#E8548C', color: '#fff',
     border: 'none', cursor: 'pointer',
-    boxShadow: '0 8px 24px rgba(0,212,170,0.35)',
+    boxShadow: '0 8px 24px rgba(232,84,140,0.40)',
     fontSize: 24, fontWeight: 600,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -142,60 +144,66 @@ export default function HelpTab() {
     border: '2px solid #fff',
   };
   const panel = {
-    position: 'fixed', bottom: 90, right: 20, zIndex: 9999,
+    position: 'fixed',
+    bottom: 'calc(168px + env(safe-area-inset-bottom))',
+    right: 20, zIndex: 9999,
     width: 340, maxWidth: 'calc(100vw - 32px)',
-    height: 480, maxHeight: 'calc(100vh - 120px)',
-    background: '#0f0f18', color: '#e4e4f0',
-    borderRadius: 16, border: '1px solid #252538',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+    height: 480, maxHeight: 'calc(100vh - 220px)',
+    background: '#FFF1F6', color: '#1B3A4B',
+    borderRadius: 16, border: '1px solid #F9A8C9',
+    boxShadow: '0 20px 50px rgba(232,84,140,0.25)',
     display: 'flex', flexDirection: 'column',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     overflow: 'hidden',
   };
   const head = {
-    padding: '14px 16px', borderBottom: '1px solid #252538',
+    padding: '14px 16px', borderBottom: '1px solid #F9A8C9',
+    background: '#E8548C', color: '#fff',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   };
   const transcript = {
     flex: 1, overflowY: 'auto', padding: '14px 16px',
     display: 'flex', flexDirection: 'column', gap: 8,
+    background: '#FFF1F6',
   };
   const inputRow = {
-    padding: 12, borderTop: '1px solid #252538',
+    padding: 12, borderTop: '1px solid #F9A8C9',
     display: 'flex', gap: 8, alignItems: 'flex-end',
+    background: '#fff',
   };
   const inputStyle = {
-    flex: 1, background: '#161622', border: '1px solid #252538',
-    borderRadius: 10, color: '#e4e4f0', padding: '10px 12px',
+    flex: 1, background: '#fff', border: '1px solid #F9A8C9',
+    borderRadius: 10, color: '#1B3A4B', padding: '10px 12px',
     fontSize: 14, fontFamily: 'inherit', resize: 'none',
     minHeight: 40, maxHeight: 120, lineHeight: 1.4,
   };
   const sendBtn = {
-    background: '#00d4aa', color: '#08080d', border: 'none',
+    background: '#E8548C', color: '#fff', border: 'none',
     borderRadius: 10, padding: '10px 14px', fontWeight: 600,
     cursor: sending ? 'wait' : 'pointer', fontSize: 14,
     fontFamily: 'inherit',
     opacity: (input.trim() && !sending) ? 1 : 0.5,
   };
   const msgIn = {
-    alignSelf: 'flex-start', background: '#161622',
+    alignSelf: 'flex-start', background: '#fff',
     padding: '8px 12px', borderRadius: '10px 10px 10px 2px',
     maxWidth: '85%', fontSize: 14, lineHeight: 1.4,
-    border: '1px solid #252538',
+    border: '1px solid #F9A8C9', color: '#1B3A4B',
   };
   const msgOut = {
-    alignSelf: 'flex-end', background: '#1d3a52',
+    alignSelf: 'flex-end', background: '#E8548C',
     padding: '8px 12px', borderRadius: '10px 10px 2px 10px',
     maxWidth: '85%', fontSize: 14, lineHeight: 1.4,
-    color: '#e4e4f0',
+    color: '#fff',
   };
   const intakeStyle = {
-    padding: 14, borderBottom: '1px solid #252538',
+    padding: 14, borderBottom: '1px solid #F9A8C9',
     display: 'flex', flexDirection: 'column', gap: 8,
+    background: '#fff',
   };
   const intakeInput = {
-    background: '#161622', border: '1px solid #252538',
-    borderRadius: 8, color: '#e4e4f0', padding: '8px 10px',
+    background: '#fff', border: '1px solid #F9A8C9',
+    borderRadius: 8, color: '#1B3A4B', padding: '8px 10px',
     fontSize: 13, fontFamily: 'inherit',
   };
 
@@ -216,20 +224,20 @@ export default function HelpTab() {
       <div style={head}>
         <div>
           <div style={{ fontWeight: 600, fontSize: 15 }}>Help</div>
-          <div style={{ fontSize: 11, color: '#7878a0', marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
             We usually reply within a few hours
           </div>
         </div>
         <button
           onClick={() => setOpen(false)}
-          style={{ background: 'none', border: 'none', color: '#7878a0', cursor: 'pointer', fontSize: 22, padding: 4 }}
+          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 22, padding: 4 }}
           aria-label="Close"
         >×</button>
       </div>
 
       {showIntake && (
         <div style={intakeStyle}>
-          <div style={{ fontSize: 13, color: '#7878a0' }}>
+          <div style={{ fontSize: 13, color: '#64748B' }}>
             Optional — helps us follow up if you close this tab.
           </div>
           <input
@@ -249,7 +257,7 @@ export default function HelpTab() {
 
       <div style={transcript} ref={transcriptRef}>
         {!hasMessages && (
-          <div style={{ color: '#7878a0', fontSize: 13, textAlign: 'center', marginTop: 20 }}>
+          <div style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 20 }}>
             Send us a message — we'll reply here.
           </div>
         )}
