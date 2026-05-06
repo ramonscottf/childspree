@@ -936,8 +936,8 @@ function VolunteerForm() {
 // ─── VIDEO CAPTURE ───
 function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
   const tV = vcLang === 'es'
-    ? { title:'Video de', instructions:'Graba un video corto en la escuela. El voluntario lo verá antes de comprar.', startBtn:'Comenzar grabación', stopBtn:'Detener y revisar', upload:'✓ Subir video', redo:'↩ Repetir', skip:'Omitir', recording:'GRABANDO', uploading:'Subiendo...', done:'¡Video subido!', doneMsg:'El voluntario verá este video antes de comprar ropa para', cameraErr:'Cámara denegada. Pide al estudiante que permita el acceso.', uploadErr:'Error al subir. Intenta de nuevo.' }
-    : { title:'Video for', instructions:'Record a short video at school. The volunteer will watch this before shopping.', startBtn:'Start recording', stopBtn:'Stop & preview', upload:'✓ Upload video', redo:'↩ Record again', skip:'Skip', recording:'RECORDING', uploading:'Uploading...', done:'Video uploaded!', doneMsg:'The volunteer will watch this before shopping for', cameraErr:'Camera access denied.', uploadErr:'Upload failed. Try again.' };
+    ? { title:'Video de', instructions:'Graba un video corto en la escuela. El voluntario lo verá antes de comprar.', startBtn:'Comenzar grabación', stopBtn:'Detener y revisar', upload:'✓ Subir video', redo:'↩ Repetir', skip:'Omitir', recording:'GRABANDO', uploading:'Subiendo...', done:'¡Video subido!', doneMsg:'El voluntario verá este video antes de comprar ropa para', cameraErr:'Cámara denegada. Pide al estudiante que permita el acceso.', uploadErr:'Error al subir. Intenta de nuevo.', recordBtn:'📹 Grabar video', uploadBtn:'📁 Subir video', fileTooBig:'Archivo muy grande. Máx 50MB.', notVideo:'Por favor selecciona un archivo de video.' }
+    : { title:'Video for', instructions:'Record a short video at school. The volunteer will watch this before shopping.', startBtn:'Start recording', stopBtn:'Stop & preview', upload:'✓ Upload video', redo:'↩ Record again', skip:'Skip', recording:'RECORDING', uploading:'Uploading...', done:'Video uploaded!', doneMsg:'The volunteer will watch this before shopping for', cameraErr:'Camera access denied.', uploadErr:'Upload failed. Try again.', recordBtn:'📹 Record video', uploadBtn:'📁 Upload video', fileTooBig:'File too large. Max 50MB.', notVideo:'Please select a video file.' };
 
   const [step, setStep] = React.useState('ready'); // ready | recording | preview | uploading | done
   const [stream, setStream] = React.useState(null);
@@ -1005,12 +1005,26 @@ function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
 
   const redo = () => { setBlob(null); setPreviewUrl(null); setElapsed(0); startCamera(); };
 
+  const pickFile = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith('video/')) { setError(tV.notVideo); return; }
+    if (f.size > 50 * 1024 * 1024) { setError(tV.fileTooBig); return; }
+    setError(null);
+    stream?.getTracks().forEach(t=>t.stop());
+    setStream(null);
+    setBlob(f);
+    setPreviewUrl(URL.createObjectURL(f));
+    setStep('preview');
+  };
+
   const upload = async () => {
     if (!blob) return;
     setStep('uploading'); setProgress(0);
     try {
       const form = new FormData();
-      form.append('video', blob, 'video.webm');
+      const fname = (blob instanceof File && blob.name) ? blob.name : 'video.webm';
+      form.append('video', blob, fname);
       await new Promise((res, rej) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.onprogress = e => e.lengthComputable && setProgress(Math.round(e.loaded/e.total*100));
@@ -1073,7 +1087,11 @@ function VideoCapture({ token, childFirst, onDone, lang: vcLang }) {
         <strong>Tips:</strong> Find good light. Hold phone sideways (landscape). Ask the student to say their name, grade, favorite color, and what they love most.
       </div>
       {error && <div style={{background:'#FEF2F2', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:13, color:'#991B1B'}}>{error}</div>}
-      <button onClick={()=>startCamera()} style={{width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:12}}>Open Camera</button>
+      <button onClick={()=>startCamera()} style={{width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:10}}>{tV.recordBtn}</button>
+      <label style={{display:'block', cursor:'pointer'}}>
+        <span style={{display:'block', width:'100%', padding:14, background:'#fff', color:C.navy, border:`1.5px solid ${C.border}`, borderRadius:12, fontSize:15, fontWeight:700, marginBottom:12, boxSizing:'border-box'}}>{tV.uploadBtn}</span>
+        <input type="file" accept="video/*" onChange={pickFile} style={{display:'none'}}/>
+      </label>
       <button onClick={onDone} style={{background:'none', border:'none', color:C.light, fontSize:13, cursor:'pointer'}}>{tV.skip}</button>
     </div>
   );
@@ -3633,12 +3651,26 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
     startCamera(facingMode);
   };
 
+  const pickFile = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith('video/')) { setError('Please select a video file.'); return; }
+    if (f.size > 50 * 1024 * 1024) { setError('File too large. Max 50MB.'); return; }
+    setError(null);
+    if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setRecordedBlob(f);
+    setPreviewUrl(URL.createObjectURL(f));
+    setMode('preview');
+  };
+
   const upload = async () => {
     if (!recordedBlob) return;
     setMode('uploading'); setProgress(0);
     try {
       const fd = new FormData();
-      fd.append('video', recordedBlob, 'video.webm');
+      const fname = (recordedBlob instanceof File && recordedBlob.name) ? recordedBlob.name : 'video.webm';
+      fd.append('video', recordedBlob, fname);
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded/e.total*100)); };
@@ -3730,9 +3762,15 @@ function FAVideoPage({ faToken, nominationId, navigate }) {
               </div>
             </div>
           )}
-          <button onClick={() => startCamera()} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow:'0 2px 12px rgba(232,84,140,0.35)' }}>
+          <button onClick={() => startCamera()} style={{ width:'100%', padding:16, background:C.pink, color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow:'0 2px 12px rgba(232,84,140,0.35)', marginBottom:10 }}>
             <span style={{ fontSize:20 }}>📷</span> Start Recording {nom.childFirst}
           </button>
+          <label style={{ display:'block', cursor:'pointer' }}>
+            <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, width:'100%', padding:14, background:'#fff', color:C.navy, border:`1.5px solid ${C.border}`, borderRadius:12, fontSize:15, fontWeight:700, boxSizing:'border-box' }}>
+              <span style={{ fontSize:18 }}>📁</span> Upload existing video
+            </span>
+            <input type="file" accept="video/*" onChange={pickFile} style={{ display:'none' }}/>
+          </label>
         </div>
       )}
 
