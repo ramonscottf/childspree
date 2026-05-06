@@ -184,17 +184,27 @@ export default function HelpTab() {
     fontFamily: 'inherit',
     opacity: (input.trim() && !sending) ? 1 : 0.5,
   };
+  // User's own messages (inbound to helpline = sent BY the user) → right side, pink
   const msgIn = {
+    alignSelf: 'flex-end', background: '#E8548C',
+    padding: '8px 12px', borderRadius: '14px 14px 2px 14px',
+    maxWidth: '85%', fontSize: 14, lineHeight: 1.4,
+    color: '#fff',
+  };
+  // Staff replies (outbound from helpline = sent TO the user) → left side, white
+  const msgOut = {
     alignSelf: 'flex-start', background: '#fff',
-    padding: '8px 12px', borderRadius: '10px 10px 10px 2px',
+    padding: '8px 12px', borderRadius: '14px 14px 14px 2px',
     maxWidth: '85%', fontSize: 14, lineHeight: 1.4,
     border: '1px solid #F9A8C9', color: '#1B3A4B',
   };
-  const msgOut = {
-    alignSelf: 'flex-end', background: '#E8548C',
-    padding: '8px 12px', borderRadius: '10px 10px 2px 10px',
-    maxWidth: '85%', fontSize: 14, lineHeight: 1.4,
-    color: '#fff',
+  // Tiny label rendered above first staff reply in a streak
+  const replyLabelStyle = {
+    alignSelf: 'flex-start',
+    fontSize: 10, color: '#94A3B8',
+    fontWeight: 600, letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    marginTop: 6, marginBottom: -2, marginLeft: 4,
   };
   const intakeStyle = {
     padding: 14, borderBottom: '1px solid #F9A8C9',
@@ -261,11 +271,18 @@ export default function HelpTab() {
             Send us a message — we'll reply here.
           </div>
         )}
-        {messages.map(m => (
-          <div key={m.id} style={m.direction === 'inbound' ? msgIn : msgOut}>
-            {m.body}
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const prev = messages[i - 1];
+          const isFirstStaffReply = m.direction === 'outbound' && (!prev || prev.direction !== 'outbound');
+          return (
+            <div key={m.id} style={{ display: 'contents' }}>
+              {isFirstStaffReply && <div style={replyLabelStyle}>From the team</div>}
+              <div style={m.direction === 'inbound' ? msgIn : msgOut}>
+                {m.body}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {error && (
