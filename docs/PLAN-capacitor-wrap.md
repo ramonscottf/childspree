@@ -1,6 +1,6 @@
 ---
 title: Child Spree — Capacitor wrap (iOS + Android)
-status: in-progress
+status: SUPERSEDED
 project: childspree
 phase: Phase 1 — Android wrap (prep done in chat, runbook ready for Dutchman)
 source_chat: "childspree capacitor wrap (May 4 2026)"
@@ -8,6 +8,10 @@ created: 2026-05-04
 last_updated: 2026-05-04
 supersedes: 2026-04-06-childspree-native-expo (phantom row, no file ever committed)
 ---
+
+> **⚠️ SUPERSEDED 2026-06-19.** The Capacitor decision was reversed. iOS is now a
+> native SwiftUI app — see `docs/PLAN-2026-06-19-ios-swift-and-volunteer.md`.
+> This file is kept for the privacy-policy analysis and Android shell reference only.
 
 # Child Spree — Capacitor wrap (iOS + Android)
 
