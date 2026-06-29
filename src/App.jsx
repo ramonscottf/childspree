@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import * as XLSX from 'xlsx';
+import { TRAINING_SECTIONS, WHATS_NEW, GUIDE_CSS, GUIDE_VERSION } from './trainingContent.js';
 import QRCode from 'qrcode';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -1330,6 +1331,93 @@ async function exportEverythingWorkbook() {
   XLSX.writeFile(wb, `ChildSpree_FULL_EXPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+// ─── LEARNING / GUIDE TAB (Admin — in-app training + printable master doc) ───
+function LearningTab({ isMobile }) {
+  const [open, setOpen] = useState(() => new Set([TRAINING_SECTIONS[0].id]));
+  const toggle = (id) => setOpen(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const expandAll = () => setOpen(new Set(TRAINING_SECTIONS.map(s => s.id)));
+  const collapseAll = () => setOpen(new Set());
+
+  const printGuide = () => {
+    const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const newHtml = WHATS_NEW.map(n => `<li><strong>${n.icon} ${n.title}.</strong> ${n.text}</li>`).join('');
+    const body = TRAINING_SECTIONS.map((s, i) => `<section class="sec"><h3>${i + 1}. ${s.icon} ${s.title}</h3>${s.html}</section>`).join('');
+    const w = window.open('', '_blank');
+    if (!w) { alert('Pop-up blocked — allow pop-ups for childspree.org to print.'); return; }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Child Spree 2026 — Admin Guide & Training</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700;800&family=Playfair+Display:wght@700;800&display=swap');
+      @page { size: letter; margin: 0.7in; }
+      * { box-sizing:border-box; }
+      body { font-family:'Libre Franklin',-apple-system,Arial,sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; margin:0; }
+      .cover { border-bottom:3px solid #1B3A4B; padding-bottom:14px; margin-bottom:18px; }
+      .cover h1 { font-family:'Playfair Display',serif; font-size:30px; color:#1B3A4B; margin:0; }
+      .cover .s { color:#475569; font-size:13px; margin-top:6px; }
+      .whatsnew { background:#FDF2F8; border:1px solid #FBCFE8; border-radius:10px; padding:14px 18px; margin-bottom:22px; page-break-inside:avoid; }
+      .whatsnew h2 { color:#9D174D; font-size:15px; margin:0 0 8px; }
+      .whatsnew ul { margin:0; padding-left:20px; } .whatsnew li { margin-bottom:6px; font-size:13px; color:#831843; }
+      .sec { margin-bottom:22px; page-break-inside:avoid; }
+      ${GUIDE_CSS}
+    </style></head>
+    <body class="cs-guide">
+      <div class="cover"><h1>🛒 Child Spree 2026 — Admin Guide &amp; Training</h1><div class="s">Everything the admin can do, how it works, and what's new · ${GUIDE_VERSION} · Printed ${today}</div></div>
+      <div class="whatsnew"><h2>✨ What's new</h2><ul>${newHtml}</ul></div>
+      ${body}
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 700);
+  };
+
+  return (
+    <div>
+      <style>{GUIDE_CSS}</style>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:16, flexWrap:'wrap' }}>
+        <div>
+          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:isMobile?22:26, color:C.navy, margin:'0 0 4px' }}>📚 Admin Guide &amp; Training</h2>
+          <div style={{ fontSize:13, color:C.muted }}>How everything works, what's new, and how it's meant to run. {GUIDE_VERSION}.</div>
+        </div>
+        <button onClick={printGuide} style={{ padding:'10px 18px', borderRadius:8, border:'none', background:C.navy, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>🖨️ Print full guide</button>
+      </div>
+
+      <div style={{ background:'#FDF2F8', border:'1px solid #FBCFE8', borderRadius:12, padding:isMobile?'14px':'16px 18px', marginBottom:18 }}>
+        <div style={{ fontSize:14, fontWeight:800, color:'#9D174D', marginBottom:10 }}>✨ What's new</div>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:12 }}>
+          {WHATS_NEW.map(n => (
+            <div key={n.title} style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+              <div style={{ fontSize:20, lineHeight:1 }}>{n.icon}</div>
+              <div><div style={{ fontWeight:700, color:'#831843', fontSize:13 }}>{n.title}</div><div style={{ fontSize:12.5, color:'#9D174D', lineHeight:1.45 }}>{n.text}</div></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+        <button onClick={expandAll} style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:12, fontWeight:600, color:C.navy, cursor:'pointer' }}>Expand all</button>
+        <button onClick={collapseAll} style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:12, fontWeight:600, color:C.muted, cursor:'pointer' }}>Collapse all</button>
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        {TRAINING_SECTIONS.map(s => {
+          const o = open.has(s.id);
+          return (
+            <div key={s.id} style={{ border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', background:'#fff' }}>
+              <button onClick={()=>toggle(s.id)} style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:isMobile?'12px 14px':'14px 18px', background:o?'#F8FAFC':'#fff', border:'none', cursor:'pointer', textAlign:'left' }}>
+                <span style={{ fontSize:20 }}>{s.icon}</span>
+                <span style={{ flex:1, minWidth:0 }}>
+                  <span style={{ display:'block', fontWeight:700, color:C.navy, fontSize:isMobile?14:15 }}>{s.title}</span>
+                  <span style={{ display:'block', fontSize:12, color:C.muted, marginTop:2 }}>{s.summary}</span>
+                </span>
+                <span style={{ fontSize:20, color:C.light, transform:o?'rotate(90deg)':'none', transition:'transform 0.15s', lineHeight:1 }}>›</span>
+              </button>
+              {o && <div className="cs-guide" style={{ padding:isMobile?'2px 16px 18px':'4px 22px 22px', borderTop:`1px solid ${C.border}` }} dangerouslySetInnerHTML={{ __html: s.html }} />}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('nominations');
@@ -1459,7 +1547,7 @@ function AdminDashboard() {
     );
   }
 
-  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'allocations', icon:'🏫', label:'Schools' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }, { key:'shopday', icon:'🏪', label:'Shopping Day' }];
+  const tabs = [{ key:'nominations', icon:'📋', label:'Nominations' }, { key:'allocations', icon:'🏫', label:'Schools' }, { key:'volunteers', icon:'🛒', label:'Volunteers' }, { key:'qrcodes', icon:'📱', label:'QR Codes' }, { key:'shopday', icon:'🏪', label:'Shopping Day' }, { key:'learning', icon:'📚', label:'Guide' }];
   return (
     <div style={{ maxWidth:isMobile?'100%':1000, margin:'0 auto', padding:isMobile?'16px 12px':'24px 32px' }}>
       <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
@@ -1474,6 +1562,7 @@ function AdminDashboard() {
       {activeTab === 'volunteers' && <VolunteersTab isMobile={isMobile}/>}
       {activeTab === 'qrcodes' && <QRCodesTab isMobile={isMobile}/>}
       {activeTab === 'shopday' && <ShoppingDayTab isMobile={isMobile}/>}
+      {activeTab === 'learning' && <LearningTab isMobile={isMobile}/>}
     </div>
   );
 }
