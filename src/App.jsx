@@ -1794,9 +1794,15 @@ function QRCodesTab({ isMobile }) {
             {vidProgress ? `⬇️ Downloading ${vidProgress.done}/${vidProgress.total}…` : `⬇️ Download All Videos (${children.filter(c => c.video_uploaded).length})`}
           </button>
         )}
+        {mode === 'cards' && children.length > 0 && (
+          <button onClick={()=>printMasterRoster(children)}
+            style={{ padding:'10px 20px', borderRadius:8, border:`1.5px solid ${C.navy}`, fontSize:13, fontWeight:700, background:'#fff', color:C.navy, cursor:'pointer' }}>
+            🖨️ Master Roster ({children.length})
+          </button>
+        )}
         {mode === 'cards' && (
           <span style={{ fontSize:11, color:C.muted, flexBasis:'100%' }}>
-            Cards link each child's QR to their video + full profile page. Half-sheets print 2 per letter page (cut in half). "Download all" saves each video as a separate file — your browser may ask once to allow multiple downloads.
+            Cards link each child's QR to their video + full profile page. Half-sheets print 2 per letter page (cut in half). "Download all" saves each video as a separate file — your browser may ask once to allow multiple downloads. "Master Roster" prints a one-line-per-child overview grouped by school (allergies flagged in red).
           </span>
         )}
       </div>
@@ -2228,6 +2234,95 @@ function printAllHalfSheets(children, qrMap) {
   <body>${pages}</body></html>`);
   win.document.close();
   setTimeout(() => win.print(), 600);
+}
+
+// Master roster → one dense landscape table of every child with completed intake,
+// grouped by school. Coordinator reference / check-in sheet. Save as PDF from the dialog.
+function printMasterRoster(children) {
+  const kids = (children || []).slice();
+  if (!kids.length) { alert('No children with completed intake to list yet.'); return; }
+  const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;' }[c]));
+
+  const bySchool = {};
+  kids.forEach(c => { const s = c.school || 'Unassigned'; (bySchool[s] = bySchool[s] || []).push(c); });
+  const schools = Object.keys(bySchool).sort();
+  schools.forEach(s => bySchool[s].sort((a, b) => (a.child_first || '').localeCompare(b.child_first || '')));
+
+  const lastInit = c => c.child_last ? ` ${esc(String(c.child_last).trim().charAt(0))}.` : '';
+  let rows = '', idx = 0;
+  for (const s of schools) {
+    const list = bySchool[s];
+    const sv = list.filter(c => c.video_uploaded).length;
+    rows += `<tr class="school"><td colspan="12">${esc(s)} — ${list.length} ${list.length === 1 ? 'child' : 'children'} · ${sv} with video</td></tr>`;
+    for (const c of list) {
+      idx++;
+      const allergy = (c.allergies || '').trim();
+      const dept = esc(c.department || c.gender || '');
+      rows += `<tr class="${idx % 2 ? '' : 'alt'}">`
+        + `<td class="num">${idx}</td>`
+        + `<td class="name">${esc(c.child_first || '')}${lastInit(c)}</td>`
+        + `<td class="ctr">${esc(c.grade || '')}</td>`
+        + `<td class="ctr">${esc(c.child_age || '')}</td>`
+        + `<td class="cap">${dept}</td>`
+        + `<td class="ctr">${esc(c.shirt_size || '')}</td>`
+        + `<td class="ctr">${esc(c.pant_size || '')}</td>`
+        + `<td class="ctr">${esc(c.shoe_size || '')}</td>`
+        + `<td>${esc(c.favorite_colors || '')}</td>`
+        + `<td>${esc(c.avoid_colors || '')}</td>`
+        + `<td class="${allergy ? 'allergy' : 'dash'}">${allergy ? ('⚠ ' + esc(allergy)) : '—'}</td>`
+        + `<td class="ctr vid">${c.video_uploaded ? '<span class="yes">✓</span>' : '<span class="dash">—</span>'}</td>`
+        + `</tr>`;
+    }
+  }
+
+  const total = kids.length;
+  const withVideo = kids.filter(c => c.video_uploaded).length;
+  const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700;800&display=swap');
+    @page { size: letter landscape; margin: 0.35in; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Libre Franklin',-apple-system,Arial,sans-serif; color:#1B3A4B; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .head { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2.5px solid #1B3A4B; padding-bottom:6px; margin-bottom:9px; }
+    .title { font-size:15pt; font-weight:800; }
+    .sub { font-size:8.5pt; color:#475569; text-align:right; line-height:1.4; }
+    table { width:100%; border-collapse:collapse; font-size:8pt; }
+    thead th { background:#1B3A4B; color:#fff; font-size:7pt; text-transform:uppercase; letter-spacing:0.4px; padding:5px 5px; text-align:left; }
+    thead th.ctr { text-align:center; }
+    tbody td { padding:3px 5px; border-bottom:0.5px solid #E2E8F0; vertical-align:top; line-height:1.2; }
+    tr.alt td { background:#F6F9FC; }
+    td.num { color:#94A3B8; font-size:7pt; width:20px; }
+    td.name { font-weight:700; white-space:nowrap; }
+    td.ctr { text-align:center; }
+    td.cap { text-transform:capitalize; }
+    td.vid .yes { color:#059669; font-weight:800; }
+    td.dash { color:#CBD5E1; }
+    td.allergy { color:#B91C1C; font-weight:700; }
+    tr.school td { background:#E8548C; color:#fff; font-weight:800; font-size:8.5pt; padding:5px 7px; letter-spacing:0.3px; }
+    tfoot td { padding-top:9px; font-size:8pt; color:#64748B; border-top:1.5px solid #1B3A4B; }
+  `;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Child Spree 2026 — Master Roster</title>
+  <style>${styles}</style></head><body>
+    <div class="head">
+      <div class="title">🛒 Child Spree 2026 — Master Roster</div>
+      <div class="sub">${total} children ready for shopping · ${withVideo} with video<br/>${schools.length} schools · Printed ${today}</div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Name</th><th class="ctr">Gr</th><th class="ctr">Age</th><th>Dept</th>
+        <th class="ctr">Shirt</th><th class="ctr">Pant</th><th class="ctr">Shoe</th>
+        <th>Loves</th><th>Avoid</th><th>Allergies</th><th class="ctr">Video</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="12">$150 head-to-toe per child · Allergies flagged in red — please double-check before purchasing.</td></tr></tfoot>
+    </table>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Pop-up blocked — allow pop-ups to print.'); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
 }
 const STORES = [
   { id:'layton', label:"Kohl's Layton", cap:200 },

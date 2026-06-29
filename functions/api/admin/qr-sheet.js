@@ -27,7 +27,7 @@ export async function onRequestGet(context) {
   const schoolFilter = url.searchParams.get('school');
 
   let sql = `
-    SELECT n.id, n.parent_token, n.child_first, n.school, n.grade,
+    SELECT n.id, n.parent_token, n.child_first, n.child_last, n.school, n.grade,
            i.gender, i.department, i.shirt_size, i.pant_size, i.shoe_size,
            i.favorite_colors, i.avoid_colors, i.allergies, i.preferences,
            i.child_age, i.video_uploaded
