@@ -52,6 +52,27 @@ export async function onRequestGet(context) {
   const contentType = object.httpMetadata?.contentType || 'video/mp4';
   const size = object.size;
 
+  // Download mode (?download[&name=FirstName]) — force save-as with a real filename + extension.
+  // Used by the admin Shopper Cards tools (per-kid + bulk video download).
+  if (url.searchParams.has('download')) {
+    const extMap = {
+      'video/webm': 'webm', 'video/mp4': 'mp4', 'video/quicktime': 'mov',
+      'video/x-matroska': 'mkv', 'video/x-m4v': 'm4v', 'video/3gpp': '3gp',
+    };
+    const ext = extMap[contentType.split(';')[0].trim()] || 'mp4';
+    const safe = (url.searchParams.get('name') || token)
+      .replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'video';
+    return cors(new Response(object.body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': size.toString(),
+        'Content-Disposition': `attachment; filename="${safe}.${ext}"`,
+        'Cache-Control': 'private, max-age=0',
+      },
+    }));
+  }
+
   // Handle Range requests for video seeking
   const rangeHeader = request.headers.get('Range');
 

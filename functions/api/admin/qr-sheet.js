@@ -28,7 +28,9 @@ export async function onRequestGet(context) {
 
   let sql = `
     SELECT n.id, n.parent_token, n.child_first, n.school, n.grade,
-           i.gender, i.department, i.shirt_size, i.pant_size, i.shoe_size
+           i.gender, i.department, i.shirt_size, i.pant_size, i.shoe_size,
+           i.favorite_colors, i.avoid_colors, i.allergies, i.preferences,
+           i.child_age, i.video_uploaded
     FROM nominations n
     JOIN parent_intake i ON i.nomination_id = n.id
     WHERE n.status = 'complete'

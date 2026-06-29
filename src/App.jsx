@@ -1550,7 +1550,7 @@ function AllocationsTab({ isMobile }) {
 
 // ─── QR CODES TAB (Admin) ───
 function QRCodesTab({ isMobile }) {
-  const [mode, setMode] = useState('volunteers'); // 'volunteers' | 'bags'
+  const [mode, setMode] = useState('volunteers'); // 'volunteers' | 'bags' | 'cards'
   const [volunteers, setVolunteers] = useState([]);
   const [children, setChildren] = useState([]);
   const [schools, setSchools] = useState([]);
@@ -1558,6 +1558,7 @@ function QRCodesTab({ isMobile }) {
   const [schoolFilter, setSchoolFilter] = useState('');
   const [qrDataUrls, setQrDataUrls] = useState({});
   const [generating, setGenerating] = useState(false);
+  const [vidProgress, setVidProgress] = useState(null);
   const printRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -1591,9 +1592,13 @@ function QRCodesTab({ isMobile }) {
       }
     } else {
       for (const child of children) {
-        const bagUrl = `${window.location.origin}/#/bag/${child.id}`;
+        // Cards mode → QR opens the mobile video + full-profile page (#/shop/{parent_token}).
+        // Bags mode → QR opens the delivery-confirmation flow (#/bag/{id}).
+        const targetUrl = mode === 'cards'
+          ? `${window.location.origin}/#/shop/${child.parent_token}`
+          : `${window.location.origin}/#/bag/${child.id}`;
         try {
-          urls[child.id] = await QRCode.toDataURL(bagUrl, { width: 200, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1B3A4B', light: '#ffffff' } });
+          urls[child.id] = await QRCode.toDataURL(targetUrl, { width: 200, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1B3A4B', light: '#ffffff' } });
         } catch (e) { console.error('QR gen failed for', child.id, e); }
       }
     }
@@ -1672,11 +1677,15 @@ function QRCodesTab({ isMobile }) {
           border:`1.5px solid ${mode==='bags'?C.navy:C.border}`, background:mode==='bags'?C.navy:'#fff', color:mode==='bags'?'#fff':C.muted }}>
           📦 Bag Labels
         </button>
+        <button onClick={()=>setMode('cards')} style={{ padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer',
+          border:`1.5px solid ${mode==='cards'?C.navy:C.border}`, background:mode==='cards'?C.navy:'#fff', color:mode==='cards'?'#fff':C.muted }}>
+          🛍️ Shopper Cards
+        </button>
       </div>
 
       {/* Controls */}
       <div style={{ ...cardStyle, display:'flex', flexWrap:'wrap', gap:12, alignItems:'center' }}>
-        {mode === 'bags' && (
+        {(mode === 'bags' || mode === 'cards') && (
           <select value={schoolFilter} onChange={e => setSchoolFilter(e.target.value)}
             style={{ padding:'8px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, minWidth:200 }}>
             <option value="">All Schools ({children.length})</option>
@@ -1688,10 +1697,27 @@ function QRCodesTab({ isMobile }) {
             background: generating ? C.light : C.navy, color:'#fff', cursor: generating ? 'default' : 'pointer' }}>
           {generating ? '⏳ Generating…' : `📱 Generate ${itemCount} QR Codes`}
         </button>
-        {Object.keys(qrDataUrls).length > 0 && (
+        {mode !== 'cards' && Object.keys(qrDataUrls).length > 0 && (
           <button onClick={handlePrint} style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, background:C.pink, color:'#fff', cursor:'pointer' }}>
             🖨️ Print Sheets
           </button>
+        )}
+        {mode === 'cards' && Object.keys(qrDataUrls).length > 0 && (
+          <button onClick={()=>printAllHalfSheets(children, qrDataUrls)} style={{ padding:'10px 20px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, background:C.pink, color:'#fff', cursor:'pointer' }}>
+            🖨️ Print All Half-Sheets ({Object.keys(qrDataUrls).length})
+          </button>
+        )}
+        {mode === 'cards' && children.filter(c => c.video_uploaded).length > 0 && (
+          <button onClick={async ()=>{ setVidProgress({done:0,total:children.filter(c=>c.video_uploaded).length}); await downloadAllVideos(children, (d,t)=>setVidProgress({done:d,total:t})); setTimeout(()=>setVidProgress(null), 2500); }}
+            disabled={!!vidProgress}
+            style={{ padding:'10px 20px', borderRadius:8, border:`1.5px solid ${C.navy}`, fontSize:13, fontWeight:700, background: vidProgress ? C.light : '#fff', color:C.navy, cursor: vidProgress ? 'default' : 'pointer' }}>
+            {vidProgress ? `⬇️ Downloading ${vidProgress.done}/${vidProgress.total}…` : `⬇️ Download All Videos (${children.filter(c => c.video_uploaded).length})`}
+          </button>
+        )}
+        {mode === 'cards' && (
+          <span style={{ fontSize:11, color:C.muted, flexBasis:'100%' }}>
+            Cards link each child's QR to their video + full profile page. Half-sheets print 2 per letter page (cut in half). "Download all" saves each video as a separate file — your browser may ask once to allow multiple downloads.
+          </span>
         )}
       </div>
 
@@ -1753,10 +1779,28 @@ function QRCodesTab({ isMobile }) {
                   <div style={{ fontSize:11, color:C.muted }}>{child.school}</div>
                   <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>Grade {child.grade || '?'}</div>
                   <div style={{ fontSize:10, color:C.text, marginTop:4, fontWeight:600 }}>👕{child.shirt_size} 👖{child.pant_size} 👟{child.shoe_size}</div>
-                  <button onClick={()=>printBagTag(child, qr)}
-                    style={{ marginTop:8, padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:11, fontWeight:600, color:C.navy, cursor:'pointer', width:'100%' }}>
-                    🏷️ Print Tag
-                  </button>
+                  {mode === 'cards' ? (
+                    <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:6 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color: child.video_uploaded ? C.green : C.light }}>
+                        {child.video_uploaded ? '🎥 Has video' : '○ No video yet'}
+                      </div>
+                      <button onClick={()=>printHalfSheet(child, qr)}
+                        style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:11, fontWeight:600, color:C.navy, cursor:'pointer', width:'100%' }}>
+                        🖨️ Half-Sheet
+                      </button>
+                      {child.video_uploaded && (
+                        <button onClick={()=>downloadOneVideo(child)}
+                          style={{ padding:'5px 12px', borderRadius:6, border:'none', background:C.navy, fontSize:11, fontWeight:600, color:'#fff', cursor:'pointer', width:'100%' }}>
+                          ⬇️ Video
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <button onClick={()=>printBagTag(child, qr)}
+                      style={{ marginTop:8, padding:'5px 12px', borderRadius:6, border:`1px solid ${C.border}`, background:'#fff', fontSize:11, fontWeight:600, color:C.navy, cursor:'pointer', width:'100%' }}>
+                      🏷️ Print Tag
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1955,7 +1999,156 @@ function printBagTag(child, qrDataUrl) {
   setTimeout(() => win.print(), 400);
 }
 
-// ─── SHOPPING DAY TAB (Admin — Full Dashboard + Ops) ───
+// ─── SHOPPER CARD HELPERS (half-sheet PDF + video download) ───
+// Per-kid video download routes through /api/video/:token?download&name= so the
+// Worker sets Content-Disposition + the correct file extension (webm/mp4/mov).
+function videoDownloadUrl(child) {
+  const name = encodeURIComponent((child.child_first || child.childFirst || 'child').trim());
+  return `${API}/video/${child.parent_token}?admin=1&download=1&name=${name}`;
+}
+
+function downloadOneVideo(child) {
+  if (!child.parent_token) return;
+  const a = document.createElement('a');
+  a.href = videoDownloadUrl(child);
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 0);
+}
+
+// Bulk: trigger each download in sequence (staggered) so the browser queues them.
+// Saves individually-named files (FirstName.mp4) — ideal for an archive/backup.
+async function downloadAllVideos(children, onProgress) {
+  const withVideo = (children || []).filter(c => c.video_uploaded && c.parent_token);
+  for (let i = 0; i < withVideo.length; i++) {
+    downloadOneVideo(withVideo[i]);
+    if (onProgress) onProgress(i + 1, withVideo.length);
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  return withVideo.length;
+}
+
+function halfSheetStyles(pageRule) {
+  return `
+  @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700;800&family=Playfair+Display:wght@700;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  ${pageRule}
+  html, body { background:#fff; }
+  body { font-family:'Libre Franklin',-apple-system,sans-serif; color:#1B3A4B; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .card { width:8.5in; height:5.5in; padding:0.32in 0.36in; display:flex; flex-direction:column; overflow:hidden; background:#fff; }
+  .card.empty { visibility:hidden; }
+  .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2.5px solid #1B3A4B; padding-bottom:7px; margin-bottom:11px; }
+  .brand { font-weight:800; font-size:13pt; letter-spacing:0.2px; }
+  .htag { font-size:8.5pt; font-weight:700; text-transform:uppercase; letter-spacing:1.6px; color:#E8548C; }
+  .body { display:flex; gap:0.32in; flex:1; min-height:0; }
+  .left { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .name { font-family:'Playfair Display',serif; font-weight:800; font-size:31pt; line-height:1; color:#1B3A4B; }
+  .meta { font-size:9.5pt; color:#475569; margin-top:4px; }
+  .dept { font-size:8.5pt; color:#64748B; text-transform:capitalize; margin-top:1px; }
+  .sizes { display:flex; gap:9px; margin-top:12px; }
+  .sz { flex:1; background:#F0F9FF; border:1.5px solid #BAE6FD; border-radius:9px; text-align:center; padding:8px 2px; }
+  .szi { font-size:16pt; line-height:1; }
+  .szl { font-size:6.5pt; color:#64748B; font-weight:700; margin-top:3px; text-transform:uppercase; letter-spacing:0.5px; }
+  .szv { font-size:14pt; font-weight:800; margin-top:1px; color:#1B3A4B; }
+  .prefs { margin-top:11px; display:flex; flex-direction:column; gap:4px; }
+  .pf { font-size:9pt; line-height:1.3; }
+  .pfl { font-weight:800; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.5px; margin-right:4px; }
+  .pfl.love { color:#059669; } .pfl.avoid { color:#DC2626; } .pfl.note { color:#2563EB; }
+  .pfv { font-weight:600; color:#1E293B; }
+  .allergy { margin-top:8px; border:1.5px solid #DC2626; border-radius:7px; padding:5px 9px; font-size:9pt; font-weight:700; color:#991B1B; }
+  .allergy .al { font-weight:800; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.5px; margin-right:4px; }
+  .budget { margin-top:auto; font-size:11.5pt; font-weight:800; color:#E8548C; padding-top:9px; }
+  .right { width:2.95in; display:flex; flex-direction:column; align-items:center; justify-content:center; border-left:1px dashed #CBD5E1; padding-left:0.28in; }
+  .qr { width:2.55in; height:2.55in; }
+  .qr.noqr { display:flex; align-items:center; justify-content:center; background:#F1F5F9; color:#94A3B8; font-size:9pt; border-radius:8px; text-align:center; padding:8px; }
+  .scan { text-align:center; font-size:9.5pt; margin-top:9px; color:#334155; line-height:1.35; }
+  .scan b { color:#1B3A4B; }
+  .url { font-size:8pt; color:#94A3B8; margin-top:5px; font-weight:700; letter-spacing:0.5px; }
+  `;
+}
+
+function halfSheetCardHTML(child, qrDataUrl, extraClass) {
+  const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;' }[c]));
+  const first = esc(child.child_first || child.childFirst || 'Child');
+  const age = child.child_age || child.age;
+  const meta = [esc(child.school), child.grade ? `Grade ${esc(child.grade)}` : null, age ? `Age ${esc(age)}` : null].filter(Boolean).join(' &middot; ');
+  const dept = child.department ? `${esc(child.gender || child.department)} &middot; ${esc(child.department)} dept` : '';
+  const loves = esc(child.favorite_colors || child.favoriteColors || '');
+  const avoid = esc(child.avoid_colors || child.avoidColors || '');
+  const allergies = esc(child.allergies || '');
+  const notes = esc(child.preferences || '');
+  const qrHtml = qrDataUrl
+    ? `<img class="qr" src="${qrDataUrl}" alt="QR"/>`
+    : `<div class="qr noqr">Generate QR codes first to print with a scan code</div>`;
+  return `
+  <div class="card ${extraClass || ''}">
+    <div class="hdr">
+      <span class="brand">🛒 Child Spree 2026</span>
+      <span class="htag">Shopping Card</span>
+    </div>
+    <div class="body">
+      <div class="left">
+        <div class="name">${first}</div>
+        <div class="meta">${meta}</div>
+        ${dept ? `<div class="dept">${dept}</div>` : ''}
+        <div class="sizes">
+          <div class="sz"><div class="szi">👕</div><div class="szl">Shirt</div><div class="szv">${esc(child.shirt_size || child.shirtSize || '—')}</div></div>
+          <div class="sz"><div class="szi">👖</div><div class="szl">Pants</div><div class="szv">${esc(child.pant_size || child.pantSize || '—')}</div></div>
+          <div class="sz"><div class="szi">👟</div><div class="szl">Shoes</div><div class="szv">${esc(child.shoe_size || child.shoeSize || '—')}</div></div>
+        </div>
+        <div class="prefs">
+          ${loves ? `<div class="pf"><span class="pfl love">♥ Loves</span><span class="pfv">${loves}</span></div>` : ''}
+          ${avoid ? `<div class="pf"><span class="pfl avoid">✕ Avoid</span><span class="pfv">${avoid}</span></div>` : ''}
+          ${notes ? `<div class="pf"><span class="pfl note">✎ Notes</span><span class="pfv">${notes}</span></div>` : ''}
+        </div>
+        ${allergies ? `<div class="allergy"><span class="al">⚠ Allergy</span>${allergies}</div>` : ''}
+        <div class="budget">💳 $150 — head to toe</div>
+      </div>
+      <div class="right">
+        ${qrHtml}
+        <div class="scan">📱 Scan to watch<br/><b>${first}'s</b> video &amp; full profile</div>
+        <div class="url">childspree.org</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Single half-sheet → its own 8.5×5.5 page.
+function printHalfSheet(child, qrDataUrl) {
+  const win = window.open('', '_blank', 'width=900,height=620');
+  if (!win) { alert('Pop-up blocked — allow pop-ups to print.'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Shopping Card — ${(child.child_first || 'Child')}</title>
+  <style>${halfSheetStyles('@page { size:8.5in 5.5in; margin:0; }')}</style></head>
+  <body>${halfSheetCardHTML(child, qrDataUrl)}</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
+}
+
+// Bulk → two half-sheets per letter page (cut line down the middle), Save as PDF from the dialog.
+function printAllHalfSheets(children, qrMap) {
+  const items = (children || []).filter(c => qrMap[c.id]);
+  if (!items.length) { alert('Generate QR codes first.'); return; }
+  const win = window.open('', '_blank');
+  if (!win) { alert('Pop-up blocked — allow pop-ups to print.'); return; }
+  let pages = '';
+  for (let i = 0; i < items.length; i += 2) {
+    const a = items[i], b = items[i + 1];
+    const top = halfSheetCardHTML(a, qrMap[a.id], 'topcard');
+    const bottom = b ? halfSheetCardHTML(b, qrMap[b.id]) : '<div class="card empty"></div>';
+    pages += `<div class="sheetpage">${top}${bottom}</div>`;
+  }
+  const extra = `
+    .sheetpage { width:8.5in; height:11in; page-break-after:always; display:flex; flex-direction:column; }
+    .card.topcard { border-bottom:1px dashed #94A3B8; }
+  `;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Child Spree — Shopping Cards (${items.length})</title>
+  <style>${halfSheetStyles('@page { size:letter; margin:0; }')}${extra}</style></head>
+  <body>${pages}</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 600);
+}
 const STORES = [
   { id:'layton', label:"Kohl's Layton", cap:200 },
   { id:'centerville', label:"Kohl's Centerville", cap:175 },
