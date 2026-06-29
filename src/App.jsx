@@ -2248,7 +2248,8 @@ function halfSheetCardHTML(child, qrDataUrl, extraClass) {
   const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;' }[c]));
   const first = esc(child.child_first || child.childFirst || 'Child');
   const age = child.child_age || child.age;
-  const meta = [esc(child.school), child.grade ? `Grade ${esc(child.grade)}` : null, age ? `Age ${esc(age)}` : null].filter(Boolean).join(' &middot; ');
+  const sid = child.student_id || child.studentId;
+  const meta = [child.grade ? `Grade ${esc(child.grade)}` : null, age ? `Age ${esc(age)}` : null, sid ? `ID ${esc(sid)}` : null].filter(Boolean).join(' &middot; ');
   const dept = child.department ? `${esc(child.gender || child.department)} &middot; ${esc(child.department)} dept` : '';
   const loves = esc(child.favorite_colors || child.favoriteColors || '');
   const avoid = esc(child.avoid_colors || child.avoidColors || '');
@@ -4816,7 +4817,7 @@ function ShopperProfile({ token, volunteerView, assignment, volunteer }) {
   const isMobile = useIsMobile();
   const [profile, setProfile] = useState(assignment ? {
     childFirst: assignment.childFirst,
-    school: assignment.school,
+    studentId: assignment.studentId,
     grade: assignment.grade,
     age: assignment.age,
     gender: assignment.gender,
@@ -4917,7 +4918,7 @@ function ShopperProfile({ token, volunteerView, assignment, volunteer }) {
           Shopping for {p.childFirst}
         </h1>
         <div style={{ color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:8 }}>
-          {[p.school, p.grade ? `Grade ${p.grade}` : null, p.age ? `Age ${p.age}` : null].filter(Boolean).join(' · ')}
+          {[p.grade ? `Grade ${p.grade}` : null, p.age ? `Age ${p.age}` : null, p.studentId ? `ID ${p.studentId}` : null].filter(Boolean).join(' · ')}
         </div>
       </div>
 

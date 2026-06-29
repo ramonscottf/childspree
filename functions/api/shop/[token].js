@@ -23,7 +23,7 @@ export async function onRequestGet(context) {
 
   // Look up nomination by parent_token
   const nom = await env.DB.prepare(`
-    SELECT n.id, n.child_first, n.school, n.grade, n.status,
+    SELECT n.id, n.child_first, n.student_id, n.grade, n.status,
            i.gender, i.department, i.shirt_size, i.pant_size, i.shoe_size,
            i.favorite_colors, i.avoid_colors, i.allergies, i.preferences,
            i.video_key, i.video_uploaded, i.child_age
@@ -44,7 +44,7 @@ export async function onRequestGet(context) {
   // Return profile — NO last name for privacy
   return cors(Response.json({
     childFirst: nom.child_first,
-    school: nom.school,
+    studentId: nom.student_id,
     grade: nom.grade,
     age: nom.child_age,
     gender: nom.gender,

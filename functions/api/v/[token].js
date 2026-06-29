@@ -39,7 +39,7 @@ export async function onRequestGet(context) {
   // Check if they have an active assignment
   const assignment = await env.DB.prepare(`
     SELECT a.id as assignment_id, a.nomination_id, a.assigned_at, a.checked_out, a.checkout_at,
-           n.child_first, n.school, n.grade, n.parent_token,
+           n.child_first, n.student_id, n.grade, n.parent_token,
            i.shirt_size as child_shirt, i.pant_size, i.shoe_size,
            i.favorite_colors, i.avoid_colors, i.allergies, i.preferences,
            i.gender, i.department, i.video_key, i.video_uploaded, i.child_age
@@ -74,7 +74,7 @@ export async function onRequestGet(context) {
     response.assignment = {
       id: assignment.assignment_id,
       childFirst: assignment.child_first,
-      school: assignment.school,
+      studentId: assignment.student_id,
       grade: assignment.grade,
       age: assignment.child_age,
       gender: assignment.gender,
