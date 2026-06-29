@@ -1250,6 +1250,86 @@ function ParentIntake({ token }) {
 
 // ─── ADMIN ───
 const ADMIN_EMAILS = ['sfoster@dsdmail.net','kbuchi@dsdmail.net','ktoone@dsdmail.net'];
+// One-click full data export — every dataset in a single Excel workbook.
+// Pulls live from the admin APIs so it's always current; skips any sheet with no data.
+async function exportEverythingWorkbook() {
+  const [nres, vres, ares, gres] = await Promise.all([
+    api('/nominations').catch(() => ({ nominations: [] })),
+    api('/volunteers').catch(() => ({ volunteers: [] })),
+    api('/admin/allocations').catch(() => ({ schools: [] })),
+    api('/giftcards').catch(() => ({ giftCards: [] })),
+  ]);
+  const nominations = nres.nominations || [];
+  const volunteers = vres.volunteers || [];
+  const schools = ares.schools || [];
+  const giftCards = gres.giftCards || [];
+
+  const wb = XLSX.utils.book_new();
+  const addSheet = (name, rows) => {
+    if (!rows || !rows.length) return;
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.min(60, Math.max(k.length, ...rows.map(r => String(r[k] ?? '').length))) }));
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  };
+
+  // Summary
+  const withVideo = nominations.filter(n => n.parentIntake?.hasVideo).length;
+  const ready = nominations.filter(n => n.status === 'complete' && n.parentIntake?.hasVideo).length;
+  const byStatus = {};
+  nominations.forEach(n => { const s = (n.status === 'complete' && !n.parentIntake?.hasVideo) ? 'complete (no video)' : n.status; byStatus[s] = (byStatus[s] || 0) + 1; });
+  addSheet('Summary', [
+    { Metric: 'Total nominations', Value: nominations.length },
+    { Metric: 'Ready for shopping (complete + video)', Value: ready },
+    { Metric: 'Have a video', Value: withVideo },
+    ...Object.entries(byStatus).map(([k, v]) => ({ Metric: `Status — ${k}`, Value: v })),
+    { Metric: 'Schools represented', Value: new Set(nominations.map(n => n.school)).size },
+    { Metric: 'Total volunteers', Value: volunteers.length },
+    { Metric: 'Gift cards on file', Value: giftCards.length },
+    { Metric: 'Exported', Value: new Date().toLocaleString() },
+  ]);
+
+  // Nominations — every field
+  addSheet('Nominations', nominations.map(n => ({
+    'Child First': n.childFirst, 'Child Last': n.childLast,
+    'School': n.school, 'Grade': n.grade, 'Student ID': n.studentId || '', 'Age': n.parentIntake?.childAge || '',
+    'Status': n.status === 'complete' && (!n.parentIntake || !n.parentIntake.hasVideo) ? 'incomplete' : n.status,
+    'Parent Name': n.parentName, 'Parent Phone': n.parentPhone || '', 'Parent Email': n.parentEmail || '',
+    'FA Name': n.nominatorName, 'FA Role': n.nominatorRole, 'FA Email': n.nominatorEmail,
+    'Reason': n.reason || '',
+    'Shirt Size': n.parentIntake?.shirtSize || '', 'Pant Size': n.parentIntake?.pantSize || '', 'Shoe Size': n.parentIntake?.shoeSize || '',
+    'Favorite Colors': n.parentIntake?.favoriteColors || '', 'Colors to Avoid': n.parentIntake?.avoidColors || '',
+    'Allergies': n.parentIntake?.allergies || '', 'Preferences': n.parentIntake?.preferences || '',
+    'Video Recorded': n.parentIntake?.hasVideo ? 'Yes' : 'No',
+    'Parent Consent': n.parentIntake?.consent ? 'Yes' : 'No',
+    'Family Group': n.familyGroup || '',
+    'Nominated Date': n.createdAt?.split('T')[0] || n.createdAt?.split(' ')[0] || '',
+  })));
+
+  // Volunteers — every field
+  addSheet('Volunteers', volunteers.map(v => ({
+    'First Name': v.firstName, 'Last Name': v.lastName,
+    'Type': v.volunteerType === 'ops_crew' ? 'Operations Crew' : 'Shopper',
+    'Email': v.email || '', 'Phone': v.phone || '',
+    'Organization': v.organization || '', 'Group Type': v.groupType || 'Individual', 'Group Size': v.groupSize || '',
+    'Shirt Size': v.shirtSize || '', 'Arrival Time': v.arrivalTime || '', 'Store Location': v.storeLocation || '',
+    'SMS Opted In': v.smsOptIn ? 'Yes' : 'No',
+    'Experience': v.experience || '', 'Heard About Us': v.hearAbout || '',
+    'Status': v.status, 'Signed Up': v.createdAt?.split('T')[0] || v.createdAt?.split(' ')[0] || '',
+  })));
+
+  // Allocations by school (no export existed for this before)
+  addSheet('Allocations by School', schools.map(s => ({
+    'School': s.school, 'Allocated': s.allocated, 'Used': s.used, 'Remaining': s.remaining,
+    'Pending': s.pending, 'Approved': s.approved, 'Sent': s.sent, 'Complete': s.complete,
+  })));
+
+  // Gift cards — raw rows (money reconciliation; no export existed before)
+  addSheet('Gift Cards', giftCards);
+
+  if (wb.SheetNames.length === 0) { alert('No data to export yet.'); return; }
+  XLSX.writeFile(wb, `ChildSpree_FULL_EXPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 function AdminDashboard() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('nominations');
@@ -3051,6 +3131,7 @@ function NominationsTab({ isMobile }) {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [fullExp, setFullExp] = useState(false);
   const load = useCallback(async () => {
     try { const p=new URLSearchParams(); if(filter!=='all')p.set('status',filter); if(search)p.set('search',search); const data=await api(`/nominations?${p}`); setNominations(data.nominations); } catch(e){console.error(e);}
     setLoading(false);
@@ -3104,6 +3185,11 @@ function NominationsTab({ isMobile }) {
           XLSX.utils.book_append_sheet(wb, ws, 'Nominations');
           XLSX.writeFile(wb, `ChildSpree_Nominations_${new Date().toISOString().split('T')[0]}.xlsx`);
         }} style={{ padding:'6px 14px', background:C.navy, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>📥 Export Excel</button>
+        <button disabled={fullExp} onClick={async()=>{ setFullExp(true); try{ await exportEverythingWorkbook(); }catch(e){ alert('Export failed: '+e.message); } setFullExp(false); }}
+          title="One workbook: nominations, volunteers, allocations, gift cards + summary"
+          style={{ padding:'6px 14px', background: fullExp?C.light:C.pink, color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor: fullExp?'default':'pointer', whiteSpace:'nowrap' }}>
+          {fullExp ? '⏳ Exporting…' : '📦 Export Everything'}
+        </button>
         <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp(), width:isMobile?'100%':200, fontSize:13}}/>
       </div>
       {loading ? <div style={{ textAlign:'center', padding:60, color:C.light }}>Loading...</div>
