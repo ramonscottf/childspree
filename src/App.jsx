@@ -116,7 +116,7 @@ const LANG = {
     colorsPlaceholder:'e.g., Blue, dinosaurs, soccer',
     avoidLabel:'Colors or styles to avoid?',
     avoidPlaceholder:'e.g., No pink, no ruffles',
-    sensoryLabel:'Allergies or sensory needs?',
+    sensoryLabel:'Sensory & fabric needs?',
     sensoryPlaceholder:'e.g., No wool, needs soft fabrics',
     notesLabel:'Anything else?',
     consentLabel:'I give permission for my child to participate in Child Spree 2026, including being recorded on video at school by their family advocate. I agree that the information I provide will be used by volunteers to shop for my child.',
@@ -1174,7 +1174,7 @@ function ParentIntake({ token }) {
     if (!form.shirtSize||!form.pantSize||!form.shoeSize) { alert(lang==='es'?'Por favor complete las tallas de camiseta, pantalón y zapato.':'Please fill in shirt, pant, and shoe sizes.'); return; }
     if (!form.favoriteColors.trim()) { alert(lang==='es'?'Por favor ingrese los colores o estilos favoritos de su hijo/a.':'Please fill in your child\'s favorite colors, styles, or characters. This helps the volunteer shop for them!'); return; }
     if (!form.avoidColors.trim()) { alert(lang==='es'?'Por favor ingrese los colores o estilos que se deben evitar.':'Please fill in colors or styles to avoid. If none, type "None".'); return; }
-    if (!form.allergies.trim()) { alert(lang==='es'?'Por favor ingrese alergias o necesidades sensoriales. Si no hay, escriba "Ninguna".':'Please fill in allergies or sensory needs. If none, type "None".'); return; }
+    if (!form.allergies.trim()) { alert(lang==='es'?'Por favor ingrese necesidades sensoriales o de tela. Si no hay, escriba "Ninguna".':'Please fill in sensory or fabric needs. If none, type "None".'); return; }
     if (!form.parentConsent) { alert(t('consentRequired')); return; }
     setSubmitting(true);
     try { await api(`/intake/${token}`,{method:'POST',body:JSON.stringify({...form,language:lang})}); setStep('done'); } catch(err){setError(err.message);}
@@ -1231,7 +1231,7 @@ function ParentIntake({ token }) {
           <p style={secHead(isMobile)}>Preferences</p>
           <Field label="Favorite colors, styles, characters? *"><input style={inp()} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)} placeholder="e.g., Blue, dinosaurs, soccer"/></Field>
           <Field label="Colors or styles to avoid? *"><input style={inp()} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)} placeholder='e.g., No pink, no ruffles — or "None"'/></Field>
-          <Field label="Allergies or sensory needs? *"><input style={inp()} value={form.allergies} onChange={e=>upd('allergies',e.target.value)} placeholder='e.g., No wool, needs soft fabrics — or "None"'/></Field>
+          <Field label="Sensory & fabric needs? *"><input style={inp()} value={form.allergies} onChange={e=>upd('allergies',e.target.value)} placeholder='e.g., No wool, needs soft fabrics — or "None"'/></Field>
         </div>
       </div>
       {/* Consent checkbox */}
@@ -1299,7 +1299,7 @@ async function exportEverythingWorkbook() {
     'Reason': n.reason || '',
     'Shirt Size': n.parentIntake?.shirtSize || '', 'Pant Size': n.parentIntake?.pantSize || '', 'Shoe Size': n.parentIntake?.shoeSize || '',
     'Favorite Colors': n.parentIntake?.favoriteColors || '', 'Colors to Avoid': n.parentIntake?.avoidColors || '',
-    'Allergies': n.parentIntake?.allergies || '', 'Preferences': n.parentIntake?.preferences || '',
+    'Sensory & fabric needs': n.parentIntake?.allergies || '', 'Preferences': n.parentIntake?.preferences || '',
     'Video Recorded': n.parentIntake?.hasVideo ? 'Yes' : 'No',
     'Parent Consent': n.parentIntake?.consent ? 'Yes' : 'No',
     'Family Group': n.familyGroup || '',
@@ -1891,7 +1891,7 @@ function QRCodesTab({ isMobile }) {
         )}
         {mode === 'cards' && (
           <span style={{ fontSize:11, color:C.muted, flexBasis:'100%' }}>
-            Cards link each child's QR to their video + full profile page. Half-sheets print 2 per letter page (cut in half). "Download all" saves each video as a separate file — your browser may ask once to allow multiple downloads. "Master Roster" prints a one-line-per-child overview grouped by school (allergies flagged in red).
+            Cards link each child's QR to their video + full profile page. Half-sheets print 2 per letter page (cut in half). "Download all" saves each video as a separate file — your browser may ask once to allow multiple downloads. "Master Roster" prints a one-line-per-child overview grouped by school (sensory/fabric needs noted).
           </span>
         )}
       </div>
@@ -2162,7 +2162,7 @@ function printBagTag(child, qrDataUrl) {
 
   ${colors ? `<div class="section"><div class="section-label">♥ Loves</div><div class="section-value colors-love">${colors}</div></div>` : ''}
   ${avoid ? `<div class="section"><div class="section-label">✕ Avoid</div><div class="section-value colors-avoid">${avoid}</div></div>` : ''}
-  ${allergies ? `<div class="allergy-box"><div class="allergy-label">⚠ Allergy</div>${allergies}</div>` : ''}
+  ${allergies ? `<div class="allergy-box"><div class="allergy-label">Sensory/fabric needs</div>${allergies}</div>` : ''}
 
   <div class="footer">
     <div class="budget">$150 — HEAD TO TOE</div>
@@ -2232,7 +2232,7 @@ function halfSheetStyles(pageRule) {
   .pfl { font-weight:800; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.5px; margin-right:4px; }
   .pfl.love { color:#059669; } .pfl.avoid { color:#DC2626; } .pfl.note { color:#2563EB; }
   .pfv { font-weight:600; color:#1E293B; }
-  .allergy { margin-top:8px; border:1.5px solid #DC2626; border-radius:7px; padding:5px 9px; font-size:9pt; font-weight:700; color:#991B1B; }
+  .allergy { margin-top:8px; border:1px solid #CBD5E1; border-radius:7px; padding:5px 9px; font-size:9pt; font-weight:700; color:#334155; }
   .allergy .al { font-weight:800; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.5px; margin-right:4px; }
   .budget { margin-top:auto; font-size:11.5pt; font-weight:800; color:#E8548C; padding-top:9px; }
   .right { width:2.95in; display:flex; flex-direction:column; align-items:center; justify-content:center; border-left:1px dashed #CBD5E1; padding-left:0.28in; }
@@ -2279,7 +2279,7 @@ function halfSheetCardHTML(child, qrDataUrl, extraClass) {
           ${avoid ? `<div class="pf"><span class="pfl avoid">✕ Avoid</span><span class="pfv">${avoid}</span></div>` : ''}
           ${notes ? `<div class="pf"><span class="pfl note">✎ Notes</span><span class="pfv">${notes}</span></div>` : ''}
         </div>
-        ${allergies ? `<div class="allergy"><span class="al">⚠ Allergy</span>${allergies}</div>` : ''}
+        ${allergies ? `<div class="allergy"><span class="al">Sensory / fabric needs</span>${allergies}</div>` : ''}
         <div class="budget">💳 $150 — head to toe</div>
       </div>
       <div class="right">
@@ -2359,7 +2359,7 @@ function printMasterRoster(children) {
         + `<td class="ctr">${esc(c.shoe_size || '')}</td>`
         + `<td>${esc(c.favorite_colors || '')}</td>`
         + `<td>${esc(c.avoid_colors || '')}</td>`
-        + `<td class="${allergy ? 'allergy' : 'dash'}">${allergy ? ('⚠ ' + esc(allergy)) : '—'}</td>`
+        + `<td class="${allergy ? 'allergy' : 'dash'}">${allergy ? esc(allergy) : '—'}</td>`
         + `<td class="ctr vid">${c.video_uploaded ? '<span class="yes">✓</span>' : '<span class="dash">—</span>'}</td>`
         + `</tr>`;
     }
@@ -2387,7 +2387,7 @@ function printMasterRoster(children) {
     td.cap { text-transform:capitalize; }
     td.vid .yes { color:#059669; font-weight:800; }
     td.dash { color:#CBD5E1; }
-    td.allergy { color:#B91C1C; font-weight:700; }
+    td.allergy { color:#334155; font-weight:700; }
     tr.school td { background:#E8548C; color:#fff; font-weight:800; font-size:8.5pt; padding:5px 7px; letter-spacing:0.3px; }
     tfoot td { padding-top:9px; font-size:8pt; color:#64748B; border-top:1.5px solid #1B3A4B; }
   `;
@@ -2401,10 +2401,10 @@ function printMasterRoster(children) {
       <thead><tr>
         <th>#</th><th>Name</th><th class="ctr">Gr</th><th class="ctr">Age</th><th>Dept</th>
         <th class="ctr">Shirt</th><th class="ctr">Pant</th><th class="ctr">Shoe</th>
-        <th>Loves</th><th>Avoid</th><th>Allergies</th><th class="ctr">Video</th>
+        <th>Loves</th><th>Avoid</th><th>Sensory/fabric</th><th class="ctr">Video</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="12">$150 head-to-toe per child · Allergies flagged in red — please double-check before purchasing.</td></tr></tfoot>
+      <tfoot><tr><td colspan="12">$150 head-to-toe per child · "Sensory/fabric" = each child’s fabric & comfort needs from their parent — please check before purchasing.</td></tr></tfoot>
     </table>
   </body></html>`;
 
@@ -3205,7 +3205,7 @@ function AdminNomDetails({ n, isMobile, updateStatus, copyLink, onSaved }) {
               <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoes</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
               <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Fav colors</label><input style={{...inp(),marginBottom:0}} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)}/></div>
               <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Avoid colors</label><input style={{...inp(),marginBottom:0}} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)}/></div>
-              <div style={{gridColumn:'span 2'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Allergies</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
+              <div style={{gridColumn:'span 2'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Sensory & fabric needs</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
               <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Preferences</label><input style={{...inp(),marginBottom:0}} value={form.preferences} onChange={e=>upd('preferences',e.target.value)}/></div>
             </div>
           </>}
@@ -3267,7 +3267,7 @@ function AdminNomDetails({ n, isMobile, updateStatus, copyLink, onSaved }) {
                   </div>
                 ))}
               </div>
-              {(n.parentIntake.allergies||n.parentIntake.preferences)&&(<div style={{ marginTop:8, fontSize:12, color:'#166534', lineHeight:1.5 }}>{n.parentIntake.allergies&&<div><strong>Allergies:</strong> {n.parentIntake.allergies}</div>}{n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}</div>)}
+              {(n.parentIntake.allergies||n.parentIntake.preferences)&&(<div style={{ marginTop:8, fontSize:12, color:'#166534', lineHeight:1.5 }}>{n.parentIntake.allergies&&<div><strong>Sensory & fabric needs:</strong> {n.parentIntake.allergies}</div>}{n.parentIntake.preferences&&<div><strong>Preferences:</strong> {n.parentIntake.preferences}</div>}</div>)}
               <div style={{ marginTop:8, fontSize:12, fontWeight:600, color:n.parentIntake.hasVideo?'#065F46':'#DC2626' }}>
                 {n.parentIntake.hasVideo ? (
                   <div>
@@ -3357,7 +3357,7 @@ function NominationsTab({ isMobile }) {
             'Reason': n.reason||'',
             'Shirt Size': n.parentIntake?.shirtSize||'', 'Pant Size': n.parentIntake?.pantSize||'', 'Shoe Size': n.parentIntake?.shoeSize||'',
             'Favorite Colors': n.parentIntake?.favoriteColors||'', 'Colors to Avoid': n.parentIntake?.avoidColors||'',
-            'Allergies': n.parentIntake?.allergies||'', 'Preferences': n.parentIntake?.preferences||'',
+            'Sensory & fabric needs': n.parentIntake?.allergies||'', 'Preferences': n.parentIntake?.preferences||'',
             'Video Recorded': n.parentIntake?.hasVideo?'Yes':'No',
             'Parent Consent': n.parentIntake?.consent?'Yes':'No',
             'Family Group': n.familyGroup||'',
@@ -4543,7 +4543,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                       <div><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Shoe size</label><input style={{...inp(),marginBottom:0}} value={form.shoeSize} onChange={e=>upd('shoeSize',e.target.value)}/></div>
                       <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Favorite colors</label><input style={{...inp(),marginBottom:0}} value={form.favoriteColors} onChange={e=>upd('favoriteColors',e.target.value)}/></div>
                       <div style={{gridColumn:isMobile?'1/-1':'span 1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Colors to avoid</label><input style={{...inp(),marginBottom:0}} value={form.avoidColors} onChange={e=>upd('avoidColors',e.target.value)}/></div>
-                      <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Allergies / notes</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
+                      <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Sensory & fabric needs</label><input style={{...inp(),marginBottom:0}} value={form.allergies} onChange={e=>upd('allergies',e.target.value)}/></div>
                       <div style={{gridColumn:'1/-1'}}><label style={{ fontSize:11, color:C.muted, display:'block', marginBottom:3 }}>Preferences / special requests</label><input style={{...inp(),marginBottom:0}} value={form.preferences} onChange={e=>upd('preferences',e.target.value)}/></div>
                     </div>
                   </div>
@@ -4566,7 +4566,7 @@ function PortalNomCard({ n, session, navigate, statusColor, statusLabel, isMobil
                 )}
                 {!editing && (intake.allergies || intake.preferences) && (
                   <div style={{ marginTop:10, fontSize:12, color:C.text, lineHeight:1.6 }}>
-                    {intake.allergies && <div><strong>Allergies:</strong> {intake.allergies}</div>}
+                    {intake.allergies && <div><strong>Sensory & fabric needs:</strong> {intake.allergies}</div>}
                     {intake.preferences && <div><strong>Preferences:</strong> {intake.preferences}</div>}
                   </div>
                 )}
@@ -5016,10 +5016,10 @@ function ShopperProfile({ token, volunteerView, assignment, volunteer }) {
           </div>
         )}
 
-        {/* Allergies */}
+        {/* Sensory & fabric needs */}
         {p.allergies && (
-          <div style={{ ...cardStyle, border:'2px solid #FCA5A5', background:'#FFF5F5' }}>
-            <div style={{ ...labelStyle, color:C.red }}>⚠️ Allergies / Sensitivities</div>
+          <div style={cardStyle}>
+            <div style={labelStyle}>🧵 Sensory & fabric needs</div>
             <div style={{ fontSize:15, fontWeight:600, color:C.text, marginTop:4, lineHeight:1.5 }}>{p.allergies}</div>
           </div>
         )}

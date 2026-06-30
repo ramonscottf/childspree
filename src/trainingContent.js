@@ -10,10 +10,10 @@ export const GUIDE_VERSION = 'Updated June 2026';
 export const WHATS_NEW = [
   { icon: '🛍️', title: 'Shopper Cards', text: 'A new mode in the QR Codes tab built around shopping for one child — QR codes, video downloads, printable cards, and a master roster, all in one place.' },
   { icon: '🎥', title: 'Video downloads', text: 'Download any child\u2019s video from their card, or download every video at once for archiving or showing on a screen.' },
-  { icon: '🪪', title: 'Half-sheet shopping cards', text: 'Print one card per child (2 per page, cut in half) with sizes, colors, allergies, budget, and a QR that opens the child\u2019s video + profile. Your paper backup if phones or Wi-Fi fail.' },
-  { icon: '📱', title: 'Scan-to-video', text: 'A child\u2019s QR now opens a mobile page with their video and full profile — sizes, colors, allergies, notes, and a shopping checklist.' },
+  { icon: '🪪', title: 'Half-sheet shopping cards', text: 'Print one card per child (2 per page, cut in half) with sizes, colors, fabric/sensory needs, budget, and a QR that opens the child\u2019s video + profile. Your paper backup if phones or Wi-Fi fail.' },
+  { icon: '📱', title: 'Scan-to-video', text: 'A child\u2019s QR now opens a mobile page with their video and full profile — sizes, colors, fabric/sensory needs, notes, and a shopping checklist.' },
   { icon: '📦', title: 'Export Everything', text: 'One button in Nominations exports a single Excel workbook with nominations, volunteers, allocations, gift cards, and a summary — perfect for board reports and reconciliation.' },
-  { icon: '🖨️', title: 'Master Roster PDF', text: 'A printable, school-by-school roster of every child with their sizes, colors, allergies (flagged), and video status — great as a check-in or reference sheet.' },
+  { icon: '🖨️', title: 'Master Roster PDF', text: 'A printable, school-by-school roster of every child with their sizes, colors, fabric/sensory needs, and video status — great as a check-in or reference sheet.' },
   { icon: '🔒', title: 'Student privacy', text: 'Shopper-facing materials show only a child’s first name, grade, age, and student ID — never their school. School still appears on internal tools (Master Roster and bag/delivery tags), where it’s needed for check-in and delivery.' },
 ];
 
@@ -62,7 +62,7 @@ export const TRAINING_SECTIONS = [
       <ol>
         <li>A <strong>school family advocate</strong> nominates a child who could use a hand.</li>
         <li>An <strong>admin</strong> reviews the nomination and approves it.</li>
-        <li>The admin <strong>sends a link to the parent</strong> to submit sizes, colors, allergies, and consent.</li>
+        <li>The admin <strong>sends a link to the parent</strong> to submit sizes, colors, fabric/sensory needs, and consent.</li>
         <li>The child records a <strong>short video at school</strong> so their shopper can meet them.</li>
         <li>Once sizes + video are in, the admin marks the child <strong>complete</strong> — ready for shopping day.</li>
         <li>On <strong>shopping day</strong>, a volunteer is paired with the child, opens their profile + video + sizes, and shops with them.</li>
@@ -73,7 +73,7 @@ export const TRAINING_SECTIONS = [
         <tr><th>Role</th><th>What they do</th></tr>
         <tr><td><strong>Admin</strong> (DEF staff)</td><td>Reviews nominations, manages the pipeline, prepares shopping-day materials, runs the event, exports reports.</td></tr>
         <tr><td><strong>Family Advocate / Nominator</strong> (school staff)</td><td>Nominates children and records the short school video.</td></tr>
-        <tr><td><strong>Parent / Guardian</strong></td><td>Fills out the sizing form (sizes, colors, allergies, notes) and gives consent.</td></tr>
+        <tr><td><strong>Parent / Guardian</strong></td><td>Fills out the sizing form (sizes, colors, fabric/sensory needs, notes) and gives consent.</td></tr>
         <tr><td><strong>Volunteer</strong></td><td><strong>Shoppers</strong> shop with a child; <strong>Operations Crew</strong> handle event logistics.</td></tr>
       </table>
     `,
@@ -113,7 +113,7 @@ export const TRAINING_SECTIONS = [
         <li>Child: first/last name, grade, school</li>
         <li>Parent: name, phone, email, language</li>
         <li>Nominator: name, email</li>
-        <li><strong>Sizes & preferences:</strong> shirt, pants, shoes, favorite colors, colors to avoid, allergies, special notes</li>
+        <li><strong>Sizes & preferences:</strong> shirt, pants, shoes, favorite colors, colors to avoid, sensory &amp; fabric needs, special notes</li>
         <li>Reason for nomination & additional notes</li>
       </ul>
       <p>Click <strong>Save</strong> and it\u2019s updated immediately. This is how you fix a wrong size or typo — <strong>you never have to ask the parent to redo it</strong>.</p>
@@ -133,7 +133,7 @@ export const TRAINING_SECTIONS = [
         <li>Shirt, pant, and shoe sizes</li>
         <li>Boys/Girls department and the child\u2019s age</li>
         <li>Favorite colors and colors to avoid</li>
-        <li>Allergies or sensitivities (e.g., wool, latex)</li>
+        <li>Sensory &amp; fabric needs (e.g., soft fabrics, no wool, no scratchy tags)</li>
         <li>Special notes (what the child loves, what they really need)</li>
         <li>Consent and preferred language</li>
       </ul>
@@ -205,7 +205,7 @@ export const TRAINING_SECTIONS = [
         <li>The <strong>$150 budget</strong> and a shopping progress checklist</li>
         <li><strong>Sizes</strong> (shirt / pants / shoes) and the Boys/Girls department</li>
         <li><strong>Loves</strong> and <strong>colors to avoid</strong></li>
-        <li><strong>Allergies</strong> and any special notes</li>
+        <li><strong>Sensory &amp; fabric needs</strong> and any special notes</li>
         <li>The child\u2019s <strong>video</strong></li>
       </ul>
       <p>This is what a shopper keeps open on their phone while shopping.</p>
@@ -217,9 +217,9 @@ export const TRAINING_SECTIONS = [
       </ul>
       <h4>4. The toolbar — do it for everyone at once</h4>
       <ul>
-        <li><span class="key">🖨️ Print All Half-Sheets</span> — prints <strong>two cards per letter page</strong>; cut in half and you have a printed shopping card for every child. Each card shows the child’s <strong>first name, grade, age, and student ID</strong> (no school), plus sizes, loves/avoid colors, allergies, the $150 budget, and a QR to the video + profile. <strong>This is your backup if phones or Wi-Fi go down.</strong></li>
+        <li><span class="key">🖨️ Print All Half-Sheets</span> — prints <strong>two cards per letter page</strong>; cut in half and you have a printed shopping card for every child. Each card shows the child’s <strong>first name, grade, age, and student ID</strong> (no school), plus sizes, loves/avoid colors, sensory/fabric needs, the $150 budget, and a QR to the video + profile. <strong>This is your backup if phones or Wi-Fi go down.</strong></li>
         <li><span class="key">⬇️ Download All Videos</span> — saves every child\u2019s video as a separate, named file. Great for archiving or playing on a screen at the event.</li>
-        <li><span class="key">🖨️ Master Roster</span> — one landscape table of all children grouped by school (sizes, colors, allergies flagged in red, video status). A perfect check-in / reference sheet.</li>
+        <li><span class="key">🖨️ Master Roster</span> — one landscape table of all children grouped by school (sizes, colors, sensory/fabric needs, video status). A perfect check-in / reference sheet.</li>
       </ul>
       <div class="callout tip"><span class="lbl">Good to know</span>The <strong>school filter applies to everything</strong> — filter to one school to print just that school\u2019s cards or roster. <strong>Generate QR codes first</strong> before printing half-sheets so each card includes its scan code. And the Master Roster works without QRs.</div>
     `,
@@ -250,7 +250,7 @@ export const TRAINING_SECTIONS = [
       <p class="lead">Everything can be exported. Use these for board reports, reconciliation, and printed backups.</p>
       <table>
         <tr><th>Export</th><th>Where</th><th>What you get</th></tr>
-        <tr><td>📥 <strong>Export Excel</strong></td><td>Nominations tab</td><td>Every nomination with all fields (sizes, colors, allergies, notes, video status, contacts, dates).</td></tr>
+        <tr><td>📥 <strong>Export Excel</strong></td><td>Nominations tab</td><td>Every nomination with all fields (sizes, colors, sensory/fabric needs, notes, video status, contacts, dates).</td></tr>
         <tr><td><strong>Export</strong></td><td>Volunteers tab</td><td>The full volunteer list with contact and shift info.</td></tr>
         <tr><td>📦 <strong>Export Everything</strong> <span class="pill p-complete">New</span></td><td>Nominations tab</td><td>One workbook with five sheets: <strong>Summary, Nominations, Volunteers, Allocations by School, and Gift Cards</strong>. Pulls live data.</td></tr>
         <tr><td>🖨️ <strong>Master Roster</strong> <span class="pill p-complete">New</span></td><td>QR Codes → Shopper Cards</td><td>A printable PDF roster of all children, grouped by school.</td></tr>
