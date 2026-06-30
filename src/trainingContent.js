@@ -14,6 +14,7 @@ export const WHATS_NEW = [
   { icon: '📱', title: 'Scan-to-video', text: 'A child\u2019s QR now opens a mobile page with their video and full profile — sizes, colors, allergies, notes, and a shopping checklist.' },
   { icon: '📦', title: 'Export Everything', text: 'One button in Nominations exports a single Excel workbook with nominations, volunteers, allocations, gift cards, and a summary — perfect for board reports and reconciliation.' },
   { icon: '🖨️', title: 'Master Roster PDF', text: 'A printable, school-by-school roster of every child with their sizes, colors, allergies (flagged), and video status — great as a check-in or reference sheet.' },
+  { icon: '🔒', title: 'Student privacy', text: 'Shopper-facing materials show only a child’s first name, grade, age, and student ID — never their school. School still appears on internal tools (Master Roster and bag/delivery tags), where it’s needed for check-in and delivery.' },
 ];
 
 // CSS shared by the in-app guide and the printable document.
@@ -200,6 +201,7 @@ export const TRAINING_SECTIONS = [
       <h4>2. What the QR opens (the shopper page)</h4>
       <p>When a volunteer scans a child\u2019s QR, their phone opens a clean mobile page showing:</p>
       <ul>
+        <li>The child’s <strong>first name, grade, age, and student ID</strong> (never their school)</li>
         <li>The <strong>$150 budget</strong> and a shopping progress checklist</li>
         <li><strong>Sizes</strong> (shirt / pants / shoes) and the Boys/Girls department</li>
         <li><strong>Loves</strong> and <strong>colors to avoid</strong></li>
@@ -207,6 +209,7 @@ export const TRAINING_SECTIONS = [
         <li>The child\u2019s <strong>video</strong></li>
       </ul>
       <p>This is what a shopper keeps open on their phone while shopping.</p>
+      <div class="callout warn"><span class="lbl">Student privacy</span>To protect each child, <strong>shopper-facing materials never show the child’s school</strong> — only first name, grade, age, and student ID. This covers the scan page and the printed half-sheets. The school still appears on internal tools (the Master Roster and bag/delivery tags), where it’s needed for check-in and getting bags back to the right school.</div>
       <h4>3. On each child\u2019s card</h4>
       <ul>
         <li><span class="key">🎥 Video</span> — download just that child\u2019s video.</li>
@@ -214,7 +217,7 @@ export const TRAINING_SECTIONS = [
       </ul>
       <h4>4. The toolbar — do it for everyone at once</h4>
       <ul>
-        <li><span class="key">🖨️ Print All Half-Sheets</span> — prints <strong>two cards per letter page</strong>; cut in half and you have a printed shopping card for every child. Each card shows the name, sizes, loves/avoid colors, allergies, the $150 budget, and a QR to the video + profile. <strong>This is your backup if phones or Wi-Fi go down.</strong></li>
+        <li><span class="key">🖨️ Print All Half-Sheets</span> — prints <strong>two cards per letter page</strong>; cut in half and you have a printed shopping card for every child. Each card shows the child’s <strong>first name, grade, age, and student ID</strong> (no school), plus sizes, loves/avoid colors, allergies, the $150 budget, and a QR to the video + profile. <strong>This is your backup if phones or Wi-Fi go down.</strong></li>
         <li><span class="key">⬇️ Download All Videos</span> — saves every child\u2019s video as a separate, named file. Great for archiving or playing on a screen at the event.</li>
         <li><span class="key">🖨️ Master Roster</span> — one landscape table of all children grouped by school (sizes, colors, allergies flagged in red, video status). A perfect check-in / reference sheet.</li>
       </ul>
@@ -288,6 +291,8 @@ export const TRAINING_SECTIONS = [
       <p>Double-check the parent\u2019s phone/email on the record (edit if it\u2019s wrong), then <strong>resend</strong> the reminder from the child\u2019s panel.</p>
       <h4>Who can log in to the admin?</h4>
       <p>Only approved DSD accounts on the admin list. If someone needs access, contact Scott.</p>
+      <h4>Do shoppers see which school a child attends?</h4>
+      <p>No. The scan page and printed half-sheets show only the child’s first name, grade, age, and student ID — never their school. The school still appears on internal tools (the Master Roster and bag/delivery tags) because check-in and bag delivery are organized by school.</p>
     `,
   },
   {
